@@ -181,7 +181,7 @@ th { vertical-align: top; }
 .colmenu .menu label.conv { border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
 .colmenu .menu label.conv select { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 5px 6px; font-size: 13px; color: var(--ink); }
 .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; }
-td.sec { font-size: 12px; color: var(--muted); }
+td.sec { font-size: 12px; color: var(--muted); max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
 td.hit-pass { color: var(--pass); background: var(--pass-soft); }
 td.hit-fail { color: var(--fail); background: var(--fail-soft); }
 tr.miss td:not(.hit-fail) { opacity: 0.55; }
@@ -712,8 +712,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     { key: "mktCap" }, { key: "pe" }, { key: "fpe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
   const SECTOR_SHORT = {
-    "Information Technology": "Info Tech", "Communication Services": "Comm Services",
-    "Consumer Discretionary": "Cons Discretionary", "Consumer Staples": "Cons Staples",
+    "Information Technology": "Tech", "Communication Services": "Comm",
+    "Consumer Discretionary": "Cons Disc", "Consumer Staples": "Staples", "Health Care": "Health",
   };
   const colLabel = (c) => c.menu || c.head || FIELDS[c.key].label;
   const visibleCols = () => COLUMNS.filter((c) => c.key === "ticker" || !S.hidden.has(c.key));
