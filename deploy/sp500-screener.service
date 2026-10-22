@@ -1,0 +1,22 @@
+# systemd unit for running the screener server directly on a Linux VM (no Docker).
+# Install:
+#   sudo cp deploy/sp500-screener.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now sp500-screener
+# Logs:
+#   journalctl -u sp500-screener -f
+[Unit]
+Description=S&P 500 screener server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/sp500-screener-data
+ExecStart=/home/ubuntu/sp500-screener-data/.venv/bin/python -m backend.server
+Environment=PORT=8000
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -135,7 +135,7 @@ code.hdr { display: block; font-family: var(--font-data); font-size: 11.5px; bac
 .search { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 6px 10px; width: 180px; max-width: 100%; }
 
 .table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
-table { border-collapse: collapse; width: 100%; min-width: 760px; font-variant-numeric: tabular-nums; }
+table { border-collapse: collapse; width: 100%; min-width: 840px; font-variant-numeric: tabular-nums; }
 th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
 th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
@@ -317,6 +317,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     revGrowth: { label: "Revenue growth",  head: "Rev gr.",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%" },
     netMargin: { label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
     divYield:  { label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
+    price:     { label: "Share price",     head: "Price",    unit: "USD", fmt: (v) => "$" + v.toFixed(2) },
     mktCap:    { label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
   };
   const OPS = { ">": ">", ">=": "≥", "<": "<", "<=": "≤", "between": "between" };
@@ -426,7 +427,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     });
   }
   function ruleText(r) {
-    const f = FIELDS[r.field], u = f.unit === "$B" ? "B" : f.unit;
+    const f = FIELDS[r.field], u = f.unit === "$B" ? "B" : f.unit === "USD" ? " USD" : f.unit;
     return r.op === "between" ? `${f.head} ${r.value}–${r.value2}${u}` : `${f.head} ${OPS[r.op]} ${r.value}${u}`;
   }
   const median = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)).sort((x, y) => x - y); if (!a.length) return null; const m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
@@ -497,7 +498,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
 
   const COLUMNS = [
-    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" },
+    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price" },
     { key: "mktCap" }, { key: "pe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
   function renderResults() {
@@ -549,7 +550,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
       if (r.s.name) first.append(link("co", r.s.name));
       row.append(first, el("td", { class: "sec", text: r.s.sector || "" }));
-      ["mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"].forEach((k) => {
+      ["price", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"].forEach((k) => {
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
@@ -579,8 +580,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     tag.classList.toggle("live", S.source === "live");
     if (S.source === "live") {
       const d = new Date(S.live.asOf), ageDays = (Date.now() - d) / 864e5;
-      tag.textContent = ageDays > 3 ? "Live data · out of date" : "Live data";
-      desc.textContent = `${S.data.length} S&P 500 stocks · Yahoo Finance · updated ${d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+      const when = (s) => new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      tag.textContent = ageDays > 3 ? "Live data · out of date" : S.feed === "api" ? "Live · every minute" : "Live data";
+      desc.textContent = S.live.fundamentalsAsOf
+        ? `${S.data.length} S&P 500 stocks · prices ${when(S.live.pricesAsOf || S.live.asOf)} · fundamentals ${when(S.live.fundamentalsAsOf)}`
+        : `${S.data.length} S&P 500 stocks · Yahoo Finance · updated ${when(S.live.asOf)}`;
     } else if (S.source === "csv") {
       tag.textContent = "Your data"; desc.textContent = `${S.data.length} stocks from your import`;
     } else {
@@ -588,30 +592,45 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     }
     $("useSample").textContent = S.live ? "Back to live data" : "Back to example data";
     $("footNote").textContent = S.source === "live"
-      ? "Figures come from Yahoo Finance and refresh every few hours. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
+      ? "Figures come from Yahoo Finance. Prices refresh during US market hours and fundamentals every 30 minutes; P/E, PEG, market cap and dividend yield are recalculated from the latest price. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
       : "Example figures are approximate and for trying out screens, not live market data or investment advice. Stocks with a missing or negative-earnings value fail any rule on that metric.";
   }
   function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); }
 
-  // Live dataset. On the hosted site it is data/sp500.json next to this page,
-  // refreshed by the Python backend every 3 hours. Inside Claude it arrives
-  // through the page's database at market/sp500. The newest copy wins.
+  // Live dataset, newest copy wins. Three sources, tried in this order:
+  //   1. the always-on Python server's API (api/sp500, or the URL in
+  //      <meta name="screener-api">), polled every minute;
+  //   2. data/sp500.json next to the page (GitHub Pages), polled every 5 minutes;
+  //   3. inside Claude, the page's database at market/sp500.
+  const API_URL = (document.querySelector('meta[name="screener-api"]') || {}).content || "api/sp500";
+  let pollTimer = null;
   function applyLive(d) {
     if (!d || !Array.isArray(d.rows) || !Array.isArray(d.cols)) return;
-    if (S.live && S.live.asOf && d.asOf && d.asOf <= S.live.asOf) return;
+    const stamp = d.builtAt || d.asOf;
+    if (S.live && S.live.stamp && stamp && stamp <= S.live.stamp) return;
     const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return o; }).filter((o) => o.ticker);
     if (!rows.length) return;
-    S.live = { asOf: d.asOf, rows };
-    refreshAll();
+    const first = !S.live;
+    S.live = { stamp, asOf: d.asOf, pricesAsOf: d.pricesAsOf, fundamentalsAsOf: d.fundamentalsAsOf, rows };
+    if (first || S.source !== "live") return refreshAll();
+    // Later updates leave the rule editor alone so typing isn't interrupted.
+    pickData(); renderData(); renderScreens(); renderResults();
   }
-  function fetchJson() {
+  const getJson = (url) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  function poll(url, every) {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => getJson(url).then(applyLive).catch(() => {}), every);
+  }
+  function startFetching() {
     if (!/^https?:$/.test(location.protocol)) return;
-    fetch("data/sp500.json", { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null)).then(applyLive).catch(() => {});
+    getJson(API_URL)
+      .then((d) => { S.feed = "api"; applyLive(d); poll(API_URL, 60 * 1000); })
+      .catch(() => getJson("data/sp500.json")
+        .then((d) => { S.feed = "file"; applyLive(d); poll("data/sp500.json", 5 * 60 * 1000); })
+        .catch(() => {}));
   }
   async function initLive() {
-    fetchJson();
-    setInterval(fetchJson, 15 * 60 * 1000);
+    startFetching();
     const c = window.claude; if (!c || !c.use) return;
     try {
       const db = await c.use("db"); if (!db) return;
