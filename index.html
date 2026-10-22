@@ -60,23 +60,36 @@ body {
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.wrap { max-width: 1680px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+/* App frame: section tabs down the left, the current section to the right. */
+.app { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 20px; max-width: 1880px; margin: 0 auto; align-items: start; }
+.wrap { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.rail { position: sticky; top: max(20px, env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.rail [role="tab"] { display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: none; cursor: pointer; padding: 10px 12px; border-radius: 9px; color: var(--muted); font-family: var(--font-display); font-weight: 600; font-size: 15px; text-align: left; position: relative; }
+.rail [role="tab"] svg { width: 20px; height: 20px; flex: none; }
+.rail [role="tab"]:hover { color: var(--ink); background: var(--sunk); }
+.rail [role="tab"][aria-selected="true"] { color: var(--ink); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+.rail [role="tab"][aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--accent); }
+.rail [role="tab"][aria-selected="true"] svg { color: var(--accent); }
+.rail .badge { margin-left: auto; font-family: var(--font-data); font-weight: 400; font-size: 11px; color: var(--muted); }
+/* Medium screens: icons only, so the panels keep their room. */
+@media (min-width: 821px) and (max-width: 1199px) {
+  .app { grid-template-columns: 56px minmax(0, 1fr); gap: 14px; }
+  .summary .stat .k { white-space: normal; line-height: 1.3; height: 2.6em; text-overflow: clip; }
+  .rail [role="tab"] { justify-content: center; padding: 11px 0; }
+  .rail [role="tab"] .lbl, .rail .badge { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.drawer-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 8px 16px; border-bottom: 1px solid var(--line); }
 
 /* Title column takes the free space, so the description wraps the same way whatever the title says. */
 header.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px 24px; }
 header.top > div:first-child { min-width: 0; }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; line-height: 1.45; height: 2.9em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 62ch; line-height: 1.45; height: 2.9em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .uni-pick { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border-radius: 10px; }
 .uni-pick button { border: 0; background: transparent; cursor: pointer; padding: 7px 14px; border-radius: 8px; display: inline-flex; align-items: baseline; gap: 7px; font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--muted); white-space: nowrap; }
 .uni-pick button:hover { color: var(--ink); }
 .uni-pick button .n { font-family: var(--font-data); font-weight: 400; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .uni-pick button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
-.side-tabs { display: flex; align-items: center; gap: 4px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); }
-.side-tabs [role="tab"] { flex: 1; border: 0; background: none; cursor: pointer; padding: 11px 6px 10px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--muted); }
-.side-tabs [role="tab"]:hover { color: var(--ink); }
-.side-tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-.side-tabs .m-only { flex: none; margin-left: 4px; }
 .star { background: none; border: 0; padding: 0 6px 0 0; cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); vertical-align: 1px; }
 .star:hover, .star.on { color: var(--star); }
 .wl-pop { position: absolute; z-index: 40; width: min(270px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18); padding: 10px; display: flex; flex-direction: column; gap: 2px; }
@@ -242,13 +255,19 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   body { padding-block: 12px 28px; }
   .wrap { gap: 14px; }
   h1 { font-size: 24px; }
-  .sub { font-size: 13px; }
+  .lede { font-size: 13px; }
   header.top { gap: 8px; }
   header.top { grid-template-columns: minmax(0, 1fr); }
   .uni-pick { display: flex; width: 100%; }
   .uni-pick button { flex: 1; justify-content: center; padding: 8px 10px; }
   .statusbar{ padding: 10px 14px; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .app { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  body { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .rail { position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 20; flex-direction: row; gap: 0; padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  .rail [role="tab"] { flex: 1; flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 11.5px; font-family: var(--font-body); text-align: center; box-shadow: none !important; background: none !important; }
+  .rail [role="tab"][aria-selected="true"]::before { left: 30%; right: 30%; top: -6px; bottom: auto; width: auto; height: 3px; }
+  .rail .badge { display: none; }
 
   /* screens + rules slide in from the left */
   #sidePanel {
@@ -273,7 +292,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   .big { font-size: 32px; }
   .stat .v { font-size: 14px; }
   .criteria, .sectors-line { padding-left: 14px; padding-right: 14px; }
-  .sub { display: none; }
+  .lede { display: none; }
   .toolbar { padding: 10px 14px; gap: 10px; justify-content: flex-start; }
   .toolbar .tools { display: contents; }
   #toggleSide { order: 1; flex: 1 1 100%; padding: 9px 12px; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -309,25 +328,24 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
 }
 @media (prefers-reduced-motion: no-preference) { .screen-btn, .btn, .chip { transition: background-color .12s, border-color .12s; } }
 </style>
+
+<div class="app">
+<nav class="rail" id="rail" role="tablist" aria-orientation="vertical" aria-label="Sections"></nav>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div>
       <h1 id="pageTitle">S&amp;P 500 Screener</h1>
-      <p class="sub">Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.</p>
+      <p class="lede">Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.</p>
     </div>
     <div class="uni-pick" id="uniPick" role="radiogroup" aria-label="Stock list"></div>
   </header>
 
   <div class="layout" id="layout">
     <aside class="panel" id="sidePanel" aria-label="Screener and watchlists">
-      <div class="side-tabs" role="tablist" aria-label="View">
-        <button role="tab" id="tabScreener" aria-selected="true" aria-controls="screenerSide" type="button">Screener</button>
-        <button role="tab" id="tabWatch" aria-selected="false" aria-controls="watchSide" type="button" tabindex="-1">Watchlist</button>
-        <button class="btn sm m-only" id="closeDrawer" type="button">Close</button>
-      </div>
-      <div id="screenerSide" role="tabpanel" aria-labelledby="tabScreener">
+      <div class="drawer-head m-only"><p class="eyebrow" id="drawerTitle">Screens</p><button class="btn sm" id="closeDrawer" type="button">Close</button></div>
+      <div id="screenerSide" role="tabpanel" aria-labelledby="tab-screener">
       <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
       <div class="screens" id="screens"></div>
       <div class="storage-note" id="storageNote">Saved in this browser.</div>
@@ -386,7 +404,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       </div>
       </div>
 
-      <div id="watchSide" role="tabpanel" aria-labelledby="tabWatch" hidden>
+      <div id="watchSide" role="tabpanel" aria-labelledby="tab-watch" hidden>
         <div class="panel-head"><p class="eyebrow">Your watchlists</p></div>
         <div class="screens" id="watchlists"></div>
         <div class="storage-note row"><button class="linkbtn" id="newWatch" type="button">+ New watchlist</button></div>
@@ -422,7 +440,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         <div class="stat"><span class="v" id="missCount">0</span><span class="k" id="k1">Near misses</span></div>
         <div class="stat"><span class="v" id="medPE">–</span><span class="k" id="k2">Median P/E</span></div>
         <div class="stat"><span class="v" id="medPEG">–</span><span class="k" id="k3">Median PEG</span></div>
-        <div class="stat"><span class="v" id="medRev">–</span><span class="k" id="k4">Median rev growth</span></div>
+        <div class="stat"><span class="v" id="medRev">–</span><span class="k" id="k4">Median rev gr.</span></div>
       </div>
       <div class="criteria" id="criteria"></div>
       <div class="sectors-line" id="sectorsLine"></div>
@@ -453,6 +471,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   </div>
 
   <footer class="note" id="footNote"></footer>
+</div>
 </div>
 
 <script>
@@ -858,7 +877,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       pass = res.filter((r) => r.pass); miss = res.filter((r) => r.miss);
       $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length.toLocaleString() + " pass" }));
       $("showResults").textContent = `Show ${pass.length} stock${pass.length === 1 ? "" : "s"}`;
-      [["k1", "Near misses"], ["k2", "Median P/E"], ["k3", "Median PEG"], ["k4", "Median rev growth"]].forEach(([k, t]) => { $(k).textContent = t; });
+      [["k1", "Near misses"], ["k2", "Median P/E"], ["k3", "Median PEG"], ["k4", "Median rev gr."]].forEach(([k, t]) => { $(k).textContent = t; });
       $("missCount").textContent = miss.length;
       const mPE = median(pass.map((r) => r.s.pe > 0 ? r.s.pe : null)), mPEG = median(pass.map((r) => r.s.peg)), mRev = median(pass.map((r) => r.s.revGrowth));
       $("medPE").textContent = mPE == null ? "–" : FIELDS.pe.fmt(mPE);
@@ -1011,7 +1030,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     });
   }
   function wtoast(msg) { $("watchToast").textContent = msg; if (S.tab !== "watch") toast(msg); }
-  async function saveWL(wl) { await wstore.put(clone(wl)); renderWatchSide(); renderResults(); }
+  async function saveWL(wl) { await wstore.put(clone(wl)); renderWatchSide(); renderResults(); renderRail(); }
   async function toggleWatch(ticker, price) {
     const wl = activeWL(), i = wl.items.findIndex((x) => x.ticker === ticker);
     if (i >= 0) { wl.items.splice(i, 1); wtoast(`Removed ${ticker} from ${wl.name}`); }
@@ -1133,10 +1152,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           }
           list.sort((a, b) => (a.created || 0) - (b.created || 0));
           S.watchlists = list;
-          renderWatchSide(); if (S.tab === "watch") { renderResults(); applySide(); }
+          renderWatchSide(); renderRail(); if (S.tab === "watch") { renderResults(); applySide(); }
         }, () => { this.mode = "local"; });
       }
-      renderWatchSide(); renderResults();
+      renderWatchSide(); renderResults(); renderRail();
     },
     async put(w) {
       w.saved = true;
@@ -1160,17 +1179,42 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   };
 
   // ---------- Tabs ----------
+  // Sections shown as tabs down the left (a bottom bar on phones). To add a section:
+  // add an entry here, a side panel with the matching id, and handle it in renderResults.
+  const ICONS = {
+    screener: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>',
+    watch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
+  };
+  const TABS = [
+    { id: "screener", label: "Screener", hash: "screener", panel: "screenerSide", panelTitle: "Screens" },
+    { id: "watch", label: "Watchlist", hash: "watchlist", panel: "watchSide", panelTitle: "Watchlists",
+      badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
+  ];
+  function renderRail() {
+    const rail = $("rail"), hadFocus = rail.contains(document.activeElement); rail.textContent = "";
+    TABS.forEach((t) => {
+      const on = t.id === S.tab;
+      const b = el("button", { type: "button", role: "tab", id: "tab-" + t.id, "aria-selected": String(on), "aria-controls": t.panel,
+        tabindex: on ? "0" : "-1", title: t.label, onclick: () => setTab(t.id) });
+      b.innerHTML = ICONS[t.id] || "";
+      b.append(el("span", { class: "lbl", text: t.label }));
+      const badge = t.badge && t.badge();
+      if (badge) b.append(el("span", { class: "badge", text: badge, "aria-label": badge + " stocks" }));
+      rail.append(b);
+    });
+    if (hadFocus) $("tab-" + S.tab).focus();
+  }
   function setTab(tab) {
-    S.tab = tab === "watch" ? "watch" : "screener";
+    S.tab = TABS.some((t) => t.id === tab) ? tab : "screener";
     lsSet("screener.tab", S.tab);
     const watch = S.tab === "watch";
-    $("tabScreener").setAttribute("aria-selected", String(!watch)); $("tabScreener").tabIndex = watch ? -1 : 0;
-    $("tabWatch").setAttribute("aria-selected", String(watch)); $("tabWatch").tabIndex = watch ? 0 : -1;
-    $("screenerSide").hidden = watch; $("watchSide").hidden = !watch;
+    TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
+    renderRail();
+    $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
     // keep these in place (just invisible) so nothing below moves when switching tabs
     $("uniPick").style.visibility = watch ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
     $("pageTitle").textContent = watch ? "Watchlist" : uName() + " Screener";
-    document.querySelector(".sub").textContent = watch
+    document.querySelector(".lede").textContent = watch
       ? "The stocks you're keeping an eye on, with live prices and the same metrics as the screener."
       : "Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.";
     if (watch) renderWatchSide();
@@ -1432,12 +1476,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   window.addEventListener("scroll", () => { if (cardFor) hideCard(0); }, { passive: true });
   document.querySelector(".table-wrap").addEventListener("scroll", () => { if (cardFor) hideCard(0); }, { passive: true });
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
-  $("tabScreener").addEventListener("click", () => setTab("screener"));
-  $("tabWatch").addEventListener("click", () => setTab("watch"));
-  document.querySelector(".side-tabs").addEventListener("keydown", (e) => {
-    if (!["ArrowLeft", "ArrowRight"].includes(e.key) || e.target.getAttribute("role") !== "tab") return;
-    setTab(S.tab === "watch" ? "screener" : "watch"); $(S.tab === "watch" ? "tabWatch" : "tabScreener").focus();
+  $("rail").addEventListener("keydown", (e) => {   // arrow keys move between sections, as in a tab list
+    const keys = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
+    if (!(e.key in keys) && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const i = TABS.findIndex((t) => t.id === S.tab);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : (i + keys[e.key] + TABS.length) % TABS.length;
+    setTab(TABS[next].id); $("tab-" + S.tab).focus();
   });
+  window.addEventListener("hashchange", () => { const t = TABS.find((x) => "#" + x.hash === location.hash); if (t) setTab(t.id); });
   $("addForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const t = $("addTicker").value.trim().toUpperCase().split(/[\s—–]+/)[0].replace(/^\$/, "");
@@ -1466,7 +1513,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     S.wDeleteArmed = false;
     const wl = activeWL(); await wstore.remove(wl.id);
     S.activeWatch = (S.watchlists[0] || {}).id || null; lsSet("screener.activeWatch", S.activeWatch);
-    wtoast(`Deleted “${wl.name}”`); renderWatchSide(); renderResults(); applySide();
+    wtoast(`Deleted “${wl.name}”`); renderWatchSide(); renderResults(); renderRail(); applySide();
   });
 
   // ---------- CSV import ----------
@@ -1560,7 +1607,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   applySide();
   renderStorageNote(); refreshAll();
-  setTab(location.hash === "#watchlist" ? "watch" : lsGet("screener.tab") === "watch" ? "watch" : "screener");
+  const fromHash = TABS.find((t) => "#" + t.hash === location.hash);
+  setTab(fromHash ? fromHash.id : lsGet("screener.tab") || "screener");
   loadBuiltins();
   store.init().finally(() => wstore.init());
   initLive();

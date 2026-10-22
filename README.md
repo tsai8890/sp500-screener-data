@@ -1,6 +1,6 @@
 # S&P 500 Screener
 
-A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. A second tab keeps your **watchlists**: star any stock (☆) or add it by ticker, and see the same live metrics plus the change since you added it. Open the site with `#watchlist` to land on that tab.
+A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. Sections are tabs down the left side of the page (a bottom bar on phones); the second keeps your **watchlists**: star any stock (☆) or add it by ticker, and see the same live metrics plus the change since you added it. Open the site with `#watchlist` to land on that tab.
 
 **Live site: https://tsai8890.github.io/sp500-screener-data/**
 
@@ -19,7 +19,7 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 
 | Path | What it is |
 |---|---|
-| `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. |
+| `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. To add a section tab, add an entry to `TABS` in the script, a side panel with the matching id, and its rendering in `renderResults`. |
 | `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
 | `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
 | `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
