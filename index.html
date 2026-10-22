@@ -166,8 +166,12 @@ td .co { color: var(--muted); font-size: 12px; display: block; max-width: 160px;
 .colmenu .menu label:hover { background: var(--sunk); }
 .colmenu .menu .inrule { margin-left: auto; font-size: 11px; color: var(--accent); }
 .colmenu .menu .menu-foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; }
-td.num.up { color: var(--up); }
-td.num.down { color: var(--down); }
+td .sub { display: block; font-size: 11.5px; line-height: 1.3; margin-top: 1px; }
+td .sub.up { color: var(--up); }
+td .sub.down { color: var(--down); }
+td .sub.hit-pass, td .sub.hit-fail { display: inline-block; padding: 0 4px; border-radius: 3px; }
+th .subsort { display: flex; margin-top: 2px; font-size: 10px; font-weight: 500; opacity: 0.85; justify-content: flex-end; }
+th { vertical-align: top; }
 #colList { display: flex; flex-direction: column; gap: 2px; }
 .colmenu .menu label.conv { border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
 .colmenu .menu label.conv select { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 5px 6px; font-size: 13px; color: var(--ink); }
@@ -538,14 +542,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
 
   const COLUMNS = [
-    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price" }, { key: "chg" },
+    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price", head: "Price", menu: "Price and day change" },
     { key: "mktCap" }, { key: "pe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
   const SECTOR_SHORT = {
     "Information Technology": "Info Tech", "Communication Services": "Comm Services",
     "Consumer Discretionary": "Cons Discretionary", "Consumer Staples": "Cons Staples",
   };
-  const colLabel = (c) => c.head || FIELDS[c.key].label;
+  const colLabel = (c) => c.menu || c.head || FIELDS[c.key].label;
   const visibleCols = () => COLUMNS.filter((c) => c.key === "ticker" || !S.hidden.has(c.key));
   function renderColMenu() {
     const focusId = document.activeElement && document.activeElement.id;
@@ -590,12 +594,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // header
     const ruleFields = new Set(validRules(d).map((r) => r.field));
     const tr = el("tr");
+    const sortBtn = (key, label, cls) => {
+      const isSort = S.sort.key === key;
+      return el("button", { type: "button", class: cls || "", title: "Sort by " + (FIELDS[key] ? FIELDS[key].label.toLowerCase() : label.toLowerCase()),
+        onclick: () => { S.sort = isSort ? { key, dir: S.sort.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "ticker" || key === "sector" ? "asc" : "desc" }; renderResults(); } },
+        label, isSort ? el("span", { class: "arr", text: S.sort.dir === "asc" ? "↑" : "↓" }) : null);
+    };
     cols.forEach((c) => {
       const label = c.head || FIELDS[c.key].head;
-      const isSort = S.sort.key === c.key;
-      const b = el("button", { type: "button", onclick: () => { S.sort = isSort ? { key: c.key, dir: S.sort.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: c.key === "ticker" || c.key === "sector" ? "asc" : "desc" }; renderResults(); } },
-        label, isSort ? el("span", { class: "arr", text: S.sort.dir === "asc" ? "↑" : "↓" }) : null);
-      tr.append(el("th", { scope: "col", "aria-sort": isSort ? (S.sort.dir === "asc" ? "ascending" : "descending") : "none" }, b));
+      const keys = c.key === "price" ? ["price", "chg"] : [c.key];
+      const sorted = keys.includes(S.sort.key);
+      const th = el("th", { scope: "col", "aria-sort": sorted ? (S.sort.dir === "asc" ? "ascending" : "descending") : "none" }, sortBtn(c.key, label));
+      if (c.key === "price") th.append(sortBtn("chg", "Day chg", "subsort"));
+      tr.append(th);
     });
     $("thead").replaceChildren(tr);
 
@@ -623,9 +634,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
-        if (k === "chg" && v) cls += v > 0 ? " up" : " down";
         const cell = el("td", { class: cls });
         if (v == null) cell.append(el("span", { class: "na", text: "n/a" })); else cell.textContent = FIELDS[k].fmt(v);
+        if (k === "price" && r.s.chg != null) {
+          const c = r.s.chg, rc = ruleFields.has("chg") ? (r.fails.includes("chg") ? " hit-fail" : " hit-pass") : "";
+          cell.append(el("span", { class: "sub " + (c > 0 ? "up" : c < 0 ? "down" : "") + rc, text: FIELDS.chg.fmt(c) }));
+        }
         row.append(cell);
       });
       return row;
