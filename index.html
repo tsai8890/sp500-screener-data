@@ -182,7 +182,6 @@ a.qlink { color: inherit; text-decoration: none; }
 a.qlink.tk { color: var(--accent); }
 a.qlink:hover { text-decoration: underline; text-underline-offset: 2px; }
 a.qlink:hover::after { content: " ↗"; font-size: 11px; }
-a.qlink.co:hover::after { content: ""; }
 td .co { color: var(--muted); font-size: 12px; display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 .tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
 .btn.sm { padding: 5px 10px; font-size: 13px; }
@@ -884,8 +883,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const body = $("tbody"); body.textContent = "";
     const mkRow = (r, isMiss) => {
       const row = el("tr", { class: isMiss ? "miss" : "" });
-      const href = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
-      const link = (cls, text) => el("a", { class: "qlink " + cls, href, target: "_blank", rel: "noopener noreferrer", title: "Open " + r.s.ticker + " on Yahoo Finance", text });
+      // Ticker -> Yahoo Finance quote; company name -> financial statements on Stock Analysis.
+      const yahoo = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
+      const financials = "https://stockanalysis.com/stocks/" + encodeURIComponent(r.s.ticker.toLowerCase()) + "/financials/";
+      const link = (cls, text) => el("a", { class: "qlink " + cls, href: cls === "tk" ? yahoo : financials, target: "_blank", rel: "noopener noreferrer",
+        title: cls === "tk" ? `${r.s.ticker} quote on Yahoo Finance` : `${r.s.ticker} financial statements on Stock Analysis`, text });
       const inLists = listsOf.get(r.s.ticker) || [], on = inLists.length > 0;
       const star = el("button", { class: "star" + (on ? " on" : ""), type: "button", "aria-haspopup": "dialog", "data-t": r.s.ticker,
         "aria-label": `Watchlists for ${r.s.ticker}` + (on ? ` (in ${inLists.join(", ")})` : ""),
@@ -950,7 +952,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     }
     $("useSample").textContent = S.live ? "Back to live data" : "Back to example data";
     $("footNote").textContent = S.source === "live"
-      ? "Figures come from Yahoo Finance. Prices refresh during US market hours and fundamentals every 30 minutes; P/E, PEG, market cap and dividend yield are recalculated from the latest price. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. P/E uses trailing 12-month GAAP EPS; forward P/E uses analysts' consensus EPS for the next 12 months. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
+      ? "Click a ticker for its Yahoo Finance quote, or a company name for its financial statements on Stock Analysis. Figures come from Yahoo Finance. Prices refresh during US market hours and fundamentals every 30 minutes; P/E, PEG, market cap and dividend yield are recalculated from the latest price. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. P/E uses trailing 12-month GAAP EPS; forward P/E uses analysts' consensus EPS for the next 12 months. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
       : "Example figures are approximate and for trying out screens, not live market data or investment advice. Stocks with a missing or negative-earnings value fail any rule on that metric.";
   }
   function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); if (typeof renderUniverseSel === "function" && $("uniPick").childElementCount) renderUniverseSel(); }
