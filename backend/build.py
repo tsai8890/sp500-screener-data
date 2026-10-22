@@ -9,20 +9,22 @@ from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, UNIVERSES_PATH,
                      universe_path, utc_now, write_json)
 from .universe import DEFAULT, UNIVERSES
 
-COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"]
+COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield"]
 
 
 def row(ticker: str, f: dict, price: float | None) -> list:
     price = price or f.get("price")
     eps, growth = f.get("eps"), f.get("growth")
     pe = price / eps if price and eps and eps > 0 else None
+    fwd = f.get("fwdEps")
+    fpe = price / fwd if price and fwd and fwd > 0 else None     # forward P/E
     peg = pe / growth if pe and growth and growth > 0 else None
     cap = f["shares"] * price / 1e9 if price and f.get("shares") else None
     div = f["divRate"] / price * 100 if price and f.get("divRate") else (0.0 if price else None)
     prev = f.get("prevClose")
     chg = (price / prev - 1) * 100 if price and prev else None   # % vs previous session's close
     return [ticker, f.get("name", ""), f.get("sector", ""),
-            num(price, nd=2), num(chg, nd=2), num(cap, nd=1), num(pe, nd=1), num(peg, nd=2),
+            num(price, nd=2), num(chg, nd=2), num(cap, nd=1), num(pe, nd=1), num(fpe, nd=1), num(peg, nd=2),
             f.get("revGrowth"), f.get("netMargin"), num(div, nd=2)]
 
 

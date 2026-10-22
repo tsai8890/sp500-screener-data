@@ -42,6 +42,7 @@ def extract(info: dict) -> dict | None:
     return {
         "shares": cap / price,                       # implied shares, consistent with Yahoo's market cap
         "eps": num(eps, nd=4),
+        "fwdEps": num(info.get("forwardEps"), nd=4),   # analysts' consensus EPS, next 12 months
         "growth": num(growth, nd=3),                 # % per year, implied by Yahoo's PEG
         "revGrowth": num(info.get("revenueGrowth"), 100, 1),
         "netMargin": num(info.get("profitMargins"), 100, 1),

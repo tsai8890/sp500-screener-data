@@ -23,7 +23,7 @@ from backend import build, common, fundamentals, prices, screens_db, universe  #
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
     "trailingEps": 6.6, "revenueGrowth": 0.081, "profitMargins": 0.243, "dividendRate": 1.04,
-    "regularMarketPreviousClose": 250.0,
+    "regularMarketPreviousClose": 250.0, "forwardEps": 7.8,
 }
 
 
@@ -59,6 +59,7 @@ class Combine(unittest.TestCase):
         self.assertEqual(r["price"], 286.0)
         self.assertEqual(r["chg"], round((286 / 250 - 1) * 100, 2))
         self.assertEqual(r["pe"], round(286 / 6.6, 1))
+        self.assertEqual(r["fpe"], round(286 / 7.8, 1))
         self.assertEqual(r["mktCap"], round(1.5e10 * 286 / 1e9, 1))
         self.assertEqual(r["divYield"], round(1.04 / 286 * 100, 2))
         self.assertAlmostEqual(r["peg"], round((286 / 6.6) / (39.4 / 2.62), 2))
@@ -76,6 +77,7 @@ class Combine(unittest.TestCase):
         r = dict(zip(out["cols"], out["rows"][1]))
         self.assertIsNone(r["pe"])
         self.assertIsNone(r["peg"])
+        self.assertIsNone(r["fpe"])
         self.assertIsNone(r["chg"])   # no previous close known
 
 

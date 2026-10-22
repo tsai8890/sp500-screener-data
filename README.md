@@ -1,6 +1,6 @@
 # S&P 500 Screener
 
-A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results.
+A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results.
 
 **Live site: https://tsai8890.github.io/sp500-screener-data/**
 
@@ -100,12 +100,12 @@ Fundamentals and prices are fetched once for every stock in any list (about 1,00
   "fundamentalsAsOf": "2026-10-22T17:00:00Z",
   "builtAt": "2026-10-22T17:30:05Z",
   "count": 503,
-  "cols": ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"],
-  "rows": [["AAPL", "Apple Inc.", "Information Technology", 262.1, 1.32, 3890.2, 39.7, 2.64, 8.1, 24.3, 0.4], ...]
+  "cols": ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield"],
+  "rows": [["AAPL", "Apple Inc.", "Information Technology", 262.1, 1.32, 3890.2, 39.7, 33.5, 2.64, 8.1, 24.3, 0.4], ...]
 }
 ```
 
-Units: `price` in USD; `chg` is the % change from the previous session's close; `mktCap` in billions of USD; `revGrowth`, `netMargin`, `divYield` in percent. `pe` and `peg` are null for negative earnings. `revGrowth` is the latest quarter compared with the same quarter a year earlier. `peg` uses the earnings growth implied by Yahoo's trailing PEG.
+Units: `price` in USD; `chg` is the % change from the previous session's close; `mktCap` in billions of USD; `revGrowth`, `netMargin`, `divYield` in percent. `pe` (trailing 12-month GAAP EPS) and `peg` are null for negative earnings; `fpe` is the forward P/E on analysts' consensus EPS for the next 12 months, null when that estimate is missing or negative. `revGrowth` is the latest quarter compared with the same quarter a year earlier. `peg` uses the earnings growth implied by Yahoo's trailing PEG.
 
 ## Notes
 

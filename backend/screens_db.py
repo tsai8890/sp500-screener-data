@@ -22,7 +22,7 @@ from .common import DATA_DIR
 
 DB_PATH = os.environ.get("SCREENER_DB", os.path.join(DATA_DIR, "screener.db"))
 
-FIELDS = {"price", "chg", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"}
+FIELDS = {"price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield"}
 OPS = {">", ">=", "<", "<=", "between"}
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 MAX_SCREENS = 500
