@@ -876,7 +876,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   let UNIVERSE_LIST = [{ id: "sp500", name: "S&P 500" }, { id: "russell1000", name: "Russell 1000" }];
   const uName = (id = S.universe) => (UNIVERSE_LIST.find((u) => u.id === id) || { name: id }).name;
   function renderUniverseSel() {
-    const box = $("uniPick"); box.textContent = "";
+    const box = $("uniPick"), hadFocus = box.contains(document.activeElement); box.textContent = "";
     UNIVERSE_LIST.forEach((u) => {
       const on = u.id === S.universe;
       const n = on && S.live ? S.live.rows.length : u.count;
@@ -884,6 +884,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
     $("pageTitle").textContent = uName() + " Screener";
+    if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
     if (!/^https?:$/.test(location.protocol)) return;
