@@ -8,8 +8,8 @@ The backend runs in two ways, from the same Python code:
 
 | | GitHub (running now) | Always-on server (`backend/server.py`) |
 |---|---|---|
-| Prices | every 10 min during US market hours | every minute during US market hours |
-| Fundamentals | every 30 min | every 30 min |
+| Prices | every 10 min during US market hours (:03, :13, ...) | every minute during US market hours |
+| Fundamentals | every 30 min (:07, :37) | every 30 min |
 | Runs on | GitHub Actions, free | any Linux machine or VM |
 | Page reads | `data/sp500.json` from GitHub Pages | `/api/sp500` from the server |
 
