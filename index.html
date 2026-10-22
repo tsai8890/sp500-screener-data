@@ -63,10 +63,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0; line-height: 1.05; text-wrap: balance; }
 .sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
-.datasrc { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
-.uni-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--muted); }
-select.uni { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; cursor: pointer; }
-select.uni:hover { border-color: var(--accent); }
+.uni-pick { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border-radius: 10px; }
+.uni-pick button { border: 0; background: transparent; cursor: pointer; padding: 7px 14px; border-radius: 8px; display: inline-flex; align-items: baseline; gap: 7px; font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.uni-pick button:hover { color: var(--ink); }
+.uni-pick button .n { font-family: var(--font-data); font-weight: 400; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.uni-pick button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.statusbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
 .tag.live { background: var(--accent-soft); color: var(--accent); }
 
@@ -201,8 +203,9 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   h1 { font-size: 24px; }
   .sub { font-size: 13px; }
   header.top { gap: 8px; }
-  .datasrc { font-size: 12px; }
-  select.uni { font-size: 16px; }
+  .uni-pick { display: flex; width: 100%; }
+  .uni-pick button { flex: 1; justify-content: center; padding: 8px 10px; }
+  .statusbar { padding: 10px 14px; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
 
   /* screens + rules slide in from the left */
@@ -271,7 +274,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <h1 id="pageTitle">S&amp;P 500 Screener</h1>
       <p class="sub">Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.</p>
     </div>
-    <div class="datasrc"><label class="uni-label" for="universeSel">Stocks</label><select id="universeSel" class="uni"></select><span class="tag" id="dataTag">Example data</span><span id="dataDesc">50 large S&amp;P 500 names, illustrative figures</span></div>
+    <div class="uni-pick" id="uniPick" role="radiogroup" aria-label="Stock list"></div>
   </header>
 
   <div class="layout" id="layout">
@@ -337,6 +340,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
     <div class="scrim" id="scrim"></div>
 
     <main class="panel" aria-label="Results">
+      <div class="statusbar" role="status"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">illustrative figures</span></div>
       <div class="summary">
         <div class="big" id="passCount">0 <small>/ 0 pass</small></div>
         <div class="stat"><span class="v" id="missCount">0</span><span class="k">Near misses</span></div>
@@ -757,7 +761,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const cols = visibleCols();
     renderColMenu();
     const pass = res.filter((r) => r.pass), miss = res.filter((r) => r.miss);
-    $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length + " pass" }));
+    $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length.toLocaleString() + " pass" }));
     $("showResults").textContent = `Show ${pass.length} stock${pass.length === 1 ? "" : "s"}`;
     renderSortSel();
     $("missCount").textContent = miss.length;
@@ -847,11 +851,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     tag.classList.toggle("live", S.source === "live");
     if (S.source === "live") {
       const d = new Date(S.live.asOf), ageDays = (Date.now() - d) / 864e5;
-      const when = (s) => new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      const when = (s) => { const t = new Date(s), today = t.toDateString() === new Date().toDateString();
+        return t.toLocaleString(undefined, today ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
       tag.textContent = ageDays > 3 ? "Live data · out of date" : S.feed === "api" ? "Live · every minute" : "Live data";
       desc.textContent = S.live.fundamentalsAsOf
-        ? `${S.data.length} stocks · prices ${when(S.live.pricesAsOf || S.live.asOf)} · fundamentals ${when(S.live.fundamentalsAsOf)}`
-        : `${S.data.length} stocks · Yahoo Finance · updated ${when(S.live.asOf)}`;
+        ? `Yahoo Finance · prices ${when(S.live.pricesAsOf || S.live.asOf)} · fundamentals ${when(S.live.fundamentalsAsOf)}`
+        : `Yahoo Finance · updated ${when(S.live.asOf)}`;
     } else if (S.source === "csv") {
       tag.textContent = "Your data"; desc.textContent = `${S.data.length} stocks from your import`;
     } else {
@@ -865,15 +870,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       ? "Figures come from Yahoo Finance. Prices refresh during US market hours and fundamentals every 30 minutes; P/E, PEG, market cap and dividend yield are recalculated from the latest price. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. P/E uses trailing 12-month GAAP EPS; forward P/E uses analysts' consensus EPS for the next 12 months. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
       : "Example figures are approximate and for trying out screens, not live market data or investment advice. Stocks with a missing or negative-earnings value fail any rule on that metric.";
   }
-  function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); }
+  function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); if (typeof renderUniverseSel === "function" && $("uniPick").childElementCount) renderUniverseSel(); }
 
   // ---------- Stock universes ----------
   let UNIVERSE_LIST = [{ id: "sp500", name: "S&P 500" }, { id: "russell1000", name: "Russell 1000" }];
   const uName = (id = S.universe) => (UNIVERSE_LIST.find((u) => u.id === id) || { name: id }).name;
   function renderUniverseSel() {
-    const sel = $("universeSel"); sel.textContent = "";
-    UNIVERSE_LIST.forEach((u) => sel.append(el("option", { value: u.id, text: u.name + (u.count ? ` (${u.count})` : "") })));
-    sel.value = S.universe;
+    const box = $("uniPick"); box.textContent = "";
+    UNIVERSE_LIST.forEach((u) => {
+      const on = u.id === S.universe;
+      const n = on && S.live ? S.live.rows.length : u.count;
+      box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
+        onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
+    });
     $("pageTitle").textContent = uName() + " Screener";
   }
   function loadIndex() {
@@ -1117,7 +1126,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const savedU = lsGet("screener.universe");
   if (savedU && UNIVERSE_LIST.some((u) => u.id === savedU)) S.universe = savedU;
   renderUniverseSel();
-  $("universeSel").addEventListener("change", (e) => switchUniverse(e.target.value));
+  $("uniPick").addEventListener("keydown", (e) => {   // arrow keys move between lists, as in a radio group
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    const i = UNIVERSE_LIST.findIndex((u) => u.id === S.universe), d = e.key === "ArrowRight" ? 1 : -1;
+    const next = UNIVERSE_LIST[(i + d + UNIVERSE_LIST.length) % UNIVERSE_LIST.length];
+    switchUniverse(next.id); $("uniPick").querySelector('[aria-checked="true"]').focus();
+  });
   S.hidden = new Set(lsGet("screener.hiddenCols") || []);
   S.collapsed = lsGet("screener.collapsed") === true;
   const conv = lsGet("screener.colorConv") === "red-up" ? "red-up" : "green-up";
