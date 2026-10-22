@@ -353,7 +353,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <div class="toolbar">
         <div class="tools">
           <button class="btn sm" id="toggleSide" type="button" aria-controls="sidePanel">Hide screens</button>
-          <label class="toggle"><input type="checkbox" id="showMiss" checked> Show near misses (fail one rule)</label>
+          <label class="toggle"><input type="checkbox" id="showMiss"> Show near misses (fail one rule)</label>
         </div>
         <div class="tools">
           <details class="colmenu" id="colMenu">
@@ -470,7 +470,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const S = {
     data: SAMPLE, source: "sample", live: null, csv: null,
     userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
-    universe: "sp500", sort: { key: "mktCap", dir: "desc" }, showMiss: true, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
+    universe: "sp500", sort: { key: "mktCap", dir: "desc" }, showMiss: false, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
   };
   const $ = (id) => document.getElementById(id);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -1020,7 +1020,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   $("exportScreens").addEventListener("click", exportScreens);
   $("importScreensBtn").addEventListener("click", () => $("importScreens").click());
   $("importScreens").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) importScreens(f); e.target.value = ""; });
-  $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; renderResults(); });
+  $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; lsSet("screener.showMiss", S.showMiss); renderResults(); });
   const phoneMq = window.matchMedia("(max-width: 820px)");
   const isPhone = () => phoneMq.matches;
   function setDrawer(open) {
@@ -1133,6 +1133,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const next = UNIVERSE_LIST[(i + d + UNIVERSE_LIST.length) % UNIVERSE_LIST.length];
     switchUniverse(next.id); $("uniPick").querySelector('[aria-checked="true"]').focus();
   });
+  S.showMiss = lsGet("screener.showMiss") === true; $("showMiss").checked = S.showMiss;
   S.hidden = new Set(lsGet("screener.hiddenCols") || []);
   S.collapsed = lsGet("screener.collapsed") === true;
   const conv = lsGet("screener.colorConv") === "red-up" ? "red-up" : "green-up";
