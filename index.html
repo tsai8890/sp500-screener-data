@@ -29,6 +29,8 @@ img { max-width: 100%; }
   --pass-soft: #E1F2E7;
   --fail: #B83A26;
   --fail-soft: #FBE6E1;
+  --up: var(--pass);
+  --down: var(--fail);
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-body: "Instrument Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
   --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -47,6 +49,7 @@ img { max-width: 100%; }
   --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17;
   color-scheme: dark;
 }
+:root.red-up { --up: var(--fail); --down: var(--pass); }
 * { box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
@@ -163,6 +166,11 @@ td .co { color: var(--muted); font-size: 12px; display: block; max-width: 160px;
 .colmenu .menu label:hover { background: var(--sunk); }
 .colmenu .menu .inrule { margin-left: auto; font-size: 11px; color: var(--accent); }
 .colmenu .menu .menu-foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; }
+td.num.up { color: var(--up); }
+td.num.down { color: var(--down); }
+#colList { display: flex; flex-direction: column; gap: 2px; }
+.colmenu .menu label.conv { border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+.colmenu .menu label.conv select { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 5px 6px; font-size: 13px; color: var(--ink); }
 .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; }
 td.sec { font-size: 12px; color: var(--muted); }
 td.hit-pass { color: var(--pass); background: var(--pass-soft); }
@@ -260,7 +268,15 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         <div class="tools">
           <details class="colmenu" id="colMenu">
             <summary class="btn sm" id="colSummary">Columns</summary>
-            <div class="menu" id="colList"></div>
+            <div class="menu">
+              <div id="colList"></div>
+              <label class="conv" for="colorConv">Up / down colors
+                <select id="colorConv">
+                  <option value="green-up">Green up, red down (US)</option>
+                  <option value="red-up">Red up, green down (Taiwan)</option>
+                </select>
+              </label>
+            </div>
           </details>
           <input class="search" id="search" type="search" placeholder="Find ticker or name" aria-label="Find ticker or name">
         </div>
@@ -341,6 +357,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     netMargin: { label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
     divYield:  { label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
     price:     { label: "Share price",     head: "Price",    unit: "USD", fmt: (v) => "$" + v.toFixed(2) },
+    chg:       { label: "Day change",      head: "Day chg",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
     mktCap:    { label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
   };
   const OPS = { ">": ">", ">=": "≥", "<": "<", "<=": "≤", "between": "between" };
@@ -521,7 +538,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
 
   const COLUMNS = [
-    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price" },
+    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price" }, { key: "chg" },
     { key: "mktCap" }, { key: "pe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
   const SECTOR_SHORT = {
@@ -606,6 +623,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
+        if (k === "chg" && v) cls += v > 0 ? " up" : " down";
         const cell = el("td", { class: cls });
         if (v == null) cell.append(el("span", { class: "na", text: "n/a" })); else cell.textContent = FIELDS[k].fmt(v);
         row.append(cell);
@@ -829,6 +847,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   if (lastActive && findScreen(lastActive)) { S.activeId = lastActive; S.draft = clone(findScreen(lastActive)); }
   S.hidden = new Set(lsGet("screener.hiddenCols") || []);
   S.collapsed = lsGet("screener.collapsed") === true;
+  const conv = lsGet("screener.colorConv") === "red-up" ? "red-up" : "green-up";
+  $("colorConv").value = conv; document.documentElement.classList.toggle("red-up", conv === "red-up");
+  $("colorConv").addEventListener("change", (e) => {
+    document.documentElement.classList.toggle("red-up", e.target.value === "red-up");
+    lsSet("screener.colorConv", e.target.value);
+  });
   applySide();
   renderStorageNote(); refreshAll();
   store.init();

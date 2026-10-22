@@ -87,12 +87,12 @@ To make the GitHub Pages site read from the server instead, the server needs HTT
   "fundamentalsAsOf": "2026-10-22T17:00:00Z",
   "builtAt": "2026-10-22T17:30:05Z",
   "count": 503,
-  "cols": ["ticker", "name", "sector", "price", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"],
-  "rows": [["AAPL", "Apple Inc.", "Information Technology", 262.1, 3890.2, 39.7, 2.64, 8.1, 24.3, 0.4], ...]
+  "cols": ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"],
+  "rows": [["AAPL", "Apple Inc.", "Information Technology", 262.1, 1.32, 3890.2, 39.7, 2.64, 8.1, 24.3, 0.4], ...]
 }
 ```
 
-Units: `price` in USD; `mktCap` in billions of USD; `revGrowth`, `netMargin`, `divYield` in percent. `pe` and `peg` are null for negative earnings. `revGrowth` is the latest quarter compared with the same quarter a year earlier. `peg` uses the earnings growth implied by Yahoo's trailing PEG.
+Units: `price` in USD; `chg` is the % change from the previous session's close; `mktCap` in billions of USD; `revGrowth`, `netMargin`, `divYield` in percent. `pe` and `peg` are null for negative earnings. `revGrowth` is the latest quarter compared with the same quarter a year earlier. `peg` uses the earnings growth implied by Yahoo's trailing PEG.
 
 ## Notes
 

@@ -45,6 +45,7 @@ def extract(info: dict) -> dict | None:
         "netMargin": num(info.get("profitMargins"), 100, 1),
         "divRate": num(div_rate, nd=4),
         "price": num(price, nd=4),                   # price when these fundamentals were read
+        "prevClose": num(info.get("regularMarketPreviousClose") or info.get("previousClose"), nd=4),
     }
 
 
