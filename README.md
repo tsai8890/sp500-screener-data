@@ -1,6 +1,6 @@
 # S&P 500 Screener
 
-A stock screener for the S&P 500. You build screens from rules on price, P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results.
+A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results.
 
 **Live site: https://tsai8890.github.io/sp500-screener-data/**
 
@@ -20,10 +20,10 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 | Path | What it is |
 |---|---|
 | `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. |
-| `backend/universe.py` | S&P 500 constituents from Wikipedia (GitHub CSV fallback). |
+| `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (Wikipedia, iShares IWB holdings fallback). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
 | `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
 | `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
-| `backend/build.py` | Merges both into `data/sp500.json` and recalculates the price-based metrics. |
+| `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
 | `backend/update.py` | Command line used by GitHub Actions. |
 | `backend/server.py` | Always-on server: scheduler plus HTTP (standard library only). |
 | `backend/screens_db.py` | Saved screens in SQLite (`data/screener.db`), used by the server's `/api/screens`. |
@@ -45,7 +45,7 @@ python -m backend.update prices --force   # prices even if the market is closed
 python -m backend.server                  # always-on server: open http://localhost:8000
 ```
 
-Server endpoints: `/` (the page), `/api/sp500` (data), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete).
+Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete).
 
 ## Where saved screens live
 
@@ -91,7 +91,7 @@ To make the GitHub Pages site read from the server instead, the server needs HTT
 
 ## Data format
 
-`data/sp500.json` stores rows as arrays to stay small:
+Fundamentals and prices are fetched once for every stock in any list (about 1,000 stocks; nearly all S&P 500 names are also in the Russell 1000). Each `data/<list>.json` stores rows as arrays to stay small:
 
 ```json
 {

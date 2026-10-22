@@ -64,6 +64,9 @@ header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-cont
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0; line-height: 1.05; text-wrap: balance; }
 .sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
 .datasrc { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.uni-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--muted); }
+select.uni { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; cursor: pointer; }
+select.uni:hover { border-color: var(--accent); }
 .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
 .tag.live { background: var(--accent-soft); color: var(--accent); }
 
@@ -199,6 +202,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   .sub { font-size: 13px; }
   header.top { gap: 8px; }
   .datasrc { font-size: 12px; }
+  select.uni { font-size: 16px; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
 
   /* screens + rules slide in from the left */
@@ -264,10 +268,10 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>S&amp;P 500 Screener</h1>
+      <h1 id="pageTitle">S&amp;P 500 Screener</h1>
       <p class="sub">Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.</p>
     </div>
-    <div class="datasrc"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">50 large S&amp;P 500 names, illustrative figures</span></div>
+    <div class="datasrc"><label class="uni-label" for="universeSel">Stocks</label><select id="universeSel" class="uni"></select><span class="tag" id="dataTag">Example data</span><span id="dataDesc">50 large S&amp;P 500 names, illustrative figures</span></div>
   </header>
 
   <div class="layout" id="layout">
@@ -461,7 +465,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const S = {
     data: SAMPLE, source: "sample", live: null, csv: null,
     userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
-    sort: { key: "mktCap", dir: "desc" }, showMiss: true, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
+    universe: "sp500", sort: { key: "mktCap", dir: "desc" }, showMiss: true, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
   };
   const $ = (id) => document.getElementById(id);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -475,7 +479,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   // 1. "server": the Python server's SQLite database via /api/screens
   // 2. "cloud":  inside Claude, the page's private per-viewer database
   // 3. "local":  this browser (localStorage), with JSON export/import
-  const screensUrl = () => API_URL.replace(/sp500\/?$/, "screens");
+  const screensUrl = () => API_ROOT + "screens";
   const authHeaders = () => { const t = lsGet("screener.token"); return t ? { Authorization: "Bearer " + t } : {}; };
   async function api(method, url, body) {
     const r = await fetch(url, { method, cache: "no-store", headers: { "Content-Type": "application/json", ...authHeaders() }, body: body ? JSON.stringify(body) : undefined });
@@ -845,12 +849,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const when = (s) => new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
       tag.textContent = ageDays > 3 ? "Live data · out of date" : S.feed === "api" ? "Live · every minute" : "Live data";
       desc.textContent = S.live.fundamentalsAsOf
-        ? `${S.data.length} S&P 500 stocks · prices ${when(S.live.pricesAsOf || S.live.asOf)} · fundamentals ${when(S.live.fundamentalsAsOf)}`
-        : `${S.data.length} S&P 500 stocks · Yahoo Finance · updated ${when(S.live.asOf)}`;
+        ? `${S.data.length} stocks · prices ${when(S.live.pricesAsOf || S.live.asOf)} · fundamentals ${when(S.live.fundamentalsAsOf)}`
+        : `${S.data.length} stocks · Yahoo Finance · updated ${when(S.live.asOf)}`;
     } else if (S.source === "csv") {
       tag.textContent = "Your data"; desc.textContent = `${S.data.length} stocks from your import`;
     } else {
-      tag.textContent = "Example data"; desc.textContent = `${S.data.length} large S&P 500 names, illustrative figures`;
+      tag.textContent = "Example data";
+      desc.textContent = S.universe === "sp500" || S.loadFailed
+        ? `${S.data.length} large S&P 500 names, illustrative figures` + (S.universe !== "sp500" ? ` (no ${uName()} data available here yet)` : "")
+        : `Loading ${uName()}… showing example S&P 500 names meanwhile`;
     }
     $("useSample").textContent = S.live ? "Back to live data" : "Back to example data";
     $("footNote").textContent = S.source === "live"
@@ -859,15 +866,45 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); }
 
-  // Live dataset, newest copy wins. Three sources, tried in this order:
-  //   1. the always-on Python server's API (api/sp500, or the URL in
-  //      <meta name="screener-api">), polled every minute;
-  //   2. data/sp500.json next to the page (GitHub Pages), polled every 5 minutes;
-  //   3. inside Claude, the page's database at market/sp500.
-  const API_URL = (document.querySelector('meta[name="screener-api"]') || {}).content || "api/sp500";
-  let pollTimer = null;
+  // ---------- Stock universes ----------
+  let UNIVERSE_LIST = [{ id: "sp500", name: "S&P 500" }, { id: "russell1000", name: "Russell 1000" }];
+  const uName = (id = S.universe) => (UNIVERSE_LIST.find((u) => u.id === id) || { name: id }).name;
+  function renderUniverseSel() {
+    const sel = $("universeSel"); sel.textContent = "";
+    UNIVERSE_LIST.forEach((u) => sel.append(el("option", { value: u.id, text: u.name + (u.count ? ` (${u.count})` : "") })));
+    sel.value = S.universe;
+    $("pageTitle").textContent = uName() + " Screener";
+  }
+  function loadIndex() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    getJson("data/index.json").then((j) => {
+      const list = j && Array.isArray(j.universes) ? j.universes.filter((u) => u && u.id && u.name) : [];
+      if (!list.length) return;
+      UNIVERSE_LIST = list;
+      if (!list.some((u) => u.id === S.universe)) return switchUniverse(list[0].id);
+      renderUniverseSel();
+    }).catch(() => {});
+  }
+  function switchUniverse(id) {
+    if (!UNIVERSE_LIST.some((u) => u.id === id)) return;
+    S.universe = id; lsSet("screener.universe", id);
+    S.live = null; S.feed = null; S.loadFailed = false; fetchGen++;
+    clearInterval(pollTimer);
+    renderUniverseSel(); refreshAll();
+    startFetching(); subscribeDb();
+  }
+
+  // Live dataset for the chosen universe, newest copy wins. Sources, in order:
+  //   1. the always-on Python server's API (api/data/<id>; <meta name="screener-api">
+  //      can point at another server's api/ root), polled every minute;
+  //   2. data/<id>.json next to the page (GitHub Pages), polled every 5 minutes;
+  //   3. inside Claude, the page's database at market/<id>.
+  const API_ROOT = ((document.querySelector('meta[name="screener-api"]') || {}).content || "api/").replace(/sp500\/?$/, "");
+  const apiUrl = (id) => API_ROOT + "data/" + id;
+  let pollTimer = null, fetchGen = 0, dbRef = null, dbUnsub = null;
   function applyLive(d) {
     if (!d || !Array.isArray(d.rows) || !Array.isArray(d.cols)) return;
+    if ((d.universeId || "sp500") !== S.universe) return;   // a late answer for another universe
     const stamp = d.builtAt || d.asOf;
     if (S.live && S.live.stamp && stamp && stamp <= S.live.stamp) return;
     const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return o; }).filter((o) => o.ticker);
@@ -885,18 +922,30 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function startFetching() {
     if (!/^https?:$/.test(location.protocol)) return;
-    getJson(API_URL)
-      .then((d) => { S.feed = "api"; applyLive(d); poll(API_URL, 60 * 1000); })
-      .catch(() => getJson("data/sp500.json")
-        .then((d) => { S.feed = "file"; applyLive(d); poll("data/sp500.json", 5 * 60 * 1000); })
-        .catch(() => {}));
+    const gen = fetchGen, id = S.universe, file = "data/" + id + ".json";
+    const failed = () => { if (gen === fetchGen && !S.live && !window.claude) { S.loadFailed = true; renderData(); } };
+    getJson(apiUrl(id))
+      .then((d) => { if (gen !== fetchGen) return; S.feed = "api"; applyLive(d); poll(apiUrl(id), 60 * 1000); })
+      .catch(() => getJson(file)
+        .then((d) => { if (gen !== fetchGen) return; S.feed = "file"; applyLive(d); poll(file, 5 * 60 * 1000); })
+        .catch(failed));
+  }
+  function subscribeDb() {
+    if (dbUnsub) { dbUnsub(); dbUnsub = null; }
+    if (!dbRef) return;
+    const id = S.universe;
+    dbUnsub = dbRef.doc("market/" + id).onSnapshot((snap) => {
+      const d = snap.exists ? snap.data() : null;
+      if (d && !d.universeId && id === "sp500") d.universeId = "sp500";
+      applyLive(d);
+    }, () => {});
   }
   async function initLive() {
     startFetching();
     const c = window.claude; if (!c || !c.use) return;
     try {
-      const db = await c.use("db"); if (!db) return;
-      db.doc("market/sp500").onSnapshot((snap) => { applyLive(snap.exists ? snap.data() : null); }, () => {});
+      dbRef = await c.use("db"); if (!dbRef) return;
+      subscribeDb();
     } catch (e) { /* keep example data */ }
   }
 
@@ -1064,6 +1113,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   if (Array.isArray(savedData) && savedData.length) S.csv = savedData;
   const lastActive = lsGet("screener.active");
   if (lastActive && findScreen(lastActive)) { S.activeId = lastActive; S.draft = clone(findScreen(lastActive)); }
+  const savedU = lsGet("screener.universe");
+  if (savedU && UNIVERSE_LIST.some((u) => u.id === savedU)) S.universe = savedU;
+  renderUniverseSel();
+  $("universeSel").addEventListener("change", (e) => switchUniverse(e.target.value));
   S.hidden = new Set(lsGet("screener.hiddenCols") || []);
   S.collapsed = lsGet("screener.collapsed") === true;
   const conv = lsGet("screener.colorConv") === "red-up" ? "red-up" : "green-up";
@@ -1077,6 +1130,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   loadBuiltins();
   store.init();
   initLive();
+  loadIndex();
 })();
 </script>
 </body>

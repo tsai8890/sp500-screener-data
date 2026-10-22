@@ -13,6 +13,13 @@ DATA_DIR = os.environ.get("SCREENER_DATA_DIR", os.path.join(ROOT, "data"))
 FUNDAMENTALS_PATH = os.path.join(DATA_DIR, "fundamentals.json")
 PRICES_PATH = os.path.join(DATA_DIR, "prices.json")
 SP500_PATH = os.path.join(DATA_DIR, "sp500.json")
+UNIVERSES_PATH = os.path.join(DATA_DIR, "universes.json")   # cached index constituents
+INDEX_PATH = os.path.join(DATA_DIR, "index.json")           # list of universes for the page
+
+
+def universe_path(uid: str) -> str:
+    """Combined data file the page reads for one universe, e.g. data/russell1000.json."""
+    return os.path.join(DATA_DIR, f"{uid}.json")
 
 NY = ZoneInfo("America/New_York")
 MARKET_OPEN = dtime(9, 30)

@@ -1,7 +1,13 @@
-"""Merge fundamentals and the latest prices into data/sp500.json (what the page reads)."""
+"""Merge fundamentals and the latest prices into one data file per universe.
+
+Writes data/<universe>.json (e.g. data/sp500.json, data/russell1000.json),
+which the page reads, plus data/index.json listing the universes.
+"""
 from __future__ import annotations
 
-from .common import FUNDAMENTALS_PATH, PRICES_PATH, SP500_PATH, iso, num, read_json, utc_now, write_json
+from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, UNIVERSES_PATH, iso, num, read_json,
+                     universe_path, utc_now, write_json)
+from .universe import DEFAULT, UNIVERSES
 
 COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"]
 
@@ -20,9 +26,10 @@ def row(ticker: str, f: dict, price: float | None) -> list:
             f.get("revGrowth"), f.get("netMargin"), num(div, nd=2)]
 
 
-def combine(fund: dict, prices: dict | None) -> dict:
+def combine(fund: dict, prices: dict | None, tickers: list[str] | None = None,
+            uid: str = DEFAULT, name: str = "S&P 500") -> dict:
     stocks = fund.get("stocks", {})
-    order = fund.get("order") or list(stocks)
+    order = tickers if tickers is not None else (fund.get("order") or list(stocks))
     live = (prices or {}).get("prices", {})
     rows = [row(t, stocks[t], live.get(t)) for t in order if t in stocks]
     return {
@@ -30,19 +37,31 @@ def combine(fund: dict, prices: dict | None) -> dict:
         "pricesAsOf": (prices or {}).get("asOf"),
         "fundamentalsAsOf": fund.get("asOf"),
         "builtAt": iso(utc_now()),
-        "source": "Yahoo Finance via yfinance; constituents from Wikipedia",
-        "universe": "S&P 500",
+        "source": "Yahoo Finance via yfinance; index constituents from Wikipedia",
+        "universeId": uid,
+        "universe": name,
         "count": len(rows),
-        "stale": fund.get("stale", []),
+        "stale": [t for t in fund.get("stale", []) if t in set(order)],
         "cols": COLS,
         "rows": rows,
     }
 
 
-def build(path: str = SP500_PATH, fund: dict | None = None, prices: dict | None = None) -> dict:
+def build(fund: dict | None = None, prices: dict | None = None, universes: dict | None = None) -> dict[str, dict]:
+    """Write one data file per universe; returns {universe id: data}."""
     fund = fund or read_json(FUNDAMENTALS_PATH)
     if not fund:
         raise RuntimeError("No fundamentals yet: run the fundamentals update first.")
-    out = combine(fund, prices if prices is not None else read_json(PRICES_PATH))
-    write_json(path, out)
-    return out
+    prices = prices if prices is not None else read_json(PRICES_PATH)
+    lists = (universes or read_json(UNIVERSES_PATH) or {}).get("universes", {})
+    if not lists:  # no cached lists yet: everything we have is the default universe
+        lists = {DEFAULT: {"name": UNIVERSES[DEFAULT][0], "stocks": [[t] for t in fund.get("order", [])]}}
+    outs, index = {}, []
+    for uid in [u for u in UNIVERSES if u in lists]:
+        meta = lists[uid]
+        out = combine(fund, prices, [s[0] for s in meta["stocks"]], uid, meta.get("name", uid))
+        write_json(universe_path(uid), out)
+        outs[uid] = out
+        index.append({"id": uid, "name": out["universe"], "count": out["count"], "file": f"data/{uid}.json"})
+    write_json(INDEX_PATH, {"default": DEFAULT, "builtAt": iso(utc_now()), "universes": index})
+    return outs

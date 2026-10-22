@@ -18,7 +18,7 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import build, common, fundamentals, prices, screens_db  # noqa: E402
+from backend import build, common, fundamentals, prices, screens_db, universe  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -124,6 +124,36 @@ class Screens(unittest.TestCase):
                           ("ok", {"rules": [{"field": "pe", "op": ">", "value": "abc"}]})]:
             with self.assertRaises(screens_db.InvalidScreen):
                 screens_db.validate(sid, body)
+
+
+class Universes(unittest.TestCase):
+    def test_clean_and_union(self):
+        df = pd.DataFrame({"Symbol": ["AAPL", "brk.b", "AAPL", None], "Company": ["Apple", "Berkshire", "dup", "x"],
+                           "GICS Sector": ["IT", "Fin", "IT", None]})
+        rows = universe._clean(df, "Symbol", "Company", "GICS Sector")
+        self.assertEqual(rows, [("AAPL", "Apple", "IT"), ("BRK.B", "Berkshire", "Fin")])
+        cache = {"universes": {"russell1000": {"stocks": [["AAPL", "Apple R", "x"], ["CRWD", "CrowdStrike", "IT"]]},
+                               "sp500": {"stocks": [["AAPL", "Apple Inc.", "IT"], ["MSFT", "Microsoft", "IT"]]}}}
+        self.assertEqual(universe.union(cache), [("AAPL", "Apple Inc.", "IT"), ("MSFT", "Microsoft", "IT"),
+                                                 ("CRWD", "CrowdStrike", "IT")])
+
+    def test_build_writes_one_file_per_universe(self):
+        f = fundamentals.extract(AAPL_INFO)
+        fund = {"asOf": "t", "order": ["AAPL", "CRWD"], "stocks": {"AAPL": {"name": "Apple", "sector": "IT", **f},
+                                                                    "CRWD": {"name": "Crowd", "sector": "IT", **f}}}
+        lists = {"universes": {"sp500": {"name": "S&P 500", "stocks": [["AAPL"]]},
+                               "russell1000": {"name": "Russell 1000", "stocks": [["AAPL"], ["CRWD"]]}}}
+        with tempfile.TemporaryDirectory() as d:
+            orig = (build.universe_path, build.INDEX_PATH)
+            build.universe_path, build.INDEX_PATH = (lambda u: os.path.join(d, u + ".json")), os.path.join(d, "index.json")
+            try:
+                outs = build.build(fund=fund, prices={"prices": {}}, universes=lists)
+            finally:
+                build.universe_path, build.INDEX_PATH = orig
+            self.assertEqual({u: o["count"] for u, o in outs.items()}, {"sp500": 1, "russell1000": 2})
+            idx = common.read_json(os.path.join(d, "index.json"))
+            self.assertEqual([u["id"] for u in idx["universes"]], ["sp500", "russell1000"])
+            self.assertEqual(common.read_json(os.path.join(d, "russell1000.json"))["universe"], "Russell 1000")
 
 
 class MarketHours(unittest.TestCase):

@@ -30,9 +30,9 @@ def main(argv: list[str] | None = None) -> int:
                 print("Market closed: prices not fetched.")
                 if args.what == "prices":
                     return 0
-        out = build.build()
-        print(f"Built sp500.json: {out['count']} stocks, prices {out['pricesAsOf']}, "
-              f"fundamentals {out['fundamentalsAsOf']}")
+        for uid, out in build.build().items():
+            print(f"Built {uid}.json: {out['count']} stocks, prices {out['pricesAsOf']}, "
+                  f"fundamentals {out['fundamentalsAsOf']}")
         return 0
     except RuntimeError as e:
         print(f"Update failed: {e}", file=sys.stderr)

@@ -8,9 +8,11 @@ What it does:
   * after each update, rebuilds data/sp500.json and keeps it in memory
   * serves the page and the data:
         GET /                  the screener page (index.html)
-        GET /api/sp500         latest combined data (JSON, never cached)
+        GET /api/data/<id>     latest data for one universe: sp500, russell1000 (JSON, never cached)
+        GET /api/index         the universes available
+        GET /api/sp500         same as /api/data/sp500 (kept for older pages)
         GET /api/health        update times, last errors
-        GET /data/sp500.json   same data as a file, for the page's fallback
+        GET /data/<id>.json    same data as a file, for the page's fallback
         GET /data/screens.json built-in screens
         GET    /api/screens          saved screens (SQLite, data/screener.db)
         PUT    /api/screens/<id>     create or replace one screen (JSON body)
@@ -34,8 +36,9 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import build, fundamentals, prices, screens_db
-from .common import (FUNDAMENTALS_PATH, PRICES_PATH, ROOT, SP500_PATH, iso, market_session,
-                     parse_iso, read_json, utc_now)
+from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
+                     parse_iso, read_json, universe_path, utc_now)
+from .universe import UNIVERSES
 
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8000"))
@@ -52,18 +55,25 @@ class State:
         self.lock = threading.Lock()
         self.fund = read_json(FUNDAMENTALS_PATH)
         self.prices = read_json(PRICES_PATH)
-        self.payload = b""
+        self.payloads: dict[str, bytes] = {}   # universe id -> JSON bytes
+        self.index = b""
         self.health = {"startedAt": iso(utc_now()), "fundamentals": {}, "prices": {}}
-        data = read_json(SP500_PATH)
-        if data:
-            self.payload = json.dumps(data, separators=(",", ":")).encode()
+        for uid in UNIVERSES:
+            data = read_json(universe_path(uid))
+            if data:
+                self.payloads[uid] = json.dumps(data, separators=(",", ":")).encode()
+        idx = read_json(INDEX_PATH)
+        if idx:
+            self.index = json.dumps(idx).encode()
 
     def rebuild(self) -> None:
         if not self.fund:
             return
-        out = build.build(fund=self.fund, prices=self.prices)
+        outs = build.build(fund=self.fund, prices=self.prices)
+        idx = read_json(INDEX_PATH)
         with self.lock:
-            self.payload = json.dumps(out, separators=(",", ":")).encode()
+            self.payloads = {u: json.dumps(o, separators=(",", ":")).encode() for u, o in outs.items()}
+            self.index = json.dumps(idx).encode() if idx else b""
 
     def record(self, job: str, ok: bool, seconds: float, err: str | None = None) -> None:
         h = self.health[job]
@@ -156,12 +166,25 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
-        if path in ("/api/sp500", "/data/sp500.json"):
+        uid = None
+        if path == "/api/sp500":
+            uid = "sp500"
+        elif path.startswith("/api/data/"):
+            uid = path[len("/api/data/"):]
+        elif path.startswith("/data/") and path.endswith(".json") and path[6:-5] in UNIVERSES:
+            uid = path[6:-5]
+        if uid is not None:
+            if uid not in UNIVERSES:
+                return self._json(404, {"error": f"Unknown universe {uid!r}", "universes": list(UNIVERSES)})
             with STATE.lock:
-                body = STATE.payload
+                body = STATE.payloads.get(uid)
             if not body:
                 return self._send(503, b'{"error":"No data yet, first update still running"}', "application/json")
             return self._send(200, body, "application/json")
+        if path in ("/api/index", "/data/index.json"):
+            with STATE.lock:
+                body = STATE.index
+            return self._send(200, body, "application/json") if body else self._json(503, {"error": "No data yet"})
         if path == "/api/screens":
             return self._json(200, {"screens": screens_db.list_screens(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/health":

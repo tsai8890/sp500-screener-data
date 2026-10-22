@@ -14,7 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 import yfinance as yf
 
 from .common import FUNDAMENTALS_PATH, iso, num, read_json, utc_now, write_json
-from .universe import constituents, yahoo_symbol
+from . import universe
+from .universe import yahoo_symbol
 
 WORKERS = 8  # parallel requests; higher values get rate-limited by Yahoo
 
@@ -63,19 +64,19 @@ def fetch_one(ticker: str, tries: int = 4) -> dict | None:
 
 
 def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS) -> dict:
-    """Fetch fundamentals for every constituent and write fundamentals.json.
+    """Fetch fundamentals for every stock in any universe and write fundamentals.json.
 
     A stock that fails keeps its previous values (listed under "stale"). If
     fewer than 80% come back fresh, nothing is written and RuntimeError is raised.
     """
     started = time.time()
     prev = (read_json(path) or {}).get("stocks", {})
-    universe = constituents()
+    stocks_in = universe.union(universe.load())
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(lambda row: fetch_one(row[0]), universe))
+        results = list(pool.map(lambda row: fetch_one(row[0]), stocks_in))
 
     stocks, stale, missing = {}, [], []
-    for (ticker, name, sector), got in zip(universe, results):
+    for (ticker, name, sector), got in zip(stocks_in, results):
         if got is None:
             if ticker in prev:
                 stocks[ticker] = {**prev[ticker], "name": name, "sector": sector}
@@ -86,12 +87,12 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS) -> dict:
         stocks[ticker] = {"name": name, "sector": sector, **got}
 
     fresh = len(stocks) - len(stale)
-    if fresh < 0.8 * len(universe):
-        raise RuntimeError(f"Only {fresh}/{len(universe)} stocks fetched fresh; keeping the previous file.")
+    if fresh < 0.8 * len(stocks_in):
+        raise RuntimeError(f"Only {fresh}/{len(stocks_in)} stocks fetched fresh; keeping the previous file.")
 
     out = {
         "asOf": iso(utc_now()),
-        "order": [t for t, _, _ in universe if t in stocks],
+        "order": [t for t, _, _ in stocks_in if t in stocks],
         "stale": stale,
         "missing": missing,
         "stocks": stocks,
