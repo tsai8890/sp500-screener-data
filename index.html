@@ -222,7 +222,9 @@ th { vertical-align: bottom; }
 .colmenu .menu label.conv { border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
 .colmenu .menu label.conv select { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 5px 6px; font-size: 13px; color: var(--ink); }
 .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; }
-td.sec { font-size: 12px; color: var(--muted); max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
+td.sec { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+/* Sector shrinks to its content and never takes the table's spare width. */
+th.col-sector, td.sec { width: 64px; max-width: 64px; padding-left: 8px; padding-right: 8px; }
 td.hit-pass { color: var(--pass); background: var(--pass-soft); }
 td.hit-fail { color: var(--fail); background: var(--fail-soft); }
 tr.miss td:not(.hit-fail) { opacity: 0.55; }
@@ -792,8 +794,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     { key: "mktCap" }, { key: "pe" }, { key: "fpe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
   const SECTOR_SHORT = {
-    "Information Technology": "Tech", "Communication Services": "Comm",
-    "Consumer Discretionary": "Cons Disc", "Consumer Staples": "Staples", "Health Care": "Health",
+    "Information Technology": "Tech", "Communication Services": "Comm", "Consumer Discretionary": "Disc",
+    "Consumer Staples": "Staples", "Health Care": "Health", "Financials": "Fin", "Industrials": "Indust",
+    "Real Estate": "Real Est", "Utilities": "Util", "Materials": "Matls", "Energy": "Energy",
   };
   const colLabel = (c) => c.menu || c.head || FIELDS[c.key].label;
   const visibleCols = () => COLUMNS.filter((c) => c.key === "ticker" || !S.hidden.has(c.key));
@@ -887,7 +890,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const label = c.head || FIELDS[c.key].head;
       const keys = c.key === "price" ? ["price", "chg"] : [c.key];
       const sorted = keys.includes(S.sort.key);
-      const th = el("th", { scope: "col", "aria-sort": sorted ? (S.sort.dir === "asc" ? "ascending" : "descending") : "none" }, sortBtn(c.key, label));
+      const th = el("th", { scope: "col", class: "col-" + c.key, "aria-sort": sorted ? (S.sort.dir === "asc" ? "ascending" : "descending") : "none" }, sortBtn(c.key, label));
       if (c.key === "price") th.append(sortBtn("chg", "Day chg", "subsort"));
       tr.append(th);
     });
