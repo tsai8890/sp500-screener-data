@@ -76,6 +76,15 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .side-tabs .m-only { flex: none; margin-left: 4px; }
 .star { background: none; border: 0; padding: 0 6px 0 0; cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); vertical-align: 1px; }
 .star:hover, .star.on { color: var(--star); }
+.wl-pop { position: absolute; z-index: 40; width: min(270px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18); padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.wl-pop .pop-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--muted); margin: 0 0 4px; padding: 0 6px; }
+.wl-pop .pop-title b { color: var(--ink); font-family: var(--font-data); letter-spacing: 0; }
+.wl-pop label { display: flex; align-items: center; gap: 9px; padding: 7px 6px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.wl-pop label:hover { background: var(--sunk); }
+.wl-pop label .cnt { margin-left: auto; font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.wl-pop .pop-foot { border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 6px 2px; }
+.wl-pop form { display: flex; gap: 6px; }
+.wl-pop form input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 8px; }
 .add-row { display: flex; gap: 8px; }
 .add-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-size: 14px; text-transform: uppercase; }
 .add-row input::placeholder { text-transform: none; }
@@ -237,7 +246,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   .drawer-foot .btn { width: 100%; padding: 11px; }
   .screen-btn { padding: 10px; }
   .rule select, .rule input { padding: 8px; font-size: 16px; }   /* 16px stops iOS zooming on focus */
-  .name-in, .search, textarea, .add-row input { font-size: 16px; }
+  .name-in, .search, textarea, .add-row input, .wl-pop form input { font-size: 16px; }
 
   .summary { padding: 14px; gap: 10px 18px; }
   .big { font-size: 32px; }
@@ -382,6 +391,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <div class="drawer-foot m-only"><button class="btn primary" id="showResults" type="button">Show results</button></div>
     </aside>
     <div class="scrim" id="scrim"></div>
+    <div class="wl-pop" id="wlPop" role="dialog" aria-labelledby="wlPopTitle" hidden></div>
 
     <main class="panel" aria-label="Results">
       <div class="statusbar" role="status"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">illustrative figures</span></div>
@@ -843,7 +853,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
 
     // header
     const ruleFields = watch ? new Set() : new Set(validRules(d).map((r) => r.field));
-    const wl = activeWL(), inWatch = new Set(wl.items.map((i) => i.ticker));
+    const wl = activeWL(), listsOf = watchIndex();
     const tr = el("tr");
     const sortBtn = (key, label, cls) => {
       const isSort = S.sort.key === key;
@@ -876,10 +886,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const row = el("tr", { class: isMiss ? "miss" : "" });
       const href = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
       const link = (cls, text) => el("a", { class: "qlink " + cls, href, target: "_blank", rel: "noopener noreferrer", title: "Open " + r.s.ticker + " on Yahoo Finance", text });
-      const on = inWatch.has(r.s.ticker);
-      const star = el("button", { class: "star" + (on ? " on" : ""), type: "button", "aria-pressed": String(on),
-        "aria-label": (on ? "Remove " : "Add ") + r.s.ticker + (on ? " from " : " to ") + wl.name, title: (on ? "Remove from " : "Add to ") + wl.name,
-        text: on ? "★" : "☆", onclick: () => toggleWatch(r.s.ticker, r.s.price) });
+      const inLists = listsOf.get(r.s.ticker) || [], on = inLists.length > 0;
+      const star = el("button", { class: "star" + (on ? " on" : ""), type: "button", "aria-haspopup": "dialog", "data-t": r.s.ticker,
+        "aria-label": `Watchlists for ${r.s.ticker}` + (on ? ` (in ${inLists.join(", ")})` : ""),
+        title: on ? "In " + inLists.join(", ") : "Add to a watchlist",
+        text: on ? "★" : "☆", onclick: (e) => { e.stopPropagation(); openWatchPop(e.currentTarget, r.s.ticker, r.s.price); } });
       const first = el("td", { class: "c-stock" }, star, link("tk", r.s.ticker));
       if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
       if (r.s.name) first.append(link("co", r.s.name));
@@ -978,6 +989,70 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (i >= 0) { wl.items.splice(i, 1); wtoast(`Removed ${ticker} from ${wl.name}`); }
     else { wl.items.push({ ticker, addedAt: Date.now(), addedPrice: price || null }); wtoast(`Added ${ticker} to ${wl.name}`); }
     await saveWL(wl);
+  }
+  // ticker -> names of the watchlists it is in
+  function watchIndex() {
+    const m = new Map();
+    S.watchlists.forEach((w) => w.items.forEach((i) => { if (!m.has(i.ticker)) m.set(i.ticker, []); m.get(i.ticker).push(w.name); }));
+    return m;
+  }
+  // Star picker: choose which watchlists a stock belongs to.
+  function openWatchPop(anchor, ticker, price) {
+    activeWL();   // make sure there is at least one list to offer
+    S.pop = { ticker, price, adding: false };
+    renderWatchPop();
+    const pop = $("wlPop"), r = anchor.getBoundingClientRect();
+    pop.hidden = false;
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    let left = r.left + window.scrollX, top = r.bottom + window.scrollY + 6;
+    left = Math.max(window.scrollX + 16, Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 16));
+    if (r.bottom + h + 12 > window.innerHeight && r.top > h + 12) top = r.top + window.scrollY - h - 6;   // open upwards near the bottom
+    pop.style.left = left + "px"; pop.style.top = top + "px";
+    const first = pop.querySelector("input"); if (first) first.focus();
+  }
+  function closeWatchPop(refocus) {
+    if (!S.pop) return;
+    const t = S.pop.ticker; S.pop = null; $("wlPop").hidden = true;
+    if (refocus) { const b = document.querySelector(`.star[data-t="${CSS.escape(t)}"]`); if (b) b.focus(); }
+  }
+  function renderWatchPop() {
+    const pop = $("wlPop"), { ticker, price } = S.pop;
+    pop.textContent = "";
+    pop.append(el("p", { class: "pop-title", id: "wlPopTitle" }, "Watchlists for ", el("b", { text: ticker })));
+    S.watchlists.forEach((w) => {
+      const has = w.items.some((i) => i.ticker === ticker);
+      const cb = el("input", { type: "checkbox", id: "wp-" + w.id });
+      cb.checked = has;
+      cb.addEventListener("change", async () => {
+        const i = w.items.findIndex((x) => x.ticker === ticker);
+        if (cb.checked && i < 0) w.items.push({ ticker, addedAt: Date.now(), addedPrice: price || null });
+        if (!cb.checked && i >= 0) w.items.splice(i, 1);
+        wtoast(`${cb.checked ? "Added" : "Removed"} ${ticker} ${cb.checked ? "to" : "from"} ${w.name}`);
+        await saveWL(w);
+        if (S.pop) { renderWatchPop(); const again = $("wp-" + w.id); if (again) again.focus(); }
+      });
+      pop.append(el("label", { for: "wp-" + w.id }, cb, el("span", { text: w.name || "Watchlist" }), el("span", { class: "cnt", text: String(w.items.length) })));
+    });
+    const foot = el("div", { class: "pop-foot" });
+    if (S.pop.adding) {
+      const inp = el("input", { id: "wpNewName", placeholder: "New watchlist name", maxlength: "100", autocomplete: "off" });
+      const form = el("form", null, inp, el("button", { class: "btn sm primary", type: "submit", text: "Create" }));
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = inp.value.trim() || `Watchlist ${S.watchlists.length + 1}`;
+        const w = { id: "w-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, created: Date.now(),
+          items: [{ ticker, addedAt: Date.now(), addedPrice: price || null }] };
+        S.pop.adding = false;
+        wtoast(`Added ${ticker} to ${name}`);
+        await saveWL(w);
+        if (S.pop) renderWatchPop();
+      });
+      foot.append(form);
+      setTimeout(() => inp.focus(), 0);
+    } else {
+      foot.append(el("button", { class: "linkbtn", type: "button", text: "+ New watchlist", onclick: (e) => { e.stopPropagation(); S.pop.adding = true; renderWatchPop(); } }));
+    }
+    pop.append(foot);
   }
   let tickerListKey = "";
   function renderWatchSide() {
@@ -1265,7 +1340,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   ["closeDrawer", "showResults", "scrim"].forEach((id) => $(id).addEventListener("click", () => setDrawer(false)));
   phoneMq.addEventListener("change", applySide);
   document.addEventListener("click", (e) => { const m = $("colMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("colMenu").open = false; if (S.drawer) setDrawer(false); } });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (S.pop) return closeWatchPop(true);
+    $("colMenu").open = false; if (S.drawer) setDrawer(false);
+  });
+  document.addEventListener("click", (e) => { if (S.pop && !$("wlPop").contains(e.target)) closeWatchPop(false); });
+  window.addEventListener("resize", () => closeWatchPop(false));
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
   $("tabScreener").addEventListener("click", () => setTab("screener"));
   $("tabWatch").addEventListener("click", () => setTab("watch"));
