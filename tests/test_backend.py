@@ -18,7 +18,7 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import build, common, fundamentals, prices  # noqa: E402
+from backend import build, common, fundamentals, prices, screens_db  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -101,6 +101,29 @@ class Prices(unittest.TestCase):
                 prices._download = orig
             self.assertEqual(out["prices"], {"BRK.B": 100.0, "AAPL": 100.0, "XOM": 110.0})
             self.assertEqual(out["fresh"], 2)
+
+
+class Screens(unittest.TestCase):
+    def test_crud(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "s.db")
+            body = {"name": "Cheap growth", "sectors": ["Energy"], "created": 5,
+                    "rules": [{"field": "pe", "op": "between", "value": "10", "value2": 20.5}]}
+            out = screens_db.upsert("s-1", body, path=db)
+            self.assertEqual(out["rules"], [{"field": "pe", "op": "between", "value": 10, "value2": 20.5}])
+            self.assertEqual(out["created"], 5)
+            screens_db.upsert("s-1", {**body, "name": "Renamed"}, path=db)
+            got = screens_db.list_screens(path=db)
+            self.assertEqual([(s["id"], s["name"], s["created"]) for s in got], [("s-1", "Renamed", 5)])
+            self.assertTrue(screens_db.delete("s-1", path=db))
+            self.assertEqual(screens_db.list_screens(path=db), [])
+
+    def test_rejects_bad_input(self):
+        for sid, body in [("../x", {}), ("ok", {"rules": [{"field": "evil", "op": ">", "value": 1}]}),
+                          ("ok", {"rules": [{"field": "pe", "op": "drop", "value": 1}]}),
+                          ("ok", {"rules": [{"field": "pe", "op": ">", "value": "abc"}]})]:
+            with self.assertRaises(screens_db.InvalidScreen):
+                screens_db.validate(sid, body)
 
 
 class MarketHours(unittest.TestCase):

@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+data/screener.db
+data/*.db-journal

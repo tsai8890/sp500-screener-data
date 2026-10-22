@@ -275,6 +275,11 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <div class="panel-head"><p class="eyebrow">Saved screens</p><button class="btn sm m-only" id="closeDrawer" type="button">Close</button></div>
       <div class="screens" id="screens"></div>
       <div class="storage-note" id="storageNote">Saved in this browser.</div>
+      <div class="storage-note row" id="screenFile">
+        <button class="linkbtn" id="exportScreens" type="button">Export screens (JSON)</button>
+        <button class="linkbtn" id="importScreensBtn" type="button">Import screens</button>
+        <input type="file" id="importScreens" accept=".json,application/json" hidden>
+      </div>
 
       <div class="section">
         <label class="eyebrow" for="screenName">Screen name</label>
@@ -466,12 +471,40 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const findScreen = (id) => allScreens().find((s) => s.id === id);
   const sectors = () => Array.from(new Set(S.data.map((d) => d.sector).filter(Boolean))).sort();
 
-  // ---------- Storage: private per-viewer db, falling back to this browser ----------
+  // ---------- Storage for saved screens ----------
+  // 1. "server": the Python server's SQLite database via /api/screens
+  // 2. "cloud":  inside Claude, the page's private per-viewer database
+  // 3. "local":  this browser (localStorage), with JSON export/import
+  const screensUrl = () => API_URL.replace(/sp500\/?$/, "screens");
+  const authHeaders = () => { const t = lsGet("screener.token"); return t ? { Authorization: "Bearer " + t } : {}; };
+  async function api(method, url, body) {
+    const r = await fetch(url, { method, cache: "no-store", headers: { "Content-Type": "application/json", ...authHeaders() }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Server said " + r.status);
+    return j;
+  }
   const store = {
     mode: "local", col: null,
     loadLocal() { S.userScreens = lsGet("screener.screens") || []; },
     saveLocal() { lsSet("screener.screens", S.userScreens); },
+    async initServer() {
+      if (!/^https?:$/.test(location.protocol)) return false;
+      let got;
+      try { got = await api("GET", screensUrl()); } catch (e) { return false; }
+      if (!got || !Array.isArray(got.screens)) return false;
+      this.mode = "server";
+      const have = new Set(got.screens.map((x) => x.id));
+      const local = S.userScreens.filter((x) => !have.has(x.id));
+      for (const x of local) {   // move screens saved in this browser onto the server
+        try { got.screens.push(await api("PUT", screensUrl() + "/" + encodeURIComponent(x.id), x)); } catch (e) { break; }
+      }
+      S.userScreens = got.screens.sort((a, b) => (a.created || 0) - (b.created || 0));
+      if (!findScreen(S.activeId)) selectScreen("b-starter");
+      renderScreens(); renderStorageNote();
+      return true;
+    },
     async init() {
+      if (await this.initServer()) return;
       const c = window.claude;
       if (!c || !c.use) return;
       try {
@@ -500,6 +533,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       } catch (e) { /* stay local */ }
     },
     async put(screen) {
+      if (this.mode === "server") {
+        try {
+          const saved = await api("PUT", screensUrl() + "/" + encodeURIComponent(screen.id), screen);
+          const i = S.userScreens.findIndex((x) => x.id === saved.id);
+          if (i >= 0) S.userScreens[i] = saved; else S.userScreens.push(saved);
+          return true;
+        } catch (e) { toast("Couldn't save to the server: " + e.message + ". Saved in this browser instead."); this.mode = "local"; renderStorageNote(); }
+      }
       if (this.mode === "cloud") {
         try { await this.col.doc(screen.id).set(screen); return true; }
         catch (e) { this.mode = "local"; renderStorageNote(); }
@@ -509,6 +550,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       this.saveLocal(); return true;
     },
     async remove(id) {
+      if (this.mode === "server") {
+        try { await api("DELETE", screensUrl() + "/" + encodeURIComponent(id)); S.userScreens = S.userScreens.filter((x) => x.id !== id); return; }
+        catch (e) { toast("Couldn't delete on the server: " + e.message); return; }
+      }
       if (this.mode === "cloud") {
         try { await this.col.doc(id).delete(); return; } catch (e) { this.mode = "local"; renderStorageNote(); }
       }
@@ -516,9 +561,51 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
   };
   function renderStorageNote() {
-    $("storageNote").textContent = store.mode === "cloud"
-      ? "Your screens are saved to your account and follow you to other devices."
-      : "Your screens are saved in this browser.";
+    $("storageNote").textContent = store.mode === "server"
+      ? "Your screens are saved on the server (SQLite) and shared by everyone using this site."
+      : store.mode === "cloud"
+        ? "Your screens are saved to your account and follow you to other devices."
+        : "Your screens are saved in this browser. Export them as JSON to back up or move them.";
+    $("screenFile").hidden = store.mode === "cloud";
+  }
+
+  // Built-in screens come from data/screens.json when the page can read it.
+  function loadBuiltins() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    fetch("data/screens.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+      const list = j && Array.isArray(j.builtin) ? j.builtin.filter((x) => x && x.id && Array.isArray(x.rules)) : [];
+      if (!list.length) return;
+      BUILTINS.splice(0, BUILTINS.length, ...list.map((x) => ({ ...x, builtin: true, sectors: x.sectors || [] })));
+      const active = findScreen(S.activeId);
+      if (!active) selectScreen(BUILTINS[0].id);
+      else if (active.builtin && !S.dirty) selectScreen(active.id);
+      else renderScreens();
+    }).catch(() => {});
+  }
+
+  // Export / import saved screens as a JSON file.
+  function exportScreens() {
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), screens: S.userScreens }, null, 2)], { type: "application/json" });
+    const a = el("a", { href: URL.createObjectURL(blob), download: "screens.json" });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  async function importScreens(file) {
+    try {
+      const j = JSON.parse(await file.text());
+      const list = Array.isArray(j) ? j : j.screens;
+      if (!Array.isArray(list)) throw new Error("No screens list in that file.");
+      let n = 0;
+      for (const x of list) {
+        if (!x || !Array.isArray(x.rules)) continue;
+        const sc = { id: /^[A-Za-z0-9_-]{1,64}$/.test(x.id || "") && !x.id.startsWith("b-") ? x.id : "s-" + Date.now().toString(36) + n,
+          name: String(x.name || "Imported screen").slice(0, 100), rules: x.rules, sectors: Array.isArray(x.sectors) ? x.sectors : [], created: x.created || Date.now() };
+        await store.put(sc);
+        if (!S.userScreens.find((y) => y.id === sc.id)) S.userScreens.push(sc);
+        n++;
+      }
+      renderScreens(); toast(`Imported ${n} screen${n === 1 ? "" : "s"}`);
+    } catch (e) { toast("Import failed: " + e.message); }
   }
 
   // ---------- Evaluation ----------
@@ -870,6 +957,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     S.userScreens = S.userScreens.filter((s) => s.id !== sc.id);
     selectScreen("b-starter"); toast(`Deleted “${sc.name}”`);
   });
+  $("exportScreens").addEventListener("click", exportScreens);
+  $("importScreensBtn").addEventListener("click", () => $("importScreens").click());
+  $("importScreens").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) importScreens(f); e.target.value = ""; });
   $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; renderResults(); });
   const phoneMq = window.matchMedia("(max-width: 820px)");
   const isPhone = () => phoneMq.matches;
@@ -984,6 +1074,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   applySide();
   renderStorageNote(); refreshAll();
+  loadBuiltins();
   store.init();
   initLive();
 })();

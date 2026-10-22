@@ -1,0 +1,43 @@
+{
+  "about": "Built-in screens shown to everyone. Edit this file to change them; the page reads it on load. Rule fields: price, chg, mktCap, pe, peg, revGrowth, netMargin, divYield. Ops: >, >=, <, <=, between (uses value2).",
+  "builtin": [
+    {
+      "id": "b-starter",
+      "name": "P/E, PEG & 10% growth",
+      "sectors": [],
+      "rules": [
+        { "field": "pe", "op": "<", "value": 30 },
+        { "field": "peg", "op": "<", "value": 2 },
+        { "field": "revGrowth", "op": ">", "value": 10 }
+      ]
+    },
+    {
+      "id": "b-garp",
+      "name": "Growth at a reasonable price",
+      "sectors": [],
+      "rules": [
+        { "field": "peg", "op": "<=", "value": 1.5 },
+        { "field": "revGrowth", "op": ">=", "value": 15 },
+        { "field": "pe", "op": "between", "value": 10, "value2": 40 }
+      ]
+    },
+    {
+      "id": "b-value",
+      "name": "Value with income",
+      "sectors": [],
+      "rules": [
+        { "field": "pe", "op": "<", "value": 18 },
+        { "field": "divYield", "op": ">=", "value": 2 }
+      ]
+    },
+    {
+      "id": "b-fast",
+      "name": "Fast growers",
+      "sectors": [],
+      "rules": [
+        { "field": "revGrowth", "op": ">", "value": 20 },
+        { "field": "netMargin", "op": ">", "value": 15 }
+      ]
+    }
+  ]
+}

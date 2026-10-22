@@ -26,6 +26,8 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 | `backend/build.py` | Merges both into `data/sp500.json` and recalculates the price-based metrics. |
 | `backend/update.py` | Command line used by GitHub Actions. |
 | `backend/server.py` | Always-on server: scheduler plus HTTP (standard library only). |
+| `backend/screens_db.py` | Saved screens in SQLite (`data/screener.db`), used by the server's `/api/screens`. |
+| `data/screens.json` | The built-in screens everyone sees. Edit it to change them. |
 | `data/` | `fundamentals.json`, `prices.json` and the merged `sp500.json` the page reads. |
 | `.github/workflows/` | `fundamentals.yml` (every 30 min) and `prices.yml` (every 10 min in market hours). |
 | `tests/` | Offline unit tests: `python -m unittest discover -s tests`. |
@@ -43,9 +45,20 @@ python -m backend.update prices --force   # prices even if the market is closed
 python -m backend.server                  # always-on server: open http://localhost:8000
 ```
 
-Server endpoints: `/` (the page), `/api/sp500` (data), `/api/health` (update times and last errors).
+Server endpoints: `/` (the page), `/api/sp500` (data), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete).
 
-Server settings (environment variables): `PORT` (8000), `HOST` (0.0.0.0), `ALLOWED_ORIGINS` (`*`, or a comma-separated list such as `https://tsai8890.github.io`), `PRICE_INTERVAL` (60 seconds), `FUNDAMENTALS_INTERVAL` (1800 seconds), `PRICES_ALWAYS` (set to 1 to fetch prices outside market hours).
+## Where saved screens live
+
+| Where the page runs | Saved screens go to |
+|---|---|
+| Always-on server | SQLite, `data/screener.db`, shared by everyone using that server. Inspect with `sqlite3 data/screener.db "select id, name, rules from screens"`. |
+| GitHub Pages | The visitor's browser (localStorage). Use **Export screens (JSON)** / **Import screens** in the screens panel to back them up or move them between devices. |
+
+Built-in screens always come from `data/screens.json`. To make one of your screens a built-in for everyone, export it and copy it into that file's `builtin` list (ids starting with `b-`).
+
+On a public server anyone can change the saved screens. Set `SCREENS_TOKEN` to require a token for saving and deleting; then, in your browser's console on the site, run `localStorage.setItem("screener.token", JSON.stringify("<token>"))` once.
+
+Server settings (environment variables): `PORT` (8000), `HOST` (0.0.0.0), `ALLOWED_ORIGINS` (`*`, or a comma-separated list such as `https://tsai8890.github.io`), `PRICE_INTERVAL` (60 seconds), `FUNDAMENTALS_INTERVAL` (1800 seconds), `PRICES_ALWAYS` (set to 1 to fetch prices outside market hours), `SCREENS_TOKEN` (token required to save/delete screens), `SCREENER_DB` (SQLite path, default `data/screener.db`).
 
 ## Deploy the always-on server (every-minute prices)
 

@@ -11,12 +11,18 @@ What it does:
         GET /api/sp500         latest combined data (JSON, never cached)
         GET /api/health        update times, last errors
         GET /data/sp500.json   same data as a file, for the page's fallback
+        GET /data/screens.json built-in screens
+        GET    /api/screens          saved screens (SQLite, data/screener.db)
+        PUT    /api/screens/<id>     create or replace one screen (JSON body)
+        DELETE /api/screens/<id>     delete one screen
 
 Settings (environment variables):
   HOST (0.0.0.0)  PORT (8000)
   ALLOWED_ORIGINS  comma-separated origins allowed to call the API from a browser, or * (default)
   PRICE_INTERVAL (60 s)  FUNDAMENTALS_INTERVAL (1800 s)
   PRICES_ALWAYS (0)  set to 1 to keep fetching prices when the market is closed
+  SCREENS_TOKEN  if set, PUT/DELETE on /api/screens need "Authorization: Bearer <token>"
+  SCREENER_DB  SQLite file for saved screens (data/screener.db)
 """
 from __future__ import annotations
 
@@ -27,7 +33,7 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import build, fundamentals, prices
+from . import build, fundamentals, prices, screens_db
 from .common import (FUNDAMENTALS_PATH, PRICES_PATH, ROOT, SP500_PATH, iso, market_session,
                      parse_iso, read_json, utc_now)
 
@@ -37,6 +43,8 @@ ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") 
 PRICE_INTERVAL = int(os.environ.get("PRICE_INTERVAL", "60"))
 FUND_INTERVAL = int(os.environ.get("FUNDAMENTALS_INTERVAL", "1800"))
 PRICES_ALWAYS = os.environ.get("PRICES_ALWAYS", "0") == "1"
+SCREENS_TOKEN = os.environ.get("SCREENS_TOKEN", "")
+MAX_BODY = 64 * 1024
 
 
 class State:
@@ -114,6 +122,7 @@ def prices_loop() -> None:
 STATIC = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/data/screens.json": ("data/screens.json", "application/json"),
 }
 
 
@@ -141,7 +150,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(204)
         self._cors()
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
@@ -152,6 +162,8 @@ class Handler(BaseHTTPRequestHandler):
             if not body:
                 return self._send(503, b'{"error":"No data yet, first update still running"}', "application/json")
             return self._send(200, body, "application/json")
+        if path == "/api/screens":
+            return self._json(200, {"screens": screens_db.list_screens(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/health":
             fund, pr = STATE.fund or {}, STATE.prices or {}
             h = {**STATE.health, "marketOpen": market_session(grace_minutes=0),
@@ -168,6 +180,41 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, b"Not found", "text/plain")
 
     do_HEAD = do_GET
+
+    # ---- saved screens (SQLite) ----
+    def _json(self, code: int, obj) -> None:
+        self._send(code, json.dumps(obj).encode(), "application/json")
+
+    def _screen_id(self) -> str | None:
+        path = self.path.split("?", 1)[0]
+        prefix = "/api/screens/"
+        return path[len(prefix):] if path.startswith(prefix) else None
+
+    def _authorized(self) -> bool:
+        return not SCREENS_TOKEN or self.headers.get("Authorization") == f"Bearer {SCREENS_TOKEN}"
+
+    def do_PUT(self) -> None:  # noqa: N802
+        sid = self._screen_id()
+        if sid is None:
+            return self._json(404, {"error": "Not found"})
+        if not self._authorized():
+            return self._json(401, {"error": "Missing or wrong token"})
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0 or length > MAX_BODY:
+            return self._json(413 if length else 400, {"error": "Body must be JSON, at most 64 KB"})
+        try:
+            body = json.loads(self.rfile.read(length))
+            return self._json(200, screens_db.upsert(sid, body))
+        except (ValueError, screens_db.InvalidScreen) as e:
+            return self._json(400, {"error": str(e)})
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        sid = self._screen_id()
+        if sid is None:
+            return self._json(404, {"error": "Not found"})
+        if not self._authorized():
+            return self._json(401, {"error": "Missing or wrong token"})
+        return self._json(200, {"deleted": screens_db.delete(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors
         if len(args) < 2 or str(args[1])[:1] in "45":
