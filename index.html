@@ -55,7 +55,7 @@ body {
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.wrap { max-width: 1680px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
 header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0; line-height: 1.05; text-wrap: balance; }
@@ -64,8 +64,10 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
 .tag.live { background: var(--accent-soft); color: var(--accent); }
 
-.layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.layout.collapsed { grid-template-columns: minmax(0, 1fr); }
+.layout.collapsed > aside { display: none; }
+@media (max-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
 .panel-head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -135,8 +137,8 @@ code.hdr { display: block; font-family: var(--font-data); font-size: 11.5px; bac
 .search { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 6px 10px; width: 180px; max-width: 100%; }
 
 .table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
-table { border-collapse: collapse; width: 100%; min-width: 840px; font-variant-numeric: tabular-nums; }
-th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; min-width: max-content; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
 th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
 th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
@@ -149,7 +151,19 @@ a.qlink.tk { color: var(--accent); }
 a.qlink:hover { text-decoration: underline; text-underline-offset: 2px; }
 a.qlink:hover::after { content: " ↗"; font-size: 11px; }
 a.qlink.co:hover::after { content: ""; }
-td .co { color: var(--muted); font-size: 12px; display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+td .co { color: var(--muted); font-size: 12px; display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+.colmenu { position: relative; }
+.colmenu > summary { list-style: none; cursor: pointer; user-select: none; }
+.colmenu > summary::-webkit-details-marker { display: none; }
+.colmenu > summary::after { content: " ▾"; color: var(--muted); }
+.colmenu .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 8px; min-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+.colmenu .menu label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+.colmenu .menu label:hover { background: var(--sunk); }
+.colmenu .menu .inrule { margin-left: auto; font-size: 11px; color: var(--accent); }
+.colmenu .menu .menu-foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; }
+.linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; }
 td.sec { font-size: 12px; color: var(--muted); }
 td.hit-pass { color: var(--pass); background: var(--pass-soft); }
 td.hit-fail { color: var(--fail); background: var(--fail-soft); }
@@ -173,8 +187,8 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
     <div class="datasrc"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">50 large S&amp;P 500 names, illustrative figures</span></div>
   </header>
 
-  <div class="layout">
-    <aside class="panel" aria-label="Screens and rules">
+  <div class="layout" id="layout">
+    <aside class="panel" id="sidePanel" aria-label="Screens and rules">
       <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
       <div class="screens" id="screens"></div>
       <div class="storage-note" id="storageNote">Saved in this browser.</div>
@@ -239,8 +253,17 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <div class="criteria" id="criteria"></div>
       <div class="sectors-line" id="sectorsLine"></div>
       <div class="toolbar">
-        <label class="toggle"><input type="checkbox" id="showMiss" checked> Show near misses (fail one rule)</label>
-        <input class="search" id="search" type="search" placeholder="Find ticker or name" aria-label="Find ticker or name">
+        <div class="tools">
+          <button class="btn sm" id="toggleSide" type="button" aria-controls="sidePanel">Hide screens</button>
+          <label class="toggle"><input type="checkbox" id="showMiss" checked> Show near misses (fail one rule)</label>
+        </div>
+        <div class="tools">
+          <details class="colmenu" id="colMenu">
+            <summary class="btn sm" id="colSummary">Columns</summary>
+            <div class="menu" id="colList"></div>
+          </details>
+          <input class="search" id="search" type="search" placeholder="Find ticker or name" aria-label="Find ticker or name">
+        </div>
       </div>
       <div class="table-wrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
     </main>
@@ -338,7 +361,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const S = {
     data: SAMPLE, source: "sample", live: null, csv: null,
     userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
-    sort: { key: "mktCap", dir: "desc" }, showMiss: true, q: "", deleteArmed: false,
+    sort: { key: "mktCap", dir: "desc" }, showMiss: true, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
   };
   const $ = (id) => document.getElementById(id);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -501,8 +524,36 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" }, { key: "price" },
     { key: "mktCap" }, { key: "pe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
   ];
+  const SECTOR_SHORT = {
+    "Information Technology": "Info Tech", "Communication Services": "Comm Services",
+    "Consumer Discretionary": "Cons Discretionary", "Consumer Staples": "Cons Staples",
+  };
+  const colLabel = (c) => c.head || FIELDS[c.key].label;
+  const visibleCols = () => COLUMNS.filter((c) => c.key === "ticker" || !S.hidden.has(c.key));
+  function renderColMenu() {
+    const focusId = document.activeElement && document.activeElement.id;
+    const list = $("colList"), inRule = new Set(validRules(S.draft).map((r) => r.field));
+    list.textContent = "";
+    COLUMNS.filter((c) => c.key !== "ticker").forEach((c) => {
+      const cb = el("input", { type: "checkbox", id: "col-" + c.key });
+      cb.checked = !S.hidden.has(c.key);
+      cb.addEventListener("change", () => { if (cb.checked) S.hidden.delete(c.key); else S.hidden.add(c.key); saveCols(); renderResults(); });
+      list.append(el("label", { for: "col-" + c.key }, cb, el("span", { text: colLabel(c) }), inRule.has(c.key) ? el("span", { class: "inrule", text: "in a rule" }) : null));
+    });
+    list.append(el("div", { class: "menu-foot" },
+      el("button", { class: "linkbtn", type: "button", text: "Show all", onclick: () => { S.hidden.clear(); saveCols(); renderResults(); } }),
+      el("button", { class: "linkbtn", type: "button", text: "Only rule columns", onclick: () => {
+        COLUMNS.forEach((c) => { if (c.key !== "ticker" && !inRule.has(c.key)) S.hidden.add(c.key); else S.hidden.delete(c.key); });
+        saveCols(); renderResults(); } })));
+    const shown = COLUMNS.length - 1 - [...S.hidden].filter((k) => COLUMNS.some((c) => c.key === k)).length;
+    $("colSummary").textContent = `Columns ${shown}/${COLUMNS.length - 1}`;
+    if (focusId && focusId.startsWith("col-") && $(focusId)) $(focusId).focus();
+  }
+  function saveCols() { lsSet("screener.hiddenCols", [...S.hidden]); }
   function renderResults() {
     const d = S.draft, res = evaluate(d);
+    const cols = visibleCols();
+    renderColMenu();
     const pass = res.filter((r) => r.pass), miss = res.filter((r) => r.miss);
     $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length + " pass" }));
     $("missCount").textContent = miss.length;
@@ -522,7 +573,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // header
     const ruleFields = new Set(validRules(d).map((r) => r.field));
     const tr = el("tr");
-    COLUMNS.forEach((c) => {
+    cols.forEach((c) => {
       const label = c.head || FIELDS[c.key].head;
       const isSort = S.sort.key === c.key;
       const b = el("button", { type: "button", onclick: () => { S.sort = isSort ? { key: c.key, dir: S.sort.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: c.key === "ticker" || c.key === "sector" ? "asc" : "desc" }; renderResults(); } },
@@ -549,8 +600,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const first = el("td", null, link("tk", r.s.ticker));
       if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
       if (r.s.name) first.append(link("co", r.s.name));
-      row.append(first, el("td", { class: "sec", text: r.s.sector || "" }));
-      ["price", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"].forEach((k) => {
+      row.append(first);
+      cols.slice(1).forEach(({ key: k }) => {
+        if (k === "sector") { row.append(el("td", { class: "sec", title: r.s.sector || "", text: SECTOR_SHORT[r.s.sector] || r.s.sector || "" })); return; }
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
@@ -562,11 +614,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     };
     rowsP.forEach((r) => body.append(mkRow(r, false)));
     if (rowsM.length) {
-      body.append(el("tr", { class: "divider" }, el("td", { colspan: String(COLUMNS.length), text: `Near misses · ${rowsM.length} fail exactly one rule` })));
+      body.append(el("tr", { class: "divider" }, el("td", { colspan: String(cols.length), text: `Near misses · ${rowsM.length} fail exactly one rule` })));
       rowsM.forEach((r) => body.append(mkRow(r, true)));
     }
     if (!rowsP.length && !rowsM.length) {
-      body.append(el("tr", null, el("td", { colspan: String(COLUMNS.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
+      body.append(el("tr", null, el("td", { colspan: String(cols.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
     }
   }
 
@@ -695,6 +747,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     selectScreen("b-starter"); toast(`Deleted “${sc.name}”`);
   });
   $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; renderResults(); });
+  function applySide() {
+    $("layout").classList.toggle("collapsed", S.collapsed);
+    $("toggleSide").textContent = S.collapsed ? "Show screens" : "Hide screens";
+    $("toggleSide").setAttribute("aria-expanded", String(!S.collapsed));
+  }
+  $("toggleSide").addEventListener("click", () => { S.collapsed = !S.collapsed; lsSet("screener.collapsed", S.collapsed); applySide(); });
+  document.addEventListener("click", (e) => { const m = $("colMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("colMenu").open = false; });
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
 
   // ---------- CSV import ----------
@@ -767,6 +827,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   if (Array.isArray(savedData) && savedData.length) S.csv = savedData;
   const lastActive = lsGet("screener.active");
   if (lastActive && findScreen(lastActive)) { S.activeId = lastActive; S.draft = clone(findScreen(lastActive)); }
+  S.hidden = new Set(lsGet("screener.hiddenCols") || []);
+  S.collapsed = lsGet("screener.collapsed") === true;
+  applySide();
   renderStorageNote(); refreshAll();
   store.init();
   initLive();
