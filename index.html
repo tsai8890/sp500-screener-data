@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root { color-scheme: light; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>S&amp;P 500 Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control rail (screens + rules) on the left, results ledger on the right; stacks on phones. */
+:root {
+  --bg: #F2F5F6;
+  --surface: #FFFFFF;
+  --sunk: #E8EEF0;
+  --ink: #13212A;
+  --muted: #5A6B75;
+  --line: #D6DFE3;
+  --accent: #0E6B66;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEFEC;
+  --pass: #1D7A45;
+  --pass-soft: #E1F2E7;
+  --fail: #B83A26;
+  --fail-soft: #FBE6E1;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #151E24; --sunk: #1B262D; --ink: #E3EAEE; --muted: #8E9FA9; --line: #26343C;
+    --accent: #3DBDB2; --accent-ink: #062320; --accent-soft: #163633;
+    --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #151E24; --sunk: #1B262D; --ink: #E3EAEE; --muted: #8E9FA9; --line: #26343C;
+  --accent: #3DBDB2; --accent-ink: #062320; --accent-soft: #163633;
+  --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0; line-height: 1.05; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+.datasrc { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.tag.live { background: var(--accent-soft); color: var(--accent); }
+
+.layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel-head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--muted); margin: 0; }
+.section { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+
+/* Saved screens list */
+.screens { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 10px; }
+.screen-btn { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; background: none; border: 1px solid transparent; border-radius: 7px; padding: 8px 10px; cursor: pointer; }
+.screen-btn:hover { background: var(--sunk); }
+.screen-btn[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.screen-btn .nm { font-weight: 600; overflow-wrap: anywhere; }
+.screen-btn .ct { font-family: var(--font-data); font-size: 12px; color: var(--muted); align-self: center; font-variant-numeric: tabular-nums; }
+.screen-btn .rl { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-family: var(--font-data); overflow-wrap: anywhere; }
+.screen-btn .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: middle; }
+.group-label { font-size: 11px; color: var(--muted); padding: 8px 10px 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+.storage-note { font-size: 12px; color: var(--muted); padding: 0 18px 12px; }
+
+/* Rule editor */
+.name-in { width: 100%; font-family: var(--font-display); font-weight: 500; font-size: 18px; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; }
+.rules { display: flex; flex-direction: column; gap: 8px; }
+.rule { display: grid; grid-template-columns: minmax(0, 1.4fr) 64px minmax(0, 1fr) 30px; gap: 6px; align-items: center; }
+.rule select, .rule input { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 8px; min-width: 0; width: 100%; }
+.rule input { font-family: var(--font-data); font-size: 13px; font-variant-numeric: tabular-nums; }
+.vals { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.vals .unit { font-size: 12px; color: var(--muted); font-family: var(--font-data); }
+.vals .and { font-size: 12px; color: var(--muted); }
+.icon-btn { width: 30px; height: 30px; border-radius: 6px; border: 1px solid transparent; background: none; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; }
+.icon-btn:hover { background: var(--fail-soft); color: var(--fail); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 7px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--fail); }
+.btn.danger.confirm { background: var(--fail); color: var(--surface); border-color: var(--fail); }
+.btn.ghost { border-style: dashed; color: var(--muted); }
+.btn[disabled] { opacity: 0.45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.toast { font-size: 12px; color: var(--accent); min-height: 1em; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* Import */
+details.import summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.import summary::-webkit-details-marker { display: none; }
+details.import summary::after { content: "+"; font-family: var(--font-data); color: var(--muted); }
+details.import[open] summary::after { content: "−"; }
+details.import .inner { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 8px; font-family: var(--font-data); font-size: 12px; resize: vertical; }
+code.hdr { display: block; font-family: var(--font-data); font-size: 11.5px; background: var(--sunk); padding: 6px 8px; border-radius: 6px; overflow-x: auto; white-space: nowrap; }
+
+/* Results */
+.summary { padding: 16px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.big small { font-size: 18px; color: var(--muted); font-weight: 500; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat .v { font-family: var(--font-data); font-size: 16px; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.criteria { padding: 0 16px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.crit { font-family: var(--font-data); font-size: 12px; background: var(--sunk); border-radius: 5px; padding: 3px 8px; }
+.sectors-line { padding: 0 16px 14px; font-size: 12px; color: var(--muted); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 10px 16px; border-top: 1px solid var(--line); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.search { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 6px 10px; width: 180px; max-width: 100%; }
+
+.table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+th button:focus-visible { outline: 2px solid var(--accent); }
+th .arr { font-family: var(--font-data); color: var(--accent); }
+td.num { font-family: var(--font-data); font-size: 13px; }
+td .tk { font-family: var(--font-data); font-weight: 500; }
+a.qlink { color: inherit; text-decoration: none; }
+a.qlink.tk { color: var(--accent); }
+a.qlink:hover { text-decoration: underline; text-underline-offset: 2px; }
+a.qlink:hover::after { content: " ↗"; font-size: 11px; }
+a.qlink.co:hover::after { content: ""; }
+td .co { color: var(--muted); font-size: 12px; display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+td.sec { font-size: 12px; color: var(--muted); }
+td.hit-pass { color: var(--pass); background: var(--pass-soft); }
+td.hit-fail { color: var(--fail); background: var(--fail-soft); }
+tr.miss td:not(.hit-fail) { opacity: 0.55; }
+tr.miss td:first-child { opacity: 1; }
+.misslabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fail); font-family: var(--font-body); font-weight: 600; margin-left: 6px; }
+tr.divider td { background: var(--sunk); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 6px 12px; }
+.empty { padding: 30px 16px; text-align: center; color: var(--muted); }
+.na { color: var(--muted); }
+footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
+@media (prefers-reduced-motion: no-preference) { .screen-btn, .btn, .chip { transition: background-color .12s, border-color .12s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>S&amp;P 500 Screener</h1>
+      <p class="sub">Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.</p>
+    </div>
+    <div class="datasrc"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">50 large S&amp;P 500 names, illustrative figures</span></div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Screens and rules">
+      <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
+      <div class="screens" id="screens"></div>
+      <div class="storage-note" id="storageNote">Saved in this browser.</div>
+
+      <div class="section">
+        <label class="eyebrow" for="screenName">Screen name</label>
+        <input class="name-in" id="screenName" autocomplete="off">
+        <p class="hint" id="builtinHint" hidden>Built-in screen. Saving creates your own copy.</p>
+      </div>
+
+      <div class="section">
+        <p class="eyebrow">Rules · all must pass</p>
+        <div class="rules" id="rules"></div>
+        <div class="row"><button class="btn ghost" id="addRule" type="button">+ Add rule</button></div>
+      </div>
+
+      <div class="section">
+        <p class="eyebrow">Sectors</p>
+        <div class="chips" id="sectorChips"></div>
+        <p class="hint">None selected means every sector.</p>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <button class="btn primary" id="saveBtn" type="button">Save</button>
+          <button class="btn" id="saveNewBtn" type="button">Save as new</button>
+          <button class="btn" id="resetBtn" type="button">Discard changes</button>
+          <button class="btn danger" id="deleteBtn" type="button">Delete</button>
+        </div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+
+      <div class="section">
+        <details class="import" id="importBox">
+          <summary>Use your own data</summary>
+          <div class="inner">
+            <p class="hint">Paste a CSV or choose a file. Recognised columns (any order, extra columns ignored):</p>
+            <code class="hdr">ticker,name,sector,mktCap,pe,peg,revGrowth,netMargin,divYield</code>
+            <p class="hint">Percent columns take 12.5 or 12.5%. Market cap in billions or raw dollars.</p>
+            <textarea id="csvIn" placeholder="ticker,name,sector,pe,peg,revGrowth&#10;MSFT,Microsoft,Information Technology,35,2.2,15"></textarea>
+            <div class="row">
+              <input type="file" id="csvFile" accept=".csv,text/csv,text/plain">
+            </div>
+            <div class="row">
+              <button class="btn primary" id="loadCsv" type="button">Load data</button>
+              <button class="btn" id="useSample" type="button">Back to example data</button>
+            </div>
+            <div class="toast" id="importMsg" role="status"></div>
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <main class="panel" aria-label="Results">
+      <div class="summary">
+        <div class="big" id="passCount">0 <small>/ 0 pass</small></div>
+        <div class="stat"><span class="v" id="missCount">0</span><span class="k">Near misses</span></div>
+        <div class="stat"><span class="v" id="medPE">–</span><span class="k">Median P/E</span></div>
+        <div class="stat"><span class="v" id="medPEG">–</span><span class="k">Median PEG</span></div>
+        <div class="stat"><span class="v" id="medRev">–</span><span class="k">Median rev growth</span></div>
+      </div>
+      <div class="criteria" id="criteria"></div>
+      <div class="sectors-line" id="sectorsLine"></div>
+      <div class="toolbar">
+        <label class="toggle"><input type="checkbox" id="showMiss" checked> Show near misses (fail one rule)</label>
+        <input class="search" id="search" type="search" placeholder="Find ticker or name" aria-label="Find ticker or name">
+      </div>
+      <div class="table-wrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    </main>
+  </div>
+
+  <footer class="note" id="footNote"></footer>
+</div>
+
+<script>
+(function () {
+  // ---------- Data ----------
+  const COLS = ["ticker","name","sector","mktCap","pe","peg","revGrowth","netMargin","divYield"];
+  const RAW = `AAPL,Apple,Information Technology,3600,34,2.6,6,25,0.4
+MSFT,Microsoft,Information Technology,3700,35,2.2,15,36,0.7
+NVDA,NVIDIA,Information Technology,4300,45,1.1,55,53,0.02
+AVGO,Broadcom,Information Technology,1600,70,1.6,28,30,0.8
+ORCL,Oracle,Information Technology,700,50,2.1,12,21,0.8
+CRM,Salesforce,Information Technology,250,38,1.7,9,16,0.6
+ADBE,Adobe,Information Technology,160,23,1.5,10,30,0
+AMD,Advanced Micro Devices,Information Technology,380,110,1.3,30,9,0
+INTC,Intel,Information Technology,160,,,-2,-10,0
+CSCO,Cisco Systems,Information Technology,270,27,3.0,6,18,2.4
+PLTR,Palantir,Information Technology,420,400,4.5,48,26,0
+ANET,Arista Networks,Information Technology,180,55,2.2,28,40,0
+GOOGL,Alphabet,Communication Services,3000,27,1.4,14,31,0.3
+META,Meta Platforms,Communication Services,1800,26,1.3,20,38,0.3
+NFLX,Netflix,Communication Services,450,45,1.6,16,25,0
+DIS,Walt Disney,Communication Services,210,24,1.4,4,9,0.8
+T,AT&T,Communication Services,190,16,2.8,2,11,4.0
+VZ,Verizon,Communication Services,180,10,2.9,2,13,6.3
+AMZN,Amazon,Consumer Discretionary,2400,33,1.5,11,11,0
+TSLA,Tesla,Consumer Discretionary,1400,180,6.0,1,6,0
+HD,Home Depot,Consumer Discretionary,380,26,3.4,4,9,2.4
+MCD,McDonald's,Consumer Discretionary,220,26,3.0,3,32,2.3
+NKE,Nike,Consumer Discretionary,100,35,2.5,-6,6,2.3
+SBUX,Starbucks,Consumer Discretionary,100,40,3.5,3,7,2.8
+BKNG,Booking Holdings,Consumer Discretionary,170,33,1.5,12,22,0.7
+WMT,Walmart,Consumer Staples,800,38,4.0,5,3,0.9
+COST,Costco,Consumer Staples,420,52,5.2,8,3,0.5
+PG,Procter & Gamble,Consumer Staples,360,23,4.1,2,19,2.7
+KO,Coca-Cola,Consumer Staples,300,24,3.6,3,24,2.9
+PEP,PepsiCo,Consumer Staples,200,25,3.8,1,9,3.8
+JPM,JPMorgan Chase,Financials,830,15,2.0,5,34,1.9
+BAC,Bank of America,Financials,380,14,1.2,8,28,2.2
+GS,Goldman Sachs,Financials,230,16,1.1,12,26,1.7
+V,Visa,Financials,680,33,2.1,11,54,0.7
+MA,Mastercard,Financials,520,37,2.1,13,45,0.5
+BRK.B,Berkshire Hathaway,Financials,1050,16,2.5,3,18,0
+PGR,Progressive,Financials,150,14,0.9,16,13,0.2
+UNH,UnitedHealth,Health Care,300,17,2.4,9,3.5,2.6
+LLY,Eli Lilly,Health Care,900,55,1.0,40,30,0.6
+JNJ,Johnson & Johnson,Health Care,470,19,2.6,5,25,2.6
+ABBV,AbbVie,Health Care,380,90,1.6,7,6,2.9
+MRK,Merck,Health Care,250,12,1.5,1,27,3.4
+ISRG,Intuitive Surgical,Health Care,190,70,3.8,20,28,0
+XOM,Exxon Mobil,Energy,470,15,3.5,-2,10,3.6
+CVX,Chevron,Energy,300,19,2.8,-4,7,4.3
+CAT,Caterpillar,Industrials,260,27,3.2,2,16,1.2
+GE,GE Aerospace,Industrials,320,40,2.3,18,15,0.5
+UBER,Uber,Industrials,190,16,0.6,18,21,0
+LIN,Linde,Materials,220,33,3.4,2,20,1.3
+NEE,NextEra Energy,Utilities,160,25,2.8,8,23,2.8
+PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
+  const num = (s) => { if (s == null) return null; const t = String(s).replace(/[$,%\s]/g, ""); if (t === "" || t === "-" || /^n\/?a$/i.test(t)) return null; const v = parseFloat(t); return isFinite(v) ? v : null; };
+  const SAMPLE = RAW.split("\n").map((line) => {
+    const p = line.split(","); const o = {};
+    COLS.forEach((c, i) => { o[c] = i < 3 ? p[i] : num(p[i]); });
+    return o;
+  });
+
+  const FIELDS = {
+    pe:        { label: "P/E ratio",       head: "P/E",      unit: "×",  fmt: (v) => v.toFixed(1) },
+    peg:       { label: "PEG ratio",       head: "PEG",      unit: "",   fmt: (v) => v.toFixed(2) },
+    revGrowth: { label: "Revenue growth",  head: "Rev gr.",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%" },
+    netMargin: { label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
+    divYield:  { label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
+    mktCap:    { label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
+  };
+  const OPS = { ">": ">", ">=": "≥", "<": "<", "<=": "≤", "between": "between" };
+
+  const BUILTINS = [
+    { id: "b-starter", builtin: true, name: "P/E, PEG & 10% growth", sectors: [], rules: [
+      { field: "pe", op: "<", value: 30 }, { field: "peg", op: "<", value: 2 }, { field: "revGrowth", op: ">", value: 10 } ] },
+    { id: "b-garp", builtin: true, name: "Growth at a reasonable price", sectors: [], rules: [
+      { field: "peg", op: "<=", value: 1.5 }, { field: "revGrowth", op: ">=", value: 15 }, { field: "pe", op: "between", value: 10, value2: 40 } ] },
+    { id: "b-value", builtin: true, name: "Value with income", sectors: [], rules: [
+      { field: "pe", op: "<", value: 18 }, { field: "divYield", op: ">=", value: 2 } ] },
+    { id: "b-fast", builtin: true, name: "Fast growers", sectors: [], rules: [
+      { field: "revGrowth", op: ">", value: 20 }, { field: "netMargin", op: ">", value: 15 } ] },
+  ];
+
+  // ---------- State ----------
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const S = {
+    data: SAMPLE, source: "sample", live: null, csv: null,
+    userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
+    sort: { key: "mktCap", dir: "desc" }, showMiss: true, q: "", deleteArmed: false,
+  };
+  const $ = (id) => document.getElementById(id);
+  const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+
+  const allScreens = () => BUILTINS.concat(S.userScreens);
+  const findScreen = (id) => allScreens().find((s) => s.id === id);
+  const sectors = () => Array.from(new Set(S.data.map((d) => d.sector).filter(Boolean))).sort();
+
+  // ---------- Storage: private per-viewer db, falling back to this browser ----------
+  const store = {
+    mode: "local", col: null,
+    loadLocal() { S.userScreens = lsGet("screener.screens") || []; },
+    saveLocal() { lsSet("screener.screens", S.userScreens); },
+    async init() {
+      const c = window.claude;
+      if (!c || !c.use) return;
+      try {
+        const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+        if (!db || !user) return;
+        const uid = await user.id();
+        if (!uid) return;
+        this.col = db.doc("data/users/" + uid + "/profile").collection("screens");
+        this.mode = "cloud";
+        const local = S.userScreens.slice();
+        let first = true;
+        this.col.onSnapshot((snap) => {
+          const list = snap.docs.map((d) => d.data()).filter(Boolean).map(clone);
+          if (first) {
+            first = false;
+            // Carry over screens saved in this browser before cloud storage was available.
+            const have = new Set(list.map((s) => s.id));
+            local.filter((s) => !have.has(s.id)).forEach((s) => { list.push(s); this.col.doc(s.id).set(s).catch(() => {}); });
+          }
+          list.sort((a, b) => (a.created || 0) - (b.created || 0));
+          S.userScreens = list;
+          if (!findScreen(S.activeId)) selectScreen("b-starter");
+          renderScreens(); renderStorageNote();
+        }, () => { this.mode = "local"; renderStorageNote(); });
+        renderStorageNote();
+      } catch (e) { /* stay local */ }
+    },
+    async put(screen) {
+      if (this.mode === "cloud") {
+        try { await this.col.doc(screen.id).set(screen); return true; }
+        catch (e) { this.mode = "local"; renderStorageNote(); }
+      }
+      const i = S.userScreens.findIndex((s) => s.id === screen.id);
+      if (i >= 0) S.userScreens[i] = screen; else S.userScreens.push(screen);
+      this.saveLocal(); return true;
+    },
+    async remove(id) {
+      if (this.mode === "cloud") {
+        try { await this.col.doc(id).delete(); return; } catch (e) { this.mode = "local"; renderStorageNote(); }
+      }
+      S.userScreens = S.userScreens.filter((s) => s.id !== id); this.saveLocal();
+    },
+  };
+  function renderStorageNote() {
+    $("storageNote").textContent = store.mode === "cloud"
+      ? "Your screens are saved to your account and follow you to other devices."
+      : "Your screens are saved in this browser.";
+  }
+
+  // ---------- Evaluation ----------
+  function ruleOk(stock, r) {
+    const v = stock[r.field];
+    if (v == null || !isFinite(v)) return false;
+    if (r.field === "pe" && v <= 0) return false;
+    const a = Number(r.value), b = Number(r.value2);
+    switch (r.op) {
+      case ">": return v > a; case ">=": return v >= a;
+      case "<": return v < a; case "<=": return v <= a;
+      case "between": return v >= Math.min(a, b) && v <= Math.max(a, b);
+    }
+    return true;
+  }
+  const validRules = (screen) => screen.rules.filter((r) => r.value !== "" && r.value != null && isFinite(r.value) && (r.op !== "between" || (r.value2 !== "" && r.value2 != null && isFinite(r.value2))));
+  function evaluate(screen) {
+    const rules = validRules(screen);
+    return S.data.map((s) => {
+      const sectorOk = !screen.sectors.length || screen.sectors.includes(s.sector);
+      const fails = [];
+      rules.forEach((r) => { if (!ruleOk(s, r)) fails.push(r.field); });
+      return { s, sectorOk, fails, pass: sectorOk && fails.length === 0, miss: sectorOk && fails.length === 1 };
+    });
+  }
+  function ruleText(r) {
+    const f = FIELDS[r.field], u = f.unit === "$B" ? "B" : f.unit;
+    return r.op === "between" ? `${f.head} ${r.value}–${r.value2}${u}` : `${f.head} ${OPS[r.op]} ${r.value}${u}`;
+  }
+  const median = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)).sort((x, y) => x - y); if (!a.length) return null; const m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+
+  // ---------- Rendering ----------
+  function el(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    if (attrs) for (const k in attrs) { if (k === "class") e.className = attrs[k]; else if (k === "text") e.textContent = attrs[k]; else if (k.startsWith("on")) e.addEventListener(k.slice(2), attrs[k]); else e.setAttribute(k, attrs[k]); }
+    kids.flat().forEach((c) => c != null && e.append(c));
+    return e;
+  }
+
+  function renderScreens() {
+    const box = $("screens"); box.textContent = "";
+    const mk = (sc) => {
+      const isActive = sc.id === S.activeId;
+      const shown = isActive ? S.draft : sc;
+      const n = evaluate(shown).filter((x) => x.pass).length;
+      const nm = el("span", { class: "nm", text: shown.name || "Untitled screen" });
+      if (isActive && S.dirty) nm.append(el("span", { class: "dot", title: "Unsaved changes" }));
+      return el("button", { class: "screen-btn", type: "button", "aria-current": String(isActive), onclick: () => selectScreen(sc.id) },
+        nm, el("span", { class: "ct", text: n + " pass" }),
+        el("span", { class: "rl", text: validRules(shown).map(ruleText).join(" · ") + (shown.sectors.length ? " · " + shown.sectors.length + " sector" + (shown.sectors.length > 1 ? "s" : "") : "") }));
+    };
+    if (S.userScreens.length) { box.append(el("div", { class: "group-label", text: "Your screens" })); S.userScreens.forEach((s) => box.append(mk(s))); }
+    box.append(el("div", { class: "group-label", text: "Built-in" }));
+    BUILTINS.forEach((s) => box.append(mk(s)));
+  }
+
+  function renderEditor() {
+    const d = S.draft, active = findScreen(S.activeId);
+    $("screenName").value = d.name;
+    $("builtinHint").hidden = !(active && active.builtin);
+    const rules = $("rules"); rules.textContent = "";
+    if (!d.rules.length) rules.append(el("p", { class: "hint", text: "No rules yet. Every stock passes until you add one." }));
+    d.rules.forEach((r, i) => {
+      const fieldSel = el("select", { id: "rf" + i, "aria-label": "Metric" }, Object.keys(FIELDS).map((k) => { const o = el("option", { value: k, text: FIELDS[k].label }); if (k === r.field) o.selected = true; return o; }));
+      fieldSel.addEventListener("change", () => { r.field = fieldSel.value; changed(true); });
+      const opSel = el("select", { id: "ro" + i, "aria-label": "Comparison" }, Object.keys(OPS).map((k) => { const o = el("option", { value: k, text: OPS[k] }); if (k === r.op) o.selected = true; return o; }));
+      opSel.addEventListener("change", () => { r.op = opSel.value; if (r.op === "between" && (r.value2 == null || r.value2 === "")) r.value2 = Number(r.value) * 2 || 10; changed(true); });
+      const mkIn = (key, id) => { const inp = el("input", { id, type: "number", step: "any", inputmode: "decimal", "aria-label": key === "value" ? "Value" : "Upper value" }); inp.value = r[key] ?? ""; inp.addEventListener("input", () => { r[key] = inp.value === "" ? "" : Number(inp.value); changed(false); }); return inp; };
+      const unit = FIELDS[r.field].unit;
+      const vals = el("div", { class: "vals" }, mkIn("value", "rv" + i));
+      if (r.op === "between") vals.append(el("span", { class: "and", text: "–" }), mkIn("value2", "rw" + i));
+      if (unit) vals.append(el("span", { class: "unit", text: unit }));
+      const del = el("button", { class: "icon-btn", type: "button", "aria-label": "Remove rule", title: "Remove rule", text: "×", onclick: () => { d.rules.splice(i, 1); changed(true); } });
+      rules.append(el("div", { class: "rule" }, fieldSel, opSel, vals, del));
+    });
+    const chips = $("sectorChips"); chips.textContent = "";
+    sectors().forEach((sec) => {
+      const on = d.sectors.includes(sec);
+      chips.append(el("button", { class: "chip", type: "button", "aria-pressed": String(on), text: sec, onclick: () => {
+        d.sectors = on ? d.sectors.filter((x) => x !== sec) : d.sectors.concat(sec); changed(true);
+      } }));
+    });
+    renderButtons();
+  }
+
+  function renderButtons() {
+    const active = findScreen(S.activeId), own = active && !active.builtin;
+    $("saveBtn").textContent = own ? "Save" : "Save as my screen";
+    $("saveBtn").disabled = own ? !S.dirty : false;
+    $("saveNewBtn").hidden = !own;
+    $("resetBtn").disabled = !S.dirty;
+    $("deleteBtn").hidden = !own;
+    $("deleteBtn").textContent = S.deleteArmed ? "Confirm delete" : "Delete";
+    $("deleteBtn").classList.toggle("confirm", S.deleteArmed);
+  }
+
+  const COLUMNS = [
+    { key: "ticker", head: "Stock" }, { key: "sector", head: "Sector" },
+    { key: "mktCap" }, { key: "pe" }, { key: "peg" }, { key: "revGrowth" }, { key: "netMargin" }, { key: "divYield" },
+  ];
+  function renderResults() {
+    const d = S.draft, res = evaluate(d);
+    const pass = res.filter((r) => r.pass), miss = res.filter((r) => r.miss);
+    $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length + " pass" }));
+    $("missCount").textContent = miss.length;
+    const mPE = median(pass.map((r) => r.s.pe > 0 ? r.s.pe : null)), mPEG = median(pass.map((r) => r.s.peg)), mRev = median(pass.map((r) => r.s.revGrowth));
+    $("medPE").textContent = mPE == null ? "–" : FIELDS.pe.fmt(mPE);
+    $("medPEG").textContent = mPEG == null ? "–" : FIELDS.peg.fmt(mPEG);
+    $("medRev").textContent = mRev == null ? "–" : FIELDS.revGrowth.fmt(mRev);
+
+    const crit = $("criteria"); crit.textContent = "";
+    validRules(d).forEach((r) => crit.append(el("span", { class: "crit", text: ruleText(r) })));
+    if (d.sectors.length) crit.append(el("span", { class: "crit", text: d.sectors.join(", ") }));
+
+    const counts = {}; pass.forEach((r) => { counts[r.s.sector] = (counts[r.s.sector] || 0) + 1; });
+    const parts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
+    $("sectorsLine").textContent = parts.length ? "Passing by sector: " + parts.join(" · ") : "";
+
+    // header
+    const ruleFields = new Set(validRules(d).map((r) => r.field));
+    const tr = el("tr");
+    COLUMNS.forEach((c) => {
+      const label = c.head || FIELDS[c.key].head;
+      const isSort = S.sort.key === c.key;
+      const b = el("button", { type: "button", onclick: () => { S.sort = isSort ? { key: c.key, dir: S.sort.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: c.key === "ticker" || c.key === "sector" ? "asc" : "desc" }; renderResults(); } },
+        label, isSort ? el("span", { class: "arr", text: S.sort.dir === "asc" ? "↑" : "↓" }) : null);
+      tr.append(el("th", { scope: "col", "aria-sort": isSort ? (S.sort.dir === "asc" ? "ascending" : "descending") : "none" }, b));
+    });
+    $("thead").replaceChildren(tr);
+
+    // body
+    const q = S.q.trim().toLowerCase();
+    const match = (r) => !q || r.s.ticker.toLowerCase().includes(q) || (r.s.name || "").toLowerCase().includes(q);
+    const { key, dir } = S.sort, sgn = dir === "asc" ? 1 : -1;
+    const cmp = (a, b) => {
+      const x = a.s[key], y = b.s[key];
+      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return (typeof x === "string" ? x.localeCompare(y) : x - y) * sgn;
+    };
+    const rowsP = pass.filter(match).sort(cmp), rowsM = S.showMiss ? miss.filter(match).sort(cmp) : [];
+    const body = $("tbody"); body.textContent = "";
+    const mkRow = (r, isMiss) => {
+      const row = el("tr", { class: isMiss ? "miss" : "" });
+      const href = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
+      const link = (cls, text) => el("a", { class: "qlink " + cls, href, target: "_blank", rel: "noopener noreferrer", title: "Open " + r.s.ticker + " on Yahoo Finance", text });
+      const first = el("td", null, link("tk", r.s.ticker));
+      if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
+      if (r.s.name) first.append(link("co", r.s.name));
+      row.append(first, el("td", { class: "sec", text: r.s.sector || "" }));
+      ["mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"].forEach((k) => {
+        const v = r.s[k];
+        let cls = "num";
+        if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
+        const cell = el("td", { class: cls });
+        if (v == null) cell.append(el("span", { class: "na", text: "n/a" })); else cell.textContent = FIELDS[k].fmt(v);
+        row.append(cell);
+      });
+      return row;
+    };
+    rowsP.forEach((r) => body.append(mkRow(r, false)));
+    if (rowsM.length) {
+      body.append(el("tr", { class: "divider" }, el("td", { colspan: String(COLUMNS.length), text: `Near misses · ${rowsM.length} fail exactly one rule` })));
+      rowsM.forEach((r) => body.append(mkRow(r, true)));
+    }
+    if (!rowsP.length && !rowsM.length) {
+      body.append(el("tr", null, el("td", { colspan: String(COLUMNS.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
+    }
+  }
+
+  function pickData() {
+    if (S.csv) { S.data = S.csv; S.source = "csv"; }
+    else if (S.live) { S.data = S.live.rows; S.source = "live"; }
+    else { S.data = SAMPLE; S.source = "sample"; }
+  }
+  function renderData() {
+    const tag = $("dataTag"), desc = $("dataDesc");
+    tag.classList.toggle("live", S.source === "live");
+    if (S.source === "live") {
+      const d = new Date(S.live.asOf), ageDays = (Date.now() - d) / 864e5;
+      tag.textContent = ageDays > 3 ? "Live data · out of date" : "Live data";
+      desc.textContent = `${S.data.length} S&P 500 stocks · Yahoo Finance · updated ${d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+    } else if (S.source === "csv") {
+      tag.textContent = "Your data"; desc.textContent = `${S.data.length} stocks from your import`;
+    } else {
+      tag.textContent = "Example data"; desc.textContent = `${S.data.length} large S&P 500 names, illustrative figures`;
+    }
+    $("useSample").textContent = S.live ? "Back to live data" : "Back to example data";
+    $("footNote").textContent = S.source === "live"
+      ? "Figures come from Yahoo Finance and refresh every few hours. Revenue growth is the latest quarter versus a year earlier; PEG is Yahoo's trailing PEG. Stocks with negative earnings show n/a for P/E and fail any P/E rule. Not investment advice."
+      : "Example figures are approximate and for trying out screens, not live market data or investment advice. Stocks with a missing or negative-earnings value fail any rule on that metric.";
+  }
+  function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); }
+
+  // Live dataset. On the hosted site it is data/sp500.json next to this page,
+  // refreshed by the Python backend every 3 hours. Inside Claude it arrives
+  // through the page's database at market/sp500. The newest copy wins.
+  function applyLive(d) {
+    if (!d || !Array.isArray(d.rows) || !Array.isArray(d.cols)) return;
+    if (S.live && S.live.asOf && d.asOf && d.asOf <= S.live.asOf) return;
+    const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return o; }).filter((o) => o.ticker);
+    if (!rows.length) return;
+    S.live = { asOf: d.asOf, rows };
+    refreshAll();
+  }
+  function fetchJson() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    fetch("data/sp500.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).then(applyLive).catch(() => {});
+  }
+  async function initLive() {
+    fetchJson();
+    setInterval(fetchJson, 15 * 60 * 1000);
+    const c = window.claude; if (!c || !c.use) return;
+    try {
+      const db = await c.use("db"); if (!db) return;
+      db.doc("market/sp500").onSnapshot((snap) => { applyLive(snap.exists ? snap.data() : null); }, () => {});
+    } catch (e) { /* keep example data */ }
+  }
+
+  function changed(structural) {
+    S.dirty = true; S.deleteArmed = false;
+    if (structural) renderEditor(); else renderButtons();
+    renderScreens(); renderResults();
+  }
+
+  function selectScreen(id) {
+    const sc = findScreen(id); if (!sc) return;
+    S.activeId = id; S.draft = clone(sc); S.dirty = false; S.deleteArmed = false;
+    lsSet("screener.active", id);
+    renderScreens(); renderEditor(); renderResults(); toast("");
+  }
+
+  let toastT;
+  function toast(msg) { $("toast").textContent = msg; clearTimeout(toastT); if (msg) toastT = setTimeout(() => { $("toast").textContent = ""; }, 3500); }
+
+  // ---------- Actions ----------
+  $("screenName").addEventListener("input", (e) => { S.draft.name = e.target.value; changed(false); });
+  $("addRule").addEventListener("click", () => {
+    const used = new Set(S.draft.rules.map((r) => r.field));
+    const field = ["pe", "peg", "revGrowth", "netMargin", "divYield", "mktCap"].find((f) => !used.has(f)) || "pe";
+    const defaults = { pe: ["<", 25], peg: ["<", 1.5], revGrowth: [">", 10], netMargin: [">", 15], divYield: [">=", 2], mktCap: [">", 100] };
+    S.draft.rules.push({ field, op: defaults[field][0], value: defaults[field][1] });
+    changed(true);
+    const last = document.querySelectorAll(".rule input"); if (last.length) last[last.length - 1].focus();
+  });
+
+  async function saveNew() {
+    const active = findScreen(S.activeId);
+    let name = (S.draft.name || "").trim() || "Untitled screen";
+    if (active && active.builtin && name === active.name) name += " (my copy)";
+    const sc = { id: "s-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, rules: clone(S.draft.rules), sectors: S.draft.sectors.slice(), created: Date.now() };
+    await store.put(sc);
+    if (!S.userScreens.find((s) => s.id === sc.id)) S.userScreens.push(sc);
+    S.activeId = sc.id; S.draft = clone(sc); S.dirty = false;
+    lsSet("screener.active", sc.id);
+    renderScreens(); renderEditor(); renderResults(); toast(`Saved “${name}”`);
+  }
+  $("saveBtn").addEventListener("click", async () => {
+    const active = findScreen(S.activeId);
+    if (!active || active.builtin) return saveNew();
+    const sc = Object.assign(clone(active), { name: (S.draft.name || "").trim() || "Untitled screen", rules: clone(S.draft.rules), sectors: S.draft.sectors.slice() });
+    await store.put(sc);
+    const i = S.userScreens.findIndex((s) => s.id === sc.id); if (i >= 0) S.userScreens[i] = sc;
+    S.draft = clone(sc); S.dirty = false;
+    renderScreens(); renderEditor(); renderResults(); toast("Saved");
+  });
+  $("saveNewBtn").addEventListener("click", saveNew);
+  $("resetBtn").addEventListener("click", () => { selectScreen(S.activeId); toast("Changes discarded"); });
+  $("deleteBtn").addEventListener("click", async () => {
+    if (!S.deleteArmed) { S.deleteArmed = true; renderButtons(); return; }
+    const sc = findScreen(S.activeId); if (!sc || sc.builtin) return;
+    await store.remove(sc.id);
+    S.userScreens = S.userScreens.filter((s) => s.id !== sc.id);
+    selectScreen("b-starter"); toast(`Deleted “${sc.name}”`);
+  });
+  $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; renderResults(); });
+  $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
+
+  // ---------- CSV import ----------
+  function parseCSV(text) {
+    const rows = []; let row = [], f = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true;
+      else if (c === "," || c === "\t" || c === ";") { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); f = ""; if (row.some((x) => x.trim() !== "")) rows.push(row); row = []; }
+      else f += c;
+    }
+    row.push(f); if (row.some((x) => x.trim() !== "")) rows.push(row);
+    return rows;
+  }
+  const ALIASES = {
+    ticker: ["ticker", "symbol", "tickersymbol"], name: ["name", "company", "companyname", "security"],
+    sector: ["sector", "gicssector"], mktCap: ["mktcap", "marketcap", "marketcapitalization", "marketcapb", "mcap"],
+    pe: ["pe", "peratio", "ttmpe", "pettm", "priceearnings", "trailingpe"], peg: ["peg", "pegratio"],
+    revGrowth: ["revgrowth", "revenuegrowth", "revenuegrowthyoy", "salesgrowth", "revenueyoy", "revgrowthyoy"],
+    netMargin: ["netmargin", "profitmargin", "netprofitmargin"], divYield: ["divyield", "dividendyield", "yield"],
+  };
+  function importCSV(text) {
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error("Add a header row and at least one stock.");
+    const norm = (h) => h.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const head = rows[0].map(norm), idx = {};
+    for (const k in ALIASES) { const i = head.findIndex((h) => ALIASES[k].includes(h)); if (i >= 0) idx[k] = i; }
+    if (idx.ticker == null) throw new Error("No ticker column found. Name one column “ticker” or “symbol”.");
+    const out = rows.slice(1).map((r) => {
+      const o = {};
+      COLS.forEach((c) => { const i = idx[c]; const raw = i == null ? null : r[i]; o[c] = c === "ticker" || c === "name" || c === "sector" ? (raw || "").trim() : num(raw); });
+      return o;
+    }).filter((o) => o.ticker);
+    // Normalise units: raw-dollar market caps to billions, fractional percentages to percent.
+    const caps = out.map((o) => o.mktCap).filter((v) => v != null);
+    if (caps.length && median(caps) > 1e6) out.forEach((o) => { if (o.mktCap != null) o.mktCap = o.mktCap / 1e9; });
+    ["revGrowth", "netMargin", "divYield"].forEach((k) => {
+      const vals = out.map((o) => o[k]).filter((v) => v != null);
+      if (vals.length && Math.max(...vals.map(Math.abs)) <= 1.5) out.forEach((o) => { if (o[k] != null) o[k] = o[k] * 100; });
+    });
+    out.forEach((o) => { if (!o.sector) o.sector = "Unclassified"; });
+    const found = COLS.filter((c) => idx[c] != null), missing = COLS.filter((c) => idx[c] == null && c !== "ticker");
+    return { out, found, missing };
+  }
+  $("csvFile").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    const rd = new FileReader(); rd.onload = () => { $("csvIn").value = rd.result; }; rd.readAsText(file);
+  });
+  $("loadCsv").addEventListener("click", () => {
+    try {
+      const { out, found, missing } = importCSV($("csvIn").value);
+      if (!out.length) throw new Error("No rows with a ticker were found.");
+      S.csv = out;
+      const kept = lsSet("screener.data", out);
+      $("importMsg").textContent = `Loaded ${out.length} stocks. Columns used: ${found.join(", ")}.` + (missing.length ? ` Not in file: ${missing.join(", ")}.` : "") + (kept ? "" : " This browser won't remember it after you close the page.");
+      refreshAll();
+    } catch (err) { $("importMsg").textContent = err.message; }
+  });
+  $("useSample").addEventListener("click", () => {
+    S.csv = null; try { localStorage.removeItem("screener.data"); } catch (e) {}
+    $("importMsg").textContent = S.live ? "Switched back to live data." : "Switched back to example data.";
+    refreshAll();
+  });
+
+  // ---------- Boot ----------
+  store.loadLocal();
+  const savedData = lsGet("screener.data");
+  if (Array.isArray(savedData) && savedData.length) S.csv = savedData;
+  const lastActive = lsGet("screener.active");
+  if (lastActive && findScreen(lastActive)) { S.activeId = lastActive; S.draft = clone(findScreen(lastActive)); }
+  renderStorageNote(); refreshAll();
+  store.init();
+  initLive();
+})();
+</script>
+</body>
+</html>

@@ -1,19 +1,57 @@
-# S&P 500 screener data
+# S&P 500 Screener
 
-A free daily dataset for the S&P 500 Screener page.
+A stock screener for the S&P 500. You build screens from rules on P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. A Python job refreshes the data every 3 hours.
 
-- `fetch_sp500.py` gets the current S&P 500 list (from Wikipedia) and pulls market cap, P/E, PEG, revenue growth, net margin and dividend yield for each stock from Yahoo Finance using `yfinance`.
-- `.github/workflows/update-data.yml` runs the script every weekday at 22:15 UTC, after the US market close, and commits `data/sp500.json`.
-- A daily Claude scheduled task copies `data/sp500.json` into the screener page.
+Live site: https://tsai8890.github.io/sp500-screener-data/
 
-## Setup
+## How it fits together
 
-1. Create a **public** GitHub repository. Actions minutes are free and unlimited on public repos.
-2. Add these files, keeping the same paths.
-3. Open the **Actions** tab, choose "Update S&P 500 data", then click **Run workflow** to create the first dataset. A run takes about 5–15 minutes.
-4. Check that `data/sp500.json` appears in the repo.
+```
+GitHub Actions (every 3 h)
+  └─ backend/fetch_sp500.py  ──writes──▶  data/sp500.json  (the "database", committed to the repo)
+                                                │
+GitHub Pages serves the repo root               │
+  └─ index.html  ──fetch("data/sp500.json")─────┘
+```
+
+| Path | What it is |
+|---|---|
+| `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. |
+| `data/sp500.json` | The dataset. Rewritten by the backend on every run. |
+| `backend/fetch_sp500.py` | Python backend. Gets the S&P 500 list from Wikipedia and per-stock metrics from Yahoo Finance via `yfinance`. |
+| `backend/requirements.txt` | Python dependencies. |
+| `.github/workflows/update-data.yml` | Runs the backend every 3 hours and commits the new data. |
+
+Saved screens are kept in each visitor's browser (localStorage).
+
+## Data format
+
+`data/sp500.json` stores rows as arrays to stay small (about 36 KB):
+
+```json
+{
+  "asOf": "2026-10-22T16:22:08Z",
+  "source": "Yahoo Finance via yfinance; constituents from Wikipedia",
+  "count": 503,
+  "stale": [],
+  "cols": ["ticker", "name", "sector", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"],
+  "rows": [["AAPL", "Apple Inc.", "Information Technology", 5046.8, 39.7, 2.71, 16.4, 27.6, 0.31], ...]
+}
+```
+
+Units: `mktCap` in billions of USD; `revGrowth`, `netMargin`, `divYield` in percent. `pe` is null for negative earnings. `revGrowth` is the latest quarter compared with the same quarter a year earlier, and `peg` is Yahoo's trailing PEG.
+
+## Run locally
+
+```bash
+pip install -r backend/requirements.txt
+python backend/fetch_sp500.py          # refreshes data/sp500.json
+python -m http.server 8000             # then open http://localhost:8000
+```
+
+Opening `index.html` straight from disk (`file://`) shows the built-in example data, because browsers block `fetch` there. Serve the folder instead.
 
 ## Notes
 
-- Yahoo Finance data through `yfinance` is free but unofficial, and Yahoo can rate-limit or change it. If a stock fails to download, its previous row is kept. If fewer than 80% of stocks download fresh, the run fails and the old file stays in place.
-- Revenue growth is the latest quarter compared with the same quarter a year earlier. PEG is Yahoo's trailing PEG. P/E is blank for companies with negative earnings.
+- Yahoo Finance data through `yfinance` is free but unofficial and can be rate-limited or change without notice. If a stock fails to download, its previous row is kept and listed in `stale`. If fewer than 80% of stocks download fresh, the run fails and the previous file stays in place.
+- The schedule can start a few minutes late when GitHub is busy.

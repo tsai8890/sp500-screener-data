@@ -23,7 +23,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sp500.json")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, "data", "sp500.json")
 COLS = ["ticker", "name", "sector", "mktCap", "pe", "peg", "revGrowth", "netMargin", "divYield"]
 UA = {"User-Agent": "Mozilla/5.0 (sp500-screener data job; github actions)"}
 
