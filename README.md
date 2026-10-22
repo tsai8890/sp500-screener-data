@@ -2,7 +2,7 @@
 
 A stock screener for the S&P 500. You build screens from rules on P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. A Python job refreshes the data every 3 hours.
 
-Live site: https://tsai8890.github.io/sp500-screener-data/
+**Live site: https://tsai8890.github.io/sp500-screener-data/**
 
 ## How it fits together
 
