@@ -20,7 +20,7 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 | Path | What it is |
 |---|---|
 | `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. |
-| `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (Wikipedia, iShares IWB holdings fallback). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
+| `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
 | `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
 | `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
 | `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |

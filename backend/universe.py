@@ -95,7 +95,7 @@ def _ishares_rows(text: str) -> list[tuple[str, str, str]]:
     rows = []
     for t, n, sec in _clean(df, "Ticker", "Name", "Sector"):
         t = t.replace(" ", ".")                       # "BRK B" -> "BRK.B"
-        rows.append((ISHARES_CLASS.get(t, t), n.title(), sec))
+        rows.append((ISHARES_CLASS.get(t, t), n.title(), SECTOR_NAMES.get(sec, sec)))
     return rows
 
 
@@ -119,6 +119,9 @@ def russell1000() -> list[tuple[str, str, str]]:
 # iShares writes share-class tickers without the dot (BRKB); Wikipedia and Yahoo use BRK.B / BRK-B.
 ISHARES_CLASS = {"BRKB": "BRK.B", "BFB": "BF.B", "BFA": "BF.A", "LENB": "LEN.B", "HEIA": "HEI.A",
                  "UHALB": "UHAL.B", "CWENA": "CWEN.A", "MOGA": "MOG.A", "CRDA": "CRD.A"}
+
+# iShares' sector labels -> the GICS names Wikipedia uses for the S&P 500.
+SECTOR_NAMES = {"Communication": "Communication Services"}
 
 UNIVERSES = {
     "sp500": ("S&P 500", sp500),

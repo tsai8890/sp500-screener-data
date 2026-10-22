@@ -17,7 +17,8 @@ from .common import FUNDAMENTALS_PATH, iso, num, read_json, utc_now, write_json
 from . import universe
 from .universe import yahoo_symbol
 
-WORKERS = 8  # parallel requests; higher values get rate-limited by Yahoo
+WORKERS = 8         # parallel requests in the first pass; higher values get rate-limited by Yahoo
+RETRY_WORKERS = 2   # slower second pass for the stocks that failed
 
 
 def extract(info: dict) -> dict | None:
@@ -74,6 +75,16 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS) -> dict:
     stocks_in = universe.union(universe.load())
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = list(pool.map(lambda row: fetch_one(row[0]), stocks_in))
+
+    # Second, gentler pass for whatever failed (usually Yahoo rate limiting).
+    failed = [i for i, got in enumerate(results) if got is None]
+    if failed:
+        time.sleep(10)
+        with ThreadPoolExecutor(max_workers=RETRY_WORKERS) as pool:
+            retried = list(pool.map(lambda i: fetch_one(stocks_in[i][0], tries=3), failed))
+        for i, got in zip(failed, retried):
+            results[i] = got
+        print(f"Retry pass: {sum(g is not None for g in retried)}/{len(failed)} recovered")
 
     stocks, stale, missing = {}, [], []
     for (ticker, name, sector), got in zip(stocks_in, results):
