@@ -68,9 +68,11 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .tag.live { background: var(--accent-soft); color: var(--accent); }
 
 .layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.layout.collapsed { grid-template-columns: minmax(0, 1fr); }
-.layout.collapsed > aside { display: none; }
-@media (max-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 821px) {
+  .layout.collapsed { grid-template-columns: minmax(0, 1fr); }
+  .layout.collapsed > aside { display: none; }
+  .m-only { display: none !important; }
+}
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
 .panel-head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -186,6 +188,75 @@ tr.divider td { background: var(--sunk); color: var(--muted); font-size: 11px; t
 .empty { padding: 30px 16px; text-align: center; color: var(--muted); }
 .na { color: var(--muted); }
 footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
+
+/* ---------- Phone layout (≤ 820px): drawer for screens, cards for results ---------- */
+.scrim { display: none; }
+#sortSel { display: none; }
+@media (max-width: 820px) {
+  body { padding-block: 12px 28px; }
+  .wrap { gap: 14px; }
+  h1 { font-size: 24px; }
+  .sub { font-size: 13px; }
+  header.top { gap: 8px; }
+  .datasrc { font-size: 12px; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+
+  /* screens + rules slide in from the left */
+  #sidePanel {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 30;
+    width: min(92vw, 400px); border-radius: 0 12px 12px 0; border-left: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px);
+    transform: translateX(-105%); visibility: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,.25);
+  }
+  .layout.drawer-open #sidePanel { transform: none; visibility: visible; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(8, 16, 20, .45); opacity: 0; pointer-events: none; }
+  .layout.drawer-open .scrim { opacity: 1; pointer-events: auto; }
+  .drawer-foot { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .drawer-foot .btn { width: 100%; padding: 11px; }
+  .screen-btn { padding: 10px; }
+  .rule select, .rule input { padding: 8px; font-size: 16px; }   /* 16px stops iOS zooming on focus */
+  .name-in, .search, textarea { font-size: 16px; }
+
+  .summary { padding: 14px; gap: 10px 18px; }
+  .big { font-size: 32px; }
+  .stat .v { font-size: 14px; }
+  .criteria, .sectors-line { padding-left: 14px; padding-right: 14px; }
+  .sub { display: none; }
+  .toolbar { padding: 10px 14px; gap: 10px; justify-content: flex-start; }
+  .toolbar .tools { display: contents; }
+  #toggleSide { order: 1; flex: 1 1 100%; padding: 9px 12px; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search { order: 2; flex: 1 1 100%; width: auto; min-width: 0; padding: 8px 10px; }
+  .colmenu { order: 3; }
+  .colmenu > summary { padding: 7px 10px; }
+  #sortSel { order: 4; display: block; flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 7px 8px; font-size: 14px; }
+  .toolbar .toggle { order: 5; flex: 1 1 100%; font-size: 13px; }
+  .colmenu .menu { right: auto; left: 0; max-width: calc(100vw - 32px); }
+
+  /* results table becomes a list of cards */
+  .table-wrap { overflow: visible; }
+  #tbl, #tbody { display: block; min-width: 0; width: 100%; }
+  #thead { display: none; }
+  #tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  #tbody td { display: block; padding: 0; border: 0; text-align: left; white-space: normal; min-width: 0; }
+  #tbody td.c-stock { grid-column: 1 / 3; grid-row: 1; }
+  #tbody td.c-stock .tk { font-size: 15px; }
+  #tbody td.c-stock .co { max-width: none; white-space: nowrap; }
+  #tbody td.c-price { grid-column: 3; grid-row: 1; text-align: right; font-size: 15px; background: none; }
+  #tbody td.c-price .sub { font-size: 12.5px; }
+  #tbody td.sec { grid-column: 1 / -1; grid-row: 2; margin-top: -6px; font-size: 11.5px; }
+  #tbody td.num:not(.c-price) { padding: 4px 6px; border-radius: 5px; font-size: 13px; }
+  #tbody td.num:not(.c-price)::before { content: attr(data-label); display: block; font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 1px; }
+  #tbody tr.divider, #tbody tr.empty-row { display: block; padding: 0; }
+  #tbody tr.divider td { padding: 8px 14px; }
+  #tbody td.empty { padding: 30px 16px; text-align: center; }
+  .misslabel { margin-left: 4px; }
+}
+@media (max-width: 820px) and (prefers-reduced-motion: no-preference) {
+  #sidePanel { transition: transform .22s ease, visibility .22s; }
+  .scrim { transition: opacity .2s; }
+}
 @media (prefers-reduced-motion: no-preference) { .screen-btn, .btn, .chip { transition: background-color .12s, border-color .12s; } }
 </style>
 </head>
@@ -201,7 +272,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
 
   <div class="layout" id="layout">
     <aside class="panel" id="sidePanel" aria-label="Screens and rules">
-      <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
+      <div class="panel-head"><p class="eyebrow">Saved screens</p><button class="btn sm m-only" id="closeDrawer" type="button">Close</button></div>
       <div class="screens" id="screens"></div>
       <div class="storage-note" id="storageNote">Saved in this browser.</div>
 
@@ -252,7 +323,9 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
           </div>
         </details>
       </div>
+      <div class="drawer-foot m-only"><button class="btn primary" id="showResults" type="button">Show results</button></div>
     </aside>
+    <div class="scrim" id="scrim"></div>
 
     <main class="panel" aria-label="Results">
       <div class="summary">
@@ -282,6 +355,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
               </label>
             </div>
           </details>
+          <select id="sortSel" aria-label="Sort by"></select>
           <input class="search" id="search" type="search" placeholder="Find ticker or name" aria-label="Find ticker or name">
         </div>
       </div>
@@ -492,7 +566,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const n = evaluate(shown).filter((x) => x.pass).length;
       const nm = el("span", { class: "nm", text: shown.name || "Untitled screen" });
       if (isActive && S.dirty) nm.append(el("span", { class: "dot", title: "Unsaved changes" }));
-      return el("button", { class: "screen-btn", type: "button", "aria-current": String(isActive), onclick: () => selectScreen(sc.id) },
+      return el("button", { class: "screen-btn", type: "button", "aria-current": String(isActive), onclick: () => { selectScreen(sc.id); if (isPhone()) setDrawer(false); } },
         nm, el("span", { class: "ct", text: n + " pass" }),
         el("span", { class: "rl", text: validRules(shown).map(ruleText).join(" · ") + (shown.sectors.length ? " · " + shown.sectors.length + " sector" + (shown.sectors.length > 1 ? "s" : "") : "") }));
     };
@@ -570,6 +644,21 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("colSummary").textContent = `Columns ${shown}/${COLUMNS.length - 1}`;
     if (focusId && focusId.startsWith("col-") && $(focusId)) $(focusId).focus();
   }
+  const SORTS = [["mktCap", "desc", "Market cap ↓"], ["chg", "desc", "Day change ↓"], ["chg", "asc", "Day change ↑"],
+    ["price", "desc", "Price ↓"], ["pe", "asc", "P/E ↑"], ["peg", "asc", "PEG ↑"], ["revGrowth", "desc", "Rev growth ↓"],
+    ["netMargin", "desc", "Net margin ↓"], ["divYield", "desc", "Dividend yield ↓"], ["ticker", "asc", "Ticker A–Z"]];
+  function renderSortSel() {
+    const sel = $("sortSel"), cur = S.sort.key + ":" + S.sort.dir;
+    if (!sel.options.length) {
+      SORTS.forEach(([k, d, label]) => sel.append(el("option", { value: k + ":" + d, text: "Sort: " + label })));
+      sel.addEventListener("change", () => { const [key, dir] = sel.value.split(":"); S.sort = { key, dir }; renderResults(); });
+    }
+    if (![...sel.options].some((o) => o.value === cur)) {
+      const extra = sel.querySelector("option[data-extra]") || sel.appendChild(el("option", { "data-extra": "1" }));
+      extra.value = cur; extra.textContent = "Sort: " + (FIELDS[S.sort.key] ? FIELDS[S.sort.key].head : S.sort.key) + (S.sort.dir === "asc" ? " ↑" : " ↓");
+    }
+    sel.value = cur;
+  }
   function saveCols() { lsSet("screener.hiddenCols", [...S.hidden]); }
   function renderResults() {
     const d = S.draft, res = evaluate(d);
@@ -577,6 +666,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     renderColMenu();
     const pass = res.filter((r) => r.pass), miss = res.filter((r) => r.miss);
     $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length + " pass" }));
+    $("showResults").textContent = `Show ${pass.length} stock${pass.length === 1 ? "" : "s"}`;
+    renderSortSel();
     $("missCount").textContent = miss.length;
     const mPE = median(pass.map((r) => r.s.pe > 0 ? r.s.pe : null)), mPEG = median(pass.map((r) => r.s.peg)), mRev = median(pass.map((r) => r.s.revGrowth));
     $("medPE").textContent = mPE == null ? "–" : FIELDS.pe.fmt(mPE);
@@ -625,7 +716,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const row = el("tr", { class: isMiss ? "miss" : "" });
       const href = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
       const link = (cls, text) => el("a", { class: "qlink " + cls, href, target: "_blank", rel: "noopener noreferrer", title: "Open " + r.s.ticker + " on Yahoo Finance", text });
-      const first = el("td", null, link("tk", r.s.ticker));
+      const first = el("td", { class: "c-stock" }, link("tk", r.s.ticker));
       if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
       if (r.s.name) first.append(link("co", r.s.name));
       row.append(first);
@@ -634,7 +725,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
-        const cell = el("td", { class: cls });
+        const cell = el("td", { class: cls + (k === "price" ? " c-price" : ""), "data-label": FIELDS[k].head });
         if (v == null) cell.append(el("span", { class: "na", text: "n/a" })); else cell.textContent = FIELDS[k].fmt(v);
         if (k === "price" && r.s.chg != null) {
           const c = r.s.chg, rc = ruleFields.has("chg") ? (r.fails.includes("chg") ? " hit-fail" : " hit-pass") : "";
@@ -650,7 +741,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       rowsM.forEach((r) => body.append(mkRow(r, true)));
     }
     if (!rowsP.length && !rowsM.length) {
-      body.append(el("tr", null, el("td", { colspan: String(cols.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
+      body.append(el("tr", { class: "empty-row" }, el("td", { colspan: String(cols.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
     }
   }
 
@@ -733,13 +824,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     S.activeId = id; S.draft = clone(sc); S.dirty = false; S.deleteArmed = false;
     lsSet("screener.active", id);
     renderScreens(); renderEditor(); renderResults(); toast("");
+    applySide();
   }
 
   let toastT;
   function toast(msg) { $("toast").textContent = msg; clearTimeout(toastT); if (msg) toastT = setTimeout(() => { $("toast").textContent = ""; }, 3500); }
 
   // ---------- Actions ----------
-  $("screenName").addEventListener("input", (e) => { S.draft.name = e.target.value; changed(false); });
+  $("screenName").addEventListener("input", (e) => { S.draft.name = e.target.value; changed(false); if (isPhone()) applySide(); });
   $("addRule").addEventListener("click", () => {
     const used = new Set(S.draft.rules.map((r) => r.field));
     const field = ["pe", "peg", "revGrowth", "netMargin", "divYield", "mktCap"].find((f) => !used.has(f)) || "pe";
@@ -779,14 +871,37 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     selectScreen("b-starter"); toast(`Deleted “${sc.name}”`);
   });
   $("showMiss").addEventListener("change", (e) => { S.showMiss = e.target.checked; renderResults(); });
-  function applySide() {
-    $("layout").classList.toggle("collapsed", S.collapsed);
-    $("toggleSide").textContent = S.collapsed ? "Show screens" : "Hide screens";
-    $("toggleSide").setAttribute("aria-expanded", String(!S.collapsed));
+  const phoneMq = window.matchMedia("(max-width: 820px)");
+  const isPhone = () => phoneMq.matches;
+  function setDrawer(open) {
+    S.drawer = open;
+    $("layout").classList.toggle("drawer-open", open);
+    document.body.style.overflow = open ? "hidden" : "";
+    $("toggleSide").setAttribute("aria-expanded", String(open));
+    if (open) $("closeDrawer").focus(); else if (isPhone()) $("toggleSide").focus();
   }
-  $("toggleSide").addEventListener("click", () => { S.collapsed = !S.collapsed; lsSet("screener.collapsed", S.collapsed); applySide(); });
+  function applySide() {
+    if (isPhone()) {
+      $("layout").classList.remove("collapsed");
+      const nm = (S.draft && S.draft.name) || "Screens";
+      $("toggleSide").textContent = "☰ " + nm;
+      $("toggleSide").title = "Screens and rules";
+      $("toggleSide").setAttribute("aria-expanded", String(!!S.drawer));
+    } else {
+      if (S.drawer) setDrawer(false);
+      $("layout").classList.toggle("collapsed", S.collapsed);
+      $("toggleSide").textContent = S.collapsed ? "Show screens" : "Hide screens";
+      $("toggleSide").setAttribute("aria-expanded", String(!S.collapsed));
+    }
+  }
+  $("toggleSide").addEventListener("click", () => {
+    if (isPhone()) return setDrawer(true);
+    S.collapsed = !S.collapsed; lsSet("screener.collapsed", S.collapsed); applySide();
+  });
+  ["closeDrawer", "showResults", "scrim"].forEach((id) => $(id).addEventListener("click", () => setDrawer(false)));
+  phoneMq.addEventListener("change", applySide);
   document.addEventListener("click", (e) => { const m = $("colMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("colMenu").open = false; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("colMenu").open = false; if (S.drawer) setDrawer(false); } });
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
 
   // ---------- CSV import ----------
