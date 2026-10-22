@@ -78,21 +78,42 @@ def sp500() -> list[tuple[str, str, str]]:
         return _clean(df, "Symbol", "Security", "GICS Sector")
 
 
+IWB = "https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/"
+IWB_FILES = [IWB + "latest-holdings.csv",
+             IWB + "1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"]
+BROWSER_UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+              "Accept": "text/csv,application/csv,text/plain,*/*"}
+
+
+def _ishares_rows(text: str) -> list[tuple[str, str, str]]:
+    lines = text.replace("\ufeff", "").splitlines()
+    start = next(i for i, l in enumerate(lines) if l.startswith("Ticker,"))
+    df = pd.read_csv(io.StringIO("\n".join(lines[start:])), on_bad_lines="skip")
+    if "Asset Class" in df.columns:
+        df = df[df["Asset Class"] == "Equity"]
+    rows = []
+    for t, n, sec in _clean(df, "Ticker", "Name", "Sector"):
+        t = t.replace(" ", ".")                       # "BRK B" -> "BRK.B"
+        rows.append((ISHARES_CLASS.get(t, t), n.title(), sec))
+    return rows
+
+
 def russell1000() -> list[tuple[str, str, str]]:
-    try:
-        return _largest_wiki_table("https://en.wikipedia.org/wiki/Russell_1000_Index", 900)
-    except Exception as e:  # noqa: BLE001
-        print(f"Russell 1000 from Wikipedia failed ({e}); using iShares IWB holdings", file=sys.stderr)
-        text = _get("https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/"
-                    "1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund")
-        lines = text.splitlines()
-        start = next(i for i, l in enumerate(lines) if l.startswith("Ticker,"))
-        df = pd.read_csv(io.StringIO("\n".join(lines[start:])), on_bad_lines="skip")
-        df = df[df.get("Asset Class", "Equity") == "Equity"]
-        rows = [(ISHARES_CLASS.get(t, t), n, sec) for t, n, sec in _clean(df, "Ticker", "Name", "Sector")]
-        if len(rows) < 900:
-            raise RuntimeError(f"iShares IWB holdings look wrong: {len(rows)} rows") from None
-        return rows
+    """Russell 1000 members from the holdings of iShares' Russell 1000 ETF (IWB),
+    which tracks the index. Wikipedia has no constituents table for this index."""
+    errors = []
+    for url in IWB_FILES:
+        try:
+            r = requests.get(url, headers=BROWSER_UA, timeout=30)
+            r.raise_for_status()
+            rows = _ishares_rows(r.text)
+            if len(rows) >= 900:
+                return rows
+            errors.append(f"{url}: only {len(rows)} rows")
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{url}: {type(e).__name__}: {e}")
+    raise RuntimeError("; ".join(errors))
 
 
 # iShares writes share-class tickers without the dot (BRKB); Wikipedia and Yahoo use BRK.B / BRK-B.
@@ -116,6 +137,7 @@ def load(force: bool = False) -> dict:
     which is required)."""
     cache = read_json(UNIVERSES_PATH) or {"universes": {}}
     lists = cache.get("universes", {})
+    errors = {}
     changed = False
     for uid, (name, fetch) in UNIVERSES.items():
         cur = lists.get(uid)
@@ -129,6 +151,8 @@ def load(force: bool = False) -> dict:
             print(f"Universe {name}: {len(rows)} stocks")
         except Exception as e:  # noqa: BLE001
             print(f"Universe {name} refresh failed: {e}", file=sys.stderr)
+            errors[uid] = {"at": iso(utc_now()), "error": str(e)[:500]}
+            changed = True
             if uid == DEFAULT and not cur:
                 raise RuntimeError(f"Could not load the {name} list") from e
     # drop universes that are no longer configured
@@ -136,7 +160,7 @@ def load(force: bool = False) -> dict:
         if uid not in UNIVERSES:
             del lists[uid]
             changed = True
-    cache = {"asOf": iso(utc_now()) if changed else cache.get("asOf"), "universes": lists}
+    cache = {"asOf": iso(utc_now()) if changed else cache.get("asOf"), "universes": lists, "errors": errors}
     if changed:
         write_json(UNIVERSES_PATH, cache)
     return cache
