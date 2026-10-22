@@ -1,6 +1,6 @@
 # S&P 500 Screener
 
-A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results.
+A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. A second tab keeps your **watchlists**: star any stock (☆) or add it by ticker, and see the same live metrics plus the change since you added it. Open the site with `#watchlist` to land on that tab.
 
 **Live site: https://tsai8890.github.io/sp500-screener-data/**
 
@@ -26,7 +26,7 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 | `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
 | `backend/update.py` | Command line used by GitHub Actions. |
 | `backend/server.py` | Always-on server: scheduler plus HTTP (standard library only). |
-| `backend/screens_db.py` | Saved screens in SQLite (`data/screener.db`), used by the server's `/api/screens`. |
+| `backend/screens_db.py` | Saved screens and watchlists in SQLite (`data/screener.db`), used by the server's `/api/screens` and `/api/watchlists`. |
 | `data/screens.json` | The built-in screens everyone sees. Edit it to change them. |
 | `data/` | `fundamentals.json`, `prices.json` and the merged `sp500.json` the page reads. |
 | `.github/workflows/` | `fundamentals.yml` (every 30 min) and `prices.yml` (every 10 min in market hours). |
@@ -45,13 +45,13 @@ python -m backend.update prices --force   # prices even if the market is closed
 python -m backend.server                  # always-on server: open http://localhost:8000
 ```
 
-Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete).
+Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete) and `/api/watchlists` (same verbs; each watchlist is `{name, items: [{ticker, addedAt, addedPrice}]}`).
 
-## Where saved screens live
+## Where saved screens and watchlists live
 
 | Where the page runs | Saved screens go to |
 |---|---|
-| Always-on server | SQLite, `data/screener.db`, shared by everyone using that server. Inspect with `sqlite3 data/screener.db "select id, name, rules from screens"`. |
+| Always-on server | SQLite, `data/screener.db` (tables `screens` and `watchlists`), shared by everyone using that server. Inspect with `sqlite3 data/screener.db "select id, name, rules from screens"`. |
 | GitHub Pages | The visitor's browser (localStorage). Use **Export screens (JSON)** / **Import screens** in the screens panel to back them up or move them between devices. |
 
 Built-in screens always come from `data/screens.json`. To make one of your screens a built-in for everyone, export it and copy it into that file's `builtin` list (ids starting with `b-`).

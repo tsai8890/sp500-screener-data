@@ -17,6 +17,9 @@ What it does:
         GET    /api/screens          saved screens (SQLite, data/screener.db)
         PUT    /api/screens/<id>     create or replace one screen (JSON body)
         DELETE /api/screens/<id>     delete one screen
+        GET    /api/watchlists       saved watchlists (same database)
+        PUT    /api/watchlists/<id>  create or replace one watchlist
+        DELETE /api/watchlists/<id>  delete one watchlist
 
 Settings (environment variables):
   HOST (0.0.0.0)  PORT (8000)
@@ -185,6 +188,8 @@ class Handler(BaseHTTPRequestHandler):
             with STATE.lock:
                 body = STATE.index
             return self._send(200, body, "application/json") if body else self._json(503, {"error": "No data yet"})
+        if path == "/api/watchlists":
+            return self._json(200, {"watchlists": screens_db.list_watchlists(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/screens":
             return self._json(200, {"screens": screens_db.list_screens(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/health":
@@ -208,17 +213,21 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, code: int, obj) -> None:
         self._send(code, json.dumps(obj).encode(), "application/json")
 
-    def _screen_id(self) -> str | None:
+    def _target(self) -> tuple[str, str] | None:
+        """("screens" | "watchlists", id) for /api/screens/<id> or /api/watchlists/<id>."""
         path = self.path.split("?", 1)[0]
-        prefix = "/api/screens/"
-        return path[len(prefix):] if path.startswith(prefix) else None
+        for kind in ("screens", "watchlists"):
+            prefix = f"/api/{kind}/"
+            if path.startswith(prefix):
+                return kind, path[len(prefix):]
+        return None
 
     def _authorized(self) -> bool:
         return not SCREENS_TOKEN or self.headers.get("Authorization") == f"Bearer {SCREENS_TOKEN}"
 
     def do_PUT(self) -> None:  # noqa: N802
-        sid = self._screen_id()
-        if sid is None:
+        target = self._target()
+        if target is None:
             return self._json(404, {"error": "Not found"})
         if not self._authorized():
             return self._json(401, {"error": "Missing or wrong token"})
@@ -227,17 +236,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(413 if length else 400, {"error": "Body must be JSON, at most 64 KB"})
         try:
             body = json.loads(self.rfile.read(length))
-            return self._json(200, screens_db.upsert(sid, body))
+            kind, sid = target
+            save = screens_db.upsert if kind == "screens" else screens_db.upsert_watchlist
+            return self._json(200, save(sid, body))
         except (ValueError, screens_db.InvalidScreen) as e:
             return self._json(400, {"error": str(e)})
 
     def do_DELETE(self) -> None:  # noqa: N802
-        sid = self._screen_id()
-        if sid is None:
+        target = self._target()
+        if target is None:
             return self._json(404, {"error": "Not found"})
         if not self._authorized():
             return self._json(401, {"error": "Missing or wrong token"})
-        return self._json(200, {"deleted": screens_db.delete(sid)})
+        kind, sid = target
+        remove = screens_db.delete if kind == "screens" else screens_db.delete_watchlist
+        return self._json(200, {"deleted": remove(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors
         if len(args) < 2 or str(args[1])[:1] in "45":

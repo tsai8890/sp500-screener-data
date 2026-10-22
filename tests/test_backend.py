@@ -128,6 +128,22 @@ class Screens(unittest.TestCase):
                 screens_db.validate(sid, body)
 
 
+class Watchlists(unittest.TestCase):
+    def test_crud_and_validation(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "s.db")
+            out = screens_db.upsert_watchlist("w-1", {"name": "Tech", "items": [
+                {"ticker": "nvda", "addedAt": 1, "addedPrice": 200}, {"ticker": "NVDA"}, {"ticker": "BRK.B"}]}, path=db)
+            self.assertEqual([i["ticker"] for i in out["items"]], ["NVDA", "BRK.B"])
+            self.assertEqual(out["items"][0]["addedPrice"], 200.0)
+            self.assertEqual(screens_db.list_watchlists(path=db)[0]["name"], "Tech")
+            self.assertTrue(screens_db.delete_watchlist("w-1", path=db))
+            self.assertEqual(screens_db.list_watchlists(path=db), [])
+        for body in [{"items": [{"ticker": "DROP TABLE"}]}, {"items": "AAPL"}, {"items": [{"ticker": ""}]}]:
+            with self.assertRaises(screens_db.InvalidScreen):
+                screens_db.validate_watchlist("w", body)
+
+
 class Universes(unittest.TestCase):
     def test_clean_and_union(self):
         df = pd.DataFrame({"Symbol": ["AAPL", "brk.b", "AAPL", None], "Company": ["Apple", "Berkshire", "dup", "x"],

@@ -29,6 +29,7 @@ img { max-width: 100%; }
   --pass-soft: #E1F2E7;
   --fail: #B83A26;
   --fail-soft: #FBE6E1;
+  --star: #C48A00;
   --up: var(--pass);
   --down: var(--fail);
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -39,14 +40,14 @@ img { max-width: 100%; }
   :root:not([data-theme="light"]) {
     --bg: #0E1418; --surface: #151E24; --sunk: #1B262D; --ink: #E3EAEE; --muted: #8E9FA9; --line: #26343C;
     --accent: #3DBDB2; --accent-ink: #062320; --accent-soft: #163633;
-    --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17;
+    --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17; --star: #F2B53D;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0E1418; --surface: #151E24; --sunk: #1B262D; --ink: #E3EAEE; --muted: #8E9FA9; --line: #26343C;
   --accent: #3DBDB2; --accent-ink: #062320; --accent-soft: #163633;
-  --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17;
+  --pass: #5CCB8A; --pass-soft: #15301F; --fail: #F0816B; --fail-soft: #3A1D17; --star: #F2B53D;
   color-scheme: dark;
 }
 :root.red-up { --up: var(--fail); --down: var(--pass); }
@@ -68,6 +69,18 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .uni-pick button:hover { color: var(--ink); }
 .uni-pick button .n { font-family: var(--font-data); font-weight: 400; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .uni-pick button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.side-tabs { display: flex; align-items: center; gap: 4px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); }
+.side-tabs [role="tab"] { flex: 1; border: 0; background: none; cursor: pointer; padding: 11px 6px 10px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--muted); }
+.side-tabs [role="tab"]:hover { color: var(--ink); }
+.side-tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.side-tabs .m-only { flex: none; margin-left: 4px; }
+.star { background: none; border: 0; padding: 0 6px 0 0; cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); vertical-align: 1px; }
+.star:hover, .star.on { color: var(--star); }
+.add-row { display: flex; gap: 8px; }
+.add-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-size: 14px; text-transform: uppercase; }
+.add-row input::placeholder { text-transform: none; }
+td.num.since.up { color: var(--up); }
+td.num.since.down { color: var(--down); }
 .statusbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
 .tag.live { background: var(--accent-soft); color: var(--accent); }
@@ -205,7 +218,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   header.top { gap: 8px; }
   .uni-pick { display: flex; width: 100%; }
   .uni-pick button { flex: 1; justify-content: center; padding: 8px 10px; }
-  .statusbar { padding: 10px 14px; }
+  .statusbar{ padding: 10px 14px; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
 
   /* screens + rules slide in from the left */
@@ -224,7 +237,7 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   .drawer-foot .btn { width: 100%; padding: 11px; }
   .screen-btn { padding: 10px; }
   .rule select, .rule input { padding: 8px; font-size: 16px; }   /* 16px stops iOS zooming on focus */
-  .name-in, .search, textarea { font-size: 16px; }
+  .name-in, .search, textarea, .add-row input { font-size: 16px; }
 
   .summary { padding: 14px; gap: 10px 18px; }
   .big { font-size: 32px; }
@@ -278,8 +291,14 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   </header>
 
   <div class="layout" id="layout">
-    <aside class="panel" id="sidePanel" aria-label="Screens and rules">
-      <div class="panel-head"><p class="eyebrow">Saved screens</p><button class="btn sm m-only" id="closeDrawer" type="button">Close</button></div>
+    <aside class="panel" id="sidePanel" aria-label="Screener and watchlists">
+      <div class="side-tabs" role="tablist" aria-label="View">
+        <button role="tab" id="tabScreener" aria-selected="true" aria-controls="screenerSide" type="button">Screener</button>
+        <button role="tab" id="tabWatch" aria-selected="false" aria-controls="watchSide" type="button" tabindex="-1">Watchlist</button>
+        <button class="btn sm m-only" id="closeDrawer" type="button">Close</button>
+      </div>
+      <div id="screenerSide" role="tabpanel" aria-labelledby="tabScreener">
+      <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
       <div class="screens" id="screens"></div>
       <div class="storage-note" id="storageNote">Saved in this browser.</div>
       <div class="storage-note row" id="screenFile">
@@ -335,6 +354,31 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
           </div>
         </details>
       </div>
+      </div>
+
+      <div id="watchSide" role="tabpanel" aria-labelledby="tabWatch" hidden>
+        <div class="panel-head"><p class="eyebrow">Your watchlists</p></div>
+        <div class="screens" id="watchlists"></div>
+        <div class="storage-note row"><button class="linkbtn" id="newWatch" type="button">+ New watchlist</button></div>
+        <div class="storage-note" id="watchNote"></div>
+        <div class="section">
+          <label class="eyebrow" for="watchName">Watchlist name</label>
+          <input class="name-in" id="watchName" autocomplete="off" maxlength="100">
+        </div>
+        <div class="section">
+          <label class="eyebrow" for="addTicker">Add a stock</label>
+          <form class="add-row" id="addForm">
+            <input id="addTicker" list="tickerList" placeholder="Ticker, e.g. NVDA" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button class="btn primary" type="submit">Add</button>
+          </form>
+          <datalist id="tickerList"></datalist>
+          <p class="hint">Or tap ☆ next to any stock in the Screener tab.</p>
+          <div class="toast" id="watchToast" role="status"></div>
+        </div>
+        <div class="section">
+          <div class="row"><button class="btn danger" id="deleteWatch" type="button">Delete watchlist</button></div>
+        </div>
+      </div>
       <div class="drawer-foot m-only"><button class="btn primary" id="showResults" type="button">Show results</button></div>
     </aside>
     <div class="scrim" id="scrim"></div>
@@ -343,17 +387,17 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
       <div class="statusbar" role="status"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">illustrative figures</span></div>
       <div class="summary">
         <div class="big" id="passCount">0 <small>/ 0 pass</small></div>
-        <div class="stat"><span class="v" id="missCount">0</span><span class="k">Near misses</span></div>
-        <div class="stat"><span class="v" id="medPE">–</span><span class="k">Median P/E</span></div>
-        <div class="stat"><span class="v" id="medPEG">–</span><span class="k">Median PEG</span></div>
-        <div class="stat"><span class="v" id="medRev">–</span><span class="k">Median rev growth</span></div>
+        <div class="stat"><span class="v" id="missCount">0</span><span class="k" id="k1">Near misses</span></div>
+        <div class="stat"><span class="v" id="medPE">–</span><span class="k" id="k2">Median P/E</span></div>
+        <div class="stat"><span class="v" id="medPEG">–</span><span class="k" id="k3">Median PEG</span></div>
+        <div class="stat"><span class="v" id="medRev">–</span><span class="k" id="k4">Median rev growth</span></div>
       </div>
       <div class="criteria" id="criteria"></div>
       <div class="sectors-line" id="sectorsLine"></div>
       <div class="toolbar">
         <div class="tools">
           <button class="btn sm" id="toggleSide" type="button" aria-controls="sidePanel">Hide screens</button>
-          <label class="toggle"><input type="checkbox" id="showMiss"> Show near misses (fail one rule)</label>
+          <label class="toggle" id="missToggle"><input type="checkbox" id="showMiss"> Show near misses (fail one rule)</label>
         </div>
         <div class="tools">
           <details class="colmenu" id="colMenu">
@@ -449,6 +493,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     netMargin: { label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
     divYield:  { label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
     price:     { label: "Share price",     head: "Price",    unit: "USD", fmt: (v) => "$" + v.toFixed(2) },
+    since:     { label: "Since added",     head: "Since add", unit: "%", noRule: true, fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
     chg:       { label: "Day change",      head: "Day chg",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
     mktCap:    { label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
   };
@@ -470,7 +515,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const S = {
     data: SAMPLE, source: "sample", live: null, csv: null,
     userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
-    universe: "sp500", sort: { key: "mktCap", dir: "desc" }, showMiss: false, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
+    universe: "sp500", liveBy: {}, tab: "screener", watchlists: [], activeWatch: null, sort: { key: "mktCap", dir: "desc" }, showMiss: false, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
   };
   const $ = (id) => document.getElementById(id);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -521,7 +566,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         if (!db || !user) return;
         const uid = await user.id();
         if (!uid) return;
-        this.col = db.doc("data/users/" + uid + "/profile").collection("screens");
+        this.profile = db.doc("data/users/" + uid + "/profile");
+        this.col = this.profile.collection("screens");
         this.mode = "cloud";
         const local = S.userScreens.slice();
         let first = true;
@@ -678,7 +724,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const rules = $("rules"); rules.textContent = "";
     if (!d.rules.length) rules.append(el("p", { class: "hint", text: "No rules yet. Every stock passes until you add one." }));
     d.rules.forEach((r, i) => {
-      const fieldSel = el("select", { id: "rf" + i, "aria-label": "Metric" }, Object.keys(FIELDS).map((k) => { const o = el("option", { value: k, text: FIELDS[k].label }); if (k === r.field) o.selected = true; return o; }));
+      const fieldSel = el("select", { id: "rf" + i, "aria-label": "Metric" }, Object.keys(FIELDS).filter((k) => !FIELDS[k].noRule).map((k) => { const o = el("option", { value: k, text: FIELDS[k].label }); if (k === r.field) o.selected = true; return o; }));
       fieldSel.addEventListener("change", () => { r.field = fieldSel.value; changed(true); });
       const opSel = el("select", { id: "ro" + i, "aria-label": "Comparison" }, Object.keys(OPS).map((k) => { const o = el("option", { value: k, text: OPS[k] }); if (k === r.op) o.selected = true; return o; }));
       opSel.addEventListener("change", () => { r.op = opSel.value; if (r.op === "between" && (r.value2 == null || r.value2 === "")) r.value2 = Number(r.value) * 2 || 10; changed(true); });
@@ -756,30 +802,48 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     sel.value = cur;
   }
   function saveCols() { lsSet("screener.hiddenCols", [...S.hidden]); }
+  const pct = (v) => (v == null ? "–" : FIELDS.chg.fmt(v));
+  const mean = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
   function renderResults() {
-    const d = S.draft, res = evaluate(d);
-    const cols = visibleCols();
+    const watch = S.tab === "watch";
+    const d = S.draft;
+    const cols = visibleCols().concat(watch ? [{ key: "since" }] : []);
     renderColMenu();
-    const pass = res.filter((r) => r.pass), miss = res.filter((r) => r.miss);
-    $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length.toLocaleString() + " pass" }));
-    $("showResults").textContent = `Show ${pass.length} stock${pass.length === 1 ? "" : "s"}`;
+    let pass, miss;
+    if (watch) {
+      pass = watchRows(); miss = [];
+      const n = pass.length;
+      $("passCount").replaceChildren(String(n), " ", el("small", { text: n === 1 ? "stock" : "stocks" }));
+      $("showResults").textContent = `Show ${n} stock${n === 1 ? "" : "s"}`;
+      const chg = pass.map((r) => r.s.chg);
+      [["k1", "Up today", String(chg.filter((v) => v > 0).length)], ["k2", "Down today", String(chg.filter((v) => v < 0).length)],
+       ["k3", "Avg day change", pct(mean(chg))], ["k4", "Avg since added", pct(mean(pass.map((r) => r.s.since)))]]
+        .forEach(([k, label, v], i) => { $(k).textContent = label; $(["missCount", "medPE", "medPEG", "medRev"][i]).textContent = v; });
+      $("criteria").textContent = "";
+    } else {
+      const res = evaluate(d);
+      pass = res.filter((r) => r.pass); miss = res.filter((r) => r.miss);
+      $("passCount").replaceChildren(String(pass.length), " ", el("small", { text: "/ " + S.data.length.toLocaleString() + " pass" }));
+      $("showResults").textContent = `Show ${pass.length} stock${pass.length === 1 ? "" : "s"}`;
+      [["k1", "Near misses"], ["k2", "Median P/E"], ["k3", "Median PEG"], ["k4", "Median rev growth"]].forEach(([k, t]) => { $(k).textContent = t; });
+      $("missCount").textContent = miss.length;
+      const mPE = median(pass.map((r) => r.s.pe > 0 ? r.s.pe : null)), mPEG = median(pass.map((r) => r.s.peg)), mRev = median(pass.map((r) => r.s.revGrowth));
+      $("medPE").textContent = mPE == null ? "–" : FIELDS.pe.fmt(mPE);
+      $("medPEG").textContent = mPEG == null ? "–" : FIELDS.peg.fmt(mPEG);
+      $("medRev").textContent = mRev == null ? "–" : FIELDS.revGrowth.fmt(mRev);
+      const crit = $("criteria"); crit.textContent = "";
+      validRules(d).forEach((r) => crit.append(el("span", { class: "crit", text: ruleText(r) })));
+      if (d.sectors.length) crit.append(el("span", { class: "crit", text: d.sectors.join(", ") }));
+    }
     renderSortSel();
-    $("missCount").textContent = miss.length;
-    const mPE = median(pass.map((r) => r.s.pe > 0 ? r.s.pe : null)), mPEG = median(pass.map((r) => r.s.peg)), mRev = median(pass.map((r) => r.s.revGrowth));
-    $("medPE").textContent = mPE == null ? "–" : FIELDS.pe.fmt(mPE);
-    $("medPEG").textContent = mPEG == null ? "–" : FIELDS.peg.fmt(mPEG);
-    $("medRev").textContent = mRev == null ? "–" : FIELDS.revGrowth.fmt(mRev);
 
-    const crit = $("criteria"); crit.textContent = "";
-    validRules(d).forEach((r) => crit.append(el("span", { class: "crit", text: ruleText(r) })));
-    if (d.sectors.length) crit.append(el("span", { class: "crit", text: d.sectors.join(", ") }));
-
-    const counts = {}; pass.forEach((r) => { counts[r.s.sector] = (counts[r.s.sector] || 0) + 1; });
+    const counts = {}; pass.forEach((r) => { if (r.s.sector) counts[r.s.sector] = (counts[r.s.sector] || 0) + 1; });
     const parts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
-    $("sectorsLine").textContent = parts.length ? "Passing by sector: " + parts.join(" · ") : "";
+    $("sectorsLine").textContent = parts.length ? (watch ? "By sector: " : "Passing by sector: ") + parts.join(" · ") : "";
 
     // header
-    const ruleFields = new Set(validRules(d).map((r) => r.field));
+    const ruleFields = watch ? new Set() : new Set(validRules(d).map((r) => r.field));
+    const wl = activeWL(), inWatch = new Set(wl.items.map((i) => i.ticker));
     const tr = el("tr");
     const sortBtn = (key, label, cls) => {
       const isSort = S.sort.key === key;
@@ -812,7 +876,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const row = el("tr", { class: isMiss ? "miss" : "" });
       const href = "https://finance.yahoo.com/quote/" + encodeURIComponent(r.s.ticker.replace(/\./g, "-")) + "/";
       const link = (cls, text) => el("a", { class: "qlink " + cls, href, target: "_blank", rel: "noopener noreferrer", title: "Open " + r.s.ticker + " on Yahoo Finance", text });
-      const first = el("td", { class: "c-stock" }, link("tk", r.s.ticker));
+      const on = inWatch.has(r.s.ticker);
+      const star = el("button", { class: "star" + (on ? " on" : ""), type: "button", "aria-pressed": String(on),
+        "aria-label": (on ? "Remove " : "Add ") + r.s.ticker + (on ? " from " : " to ") + wl.name, title: (on ? "Remove from " : "Add to ") + wl.name,
+        text: on ? "★" : "☆", onclick: () => toggleWatch(r.s.ticker, r.s.price) });
+      const first = el("td", { class: "c-stock" }, star, link("tk", r.s.ticker));
       if (isMiss) first.append(el("span", { class: "misslabel", text: "misses " + FIELDS[r.fails[0]].head }));
       if (r.s.name) first.append(link("co", r.s.name));
       row.append(first);
@@ -821,6 +889,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         const v = r.s[k];
         let cls = "num";
         if (ruleFields.has(k)) cls += r.fails.includes(k) ? " hit-fail" : " hit-pass";
+        if (k === "since") cls += " since" + (v > 0 ? " up" : v < 0 ? " down" : "");
         const cell = el("td", { class: cls + (k === "price" ? " c-price" : ""), "data-label": FIELDS[k].head });
         if (v == null) cell.append(el("span", { class: "na", text: "n/a" })); else cell.textContent = FIELDS[k].fmt(v);
         if (k === "price" && r.s.chg != null) {
@@ -837,7 +906,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       rowsM.forEach((r) => body.append(mkRow(r, true)));
     }
     if (!rowsP.length && !rowsM.length) {
-      body.append(el("tr", { class: "empty-row" }, el("td", { colspan: String(cols.length), class: "empty", text: q ? "No stocks match that search." : "Nothing passes this screen. Loosen a rule or turn on near misses." })));
+      const emptyText = q ? "No stocks match that search."
+        : watch ? `${wl.name} is empty. Add a ticker on the left, or tap ☆ next to any stock in the Screener tab.`
+        : "Nothing passes this screen. Loosen a rule or turn on near misses.";
+      body.append(el("tr", { class: "empty-row" }, el("td", { colspan: String(cols.length), class: "empty", text: emptyText })));
     }
   }
 
@@ -872,6 +944,135 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function refreshAll() { pickData(); renderData(); renderScreens(); renderEditor(); renderResults(); if (typeof renderUniverseSel === "function" && $("uniPick").childElementCount) renderUniverseSel(); }
 
+  // ---------- Watchlists ----------
+  // Every stock we have data for, across all lists (and example / imported data).
+  let mapCache = null;
+  function tickerMap() {
+    if (mapCache) return mapCache;
+    const m = new Map();
+    [S.universe, ...listIds()].forEach((id) => (S.liveBy[id] ? S.liveBy[id].rows : []).forEach((r) => { if (!m.has(r.ticker)) m.set(r.ticker, r); }));
+    (S.data || []).forEach((r) => { if (!m.has(r.ticker)) m.set(r.ticker, r); });
+    return (mapCache = m);
+  }
+  function activeWL() {
+    let wl = S.watchlists.find((w) => w.id === S.activeWatch) || S.watchlists[0];
+    if (!wl) {   // first visit: an empty list, saved once something is added
+      wl = { id: "w-" + Date.now().toString(36), name: "My watchlist", items: [], created: Date.now() };
+      S.watchlists.push(wl);
+    }
+    S.activeWatch = wl.id;
+    return wl;
+  }
+  function watchRows() {
+    const m = tickerMap();
+    return activeWL().items.map((it) => {
+      const row = m.get(it.ticker) || { ticker: it.ticker, name: "No data for this ticker", sector: "" };
+      const since = row.price && it.addedPrice ? (row.price / it.addedPrice - 1) * 100 : null;
+      return { s: { ...row, since }, fails: [], pass: true, item: it };
+    });
+  }
+  function wtoast(msg) { $("watchToast").textContent = msg; if (S.tab !== "watch") toast(msg); }
+  async function saveWL(wl) { await wstore.put(clone(wl)); renderWatchSide(); renderResults(); }
+  async function toggleWatch(ticker, price) {
+    const wl = activeWL(), i = wl.items.findIndex((x) => x.ticker === ticker);
+    if (i >= 0) { wl.items.splice(i, 1); wtoast(`Removed ${ticker} from ${wl.name}`); }
+    else { wl.items.push({ ticker, addedAt: Date.now(), addedPrice: price || null }); wtoast(`Added ${ticker} to ${wl.name}`); }
+    await saveWL(wl);
+  }
+  let tickerListKey = "";
+  function renderWatchSide() {
+    const box = $("watchlists"); box.textContent = "";
+    const cur = activeWL(), m = tickerMap();
+    S.watchlists.forEach((w) => {
+      const on = w.id === cur.id;
+      const chg = mean(w.items.map((it) => (m.get(it.ticker) || {}).chg));
+      box.append(el("button", { class: "screen-btn", type: "button", "aria-current": String(on),
+        onclick: () => { S.activeWatch = w.id; lsSet("screener.activeWatch", w.id); S.wDeleteArmed = false; renderWatchSide(); renderResults(); applySide(); if (isPhone()) setDrawer(false); } },
+        el("span", { class: "nm", text: w.name || "Watchlist" }), el("span", { class: "ct", text: w.items.length + (w.items.length === 1 ? " stock" : " stocks") }),
+        el("span", { class: "rl", text: w.items.length ? w.items.slice(0, 6).map((i) => i.ticker).join(" · ") + (w.items.length > 6 ? " …" : "") + (chg != null ? "  ·  today " + pct(chg) : "") : "Empty" })));
+    });
+    if (document.activeElement !== $("watchName")) $("watchName").value = cur.name;
+    $("deleteWatch").textContent = S.wDeleteArmed ? "Confirm delete" : "Delete watchlist";
+    $("deleteWatch").classList.toggle("confirm", !!S.wDeleteArmed);
+    $("watchNote").textContent = wstore.mode === "server" ? "Saved on the server (SQLite)."
+      : wstore.mode === "cloud" ? "Saved to your account." : "Saved in this browser.";
+    const key = m.size + ":" + Object.values(S.liveBy).map((l) => l.stamp).join(",");
+    if (key !== tickerListKey) {   // rebuild the ticker suggestions only when the data changed
+      tickerListKey = key;
+      const dl = $("tickerList"); dl.textContent = "";
+      [...m.values()].sort((a, b) => a.ticker.localeCompare(b.ticker)).forEach((r) => dl.append(el("option", { value: r.ticker, label: r.name || "" })));
+    }
+  }
+  const wstore = {
+    mode: "local", col: null,
+    load() { S.watchlists = lsGet("screener.watchlists") || []; S.activeWatch = lsGet("screener.activeWatch"); },
+    saveLocal() { lsSet("screener.watchlists", S.watchlists.filter((w) => w.items.length || w.saved)); },
+    async init() {
+      const local = S.watchlists.filter((w) => w.items.length || w.saved);
+      if (store.mode === "server") {
+        try {
+          const j = await api("GET", API_ROOT + "watchlists");
+          this.mode = "server";
+          const have = new Set(j.watchlists.map((w) => w.id));
+          for (const w of local.filter((x) => !have.has(x.id))) { try { j.watchlists.push(await api("PUT", API_ROOT + "watchlists/" + encodeURIComponent(w.id), w)); } catch (e) { break; } }
+          S.watchlists = j.watchlists;
+        } catch (e) { /* stay local */ }
+      } else if (store.mode === "cloud" && store.profile) {
+        this.mode = "cloud";
+        this.col = store.profile.collection("watchlists");
+        let first = true;
+        this.col.onSnapshot((snap) => {
+          const list = snap.docs.map((x) => x.data()).filter(Boolean).map(clone);
+          if (first) {
+            first = false;
+            const have = new Set(list.map((w) => w.id));
+            local.filter((w) => !have.has(w.id)).forEach((w) => { list.push(w); this.col.doc(w.id).set(clone(w)).catch(() => {}); });
+          }
+          list.sort((a, b) => (a.created || 0) - (b.created || 0));
+          S.watchlists = list;
+          renderWatchSide(); if (S.tab === "watch") { renderResults(); applySide(); }
+        }, () => { this.mode = "local"; });
+      }
+      renderWatchSide(); renderResults();
+    },
+    async put(w) {
+      w.saved = true;
+      const i = S.watchlists.findIndex((x) => x.id === w.id);
+      if (i >= 0) S.watchlists[i] = w; else S.watchlists.push(w);
+      if (this.mode === "server") {
+        try { const saved = await api("PUT", API_ROOT + "watchlists/" + encodeURIComponent(w.id), w); S.watchlists[S.watchlists.findIndex((x) => x.id === w.id)] = saved; return; }
+        catch (e) { wtoast("Couldn't save to the server: " + e.message + ". Saved in this browser instead."); this.mode = "local"; }
+      }
+      if (this.mode === "cloud") {
+        try { await this.col.doc(w.id).set(w); return; } catch (e) { this.mode = "local"; }
+      }
+      this.saveLocal();
+    },
+    async remove(id) {
+      S.watchlists = S.watchlists.filter((w) => w.id !== id);
+      if (this.mode === "server") { try { await api("DELETE", API_ROOT + "watchlists/" + encodeURIComponent(id)); return; } catch (e) { wtoast("Couldn't delete on the server: " + e.message); return; } }
+      if (this.mode === "cloud") { try { await this.col.doc(id).delete(); return; } catch (e) { this.mode = "local"; } }
+      this.saveLocal();
+    },
+  };
+
+  // ---------- Tabs ----------
+  function setTab(tab) {
+    S.tab = tab === "watch" ? "watch" : "screener";
+    lsSet("screener.tab", S.tab);
+    const watch = S.tab === "watch";
+    $("tabScreener").setAttribute("aria-selected", String(!watch)); $("tabScreener").tabIndex = watch ? -1 : 0;
+    $("tabWatch").setAttribute("aria-selected", String(watch)); $("tabWatch").tabIndex = watch ? 0 : -1;
+    $("screenerSide").hidden = watch; $("watchSide").hidden = !watch;
+    $("uniPick").hidden = watch; $("missToggle").hidden = watch; $("criteria").hidden = watch;
+    $("pageTitle").textContent = watch ? "Watchlist" : uName() + " Screener";
+    document.querySelector(".sub").textContent = watch
+      ? "The stocks you're keeping an eye on, with live prices and the same metrics as the screener."
+      : "Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.";
+    if (watch) renderWatchSide();
+    renderResults(); applySide();
+  }
+
   // ---------- Stock universes ----------
   let UNIVERSE_LIST = [{ id: "sp500", name: "S&P 500" }, { id: "russell1000", name: "Russell 1000" }];
   const uName = (id = S.universe) => (UNIVERSE_LIST.find((u) => u.id === id) || { name: id }).name;
@@ -879,11 +1080,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const box = $("uniPick"), hadFocus = box.contains(document.activeElement); box.textContent = "";
     UNIVERSE_LIST.forEach((u) => {
       const on = u.id === S.universe;
-      const n = on && S.live ? S.live.rows.length : u.count;
+      const n = S.liveBy[u.id] ? S.liveBy[u.id].rows.length : u.count;
       box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
-    $("pageTitle").textContent = uName() + " Screener";
+    $("pageTitle").textContent = S.tab === "watch" ? "Watchlist" : uName() + " Screener";
     if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
@@ -891,7 +1092,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     getJson("data/index.json").then((j) => {
       const list = j && Array.isArray(j.universes) ? j.universes.filter((u) => u && u.id && u.name) : [];
       if (!list.length) return;
+      const added = list.some((u) => !UNIVERSE_LIST.some((x) => x.id === u.id));
       UNIVERSE_LIST = list;
+      if (added) { if (S.feed === "api") fetchAll(apiUrl); else if (S.feed === "file") fetchAll(fileUrl); subscribeDb(); }
       if (!list.some((u) => u.id === S.universe)) return switchUniverse(list[0].id);
       renderUniverseSel();
     }).catch(() => {});
@@ -899,57 +1102,67 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function switchUniverse(id) {
     if (!UNIVERSE_LIST.some((u) => u.id === id)) return;
     S.universe = id; lsSet("screener.universe", id);
-    S.live = null; S.feed = null; S.loadFailed = false; fetchGen++;
-    clearInterval(pollTimer);
+    S.live = S.liveBy[id] || null; S.loadFailed = false;
     renderUniverseSel(); refreshAll();
-    startFetching(); subscribeDb();
   }
 
-  // Live dataset for the chosen universe, newest copy wins. Sources, in order:
+  // Live data for every stock list, so switching is instant and the watchlist
+  // can show any stock. Newest copy of each list wins. Sources, in order:
   //   1. the always-on Python server's API (api/data/<id>; <meta name="screener-api">
   //      can point at another server's api/ root), polled every minute;
   //   2. data/<id>.json next to the page (GitHub Pages), polled every 5 minutes;
   //   3. inside Claude, the page's database at market/<id>.
   const API_ROOT = ((document.querySelector('meta[name="screener-api"]') || {}).content || "api/").replace(/sp500\/?$/, "");
   const apiUrl = (id) => API_ROOT + "data/" + id;
-  let pollTimer = null, fetchGen = 0, dbRef = null, dbUnsub = null;
+  const fileUrl = (id) => "data/" + id + ".json";
+  let pollTimer = null, dbRef = null, dbUnsubs = [];
   function applyLive(d) {
     if (!d || !Array.isArray(d.rows) || !Array.isArray(d.cols)) return;
-    if ((d.universeId || "sp500") !== S.universe) return;   // a late answer for another universe
-    const stamp = d.builtAt || d.asOf;
-    if (S.live && S.live.stamp && stamp && stamp <= S.live.stamp) return;
+    const uid = d.universeId || "sp500", stamp = d.builtAt || d.asOf, prev = S.liveBy[uid];
+    if (prev && prev.stamp && stamp && stamp <= prev.stamp) return;
     const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return o; }).filter((o) => o.ticker);
     if (!rows.length) return;
+    S.liveBy[uid] = { stamp, asOf: d.asOf, pricesAsOf: d.pricesAsOf, fundamentalsAsOf: d.fundamentalsAsOf, rows };
+    mapCache = null;
+    if (uid !== S.universe) {   // another list: only the watchlist and the list counts care
+      renderUniverseSel();
+      if (S.tab === "watch") { renderResults(); renderWatchSide(); }
+      return;
+    }
     const first = !S.live;
-    S.live = { stamp, asOf: d.asOf, pricesAsOf: d.pricesAsOf, fundamentalsAsOf: d.fundamentalsAsOf, rows };
+    S.live = S.liveBy[uid];
     if (first || S.source !== "live") return refreshAll();
     // Later updates leave the rule editor alone so typing isn't interrupted.
     pickData(); renderData(); renderScreens(); renderResults();
+    if (S.tab === "watch") renderWatchSide();
   }
   const getJson = (url) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
-  function poll(url, every) {
-    clearInterval(pollTimer);
-    pollTimer = setInterval(() => getJson(url).then(applyLive).catch(() => {}), every);
-  }
+  const listIds = () => UNIVERSE_LIST.map((u) => u.id);
+  function fetchAll(urlFor) { return Promise.allSettled(listIds().map((id) => getJson(urlFor(id)).then(applyLive))); }
   function startFetching() {
     if (!/^https?:$/.test(location.protocol)) return;
-    const gen = fetchGen, id = S.universe, file = "data/" + id + ".json";
-    const failed = () => { if (gen === fetchGen && !S.live && !window.claude) { S.loadFailed = true; renderData(); } };
-    getJson(apiUrl(id))
-      .then((d) => { if (gen !== fetchGen) return; S.feed = "api"; applyLive(d); poll(apiUrl(id), 60 * 1000); })
-      .catch(() => getJson(file)
-        .then((d) => { if (gen !== fetchGen) return; S.feed = "file"; applyLive(d); poll(file, 5 * 60 * 1000); })
-        .catch(failed));
+    const failed = () => { if (!S.live && !window.claude) { S.loadFailed = true; renderData(); } };
+    getJson(apiUrl(S.universe))
+      .then((d) => {
+        S.feed = "api"; applyLive(d); fetchAll(apiUrl);
+        clearInterval(pollTimer); pollTimer = setInterval(() => fetchAll(apiUrl), 60 * 1000);
+      })
+      .catch(() => {
+        S.feed = "file";
+        fetchAll(fileUrl).then(failed);
+        clearInterval(pollTimer); pollTimer = setInterval(() => fetchAll(fileUrl), 5 * 60 * 1000);
+      });
   }
   function subscribeDb() {
-    if (dbUnsub) { dbUnsub(); dbUnsub = null; }
+    dbUnsubs.forEach((u) => u()); dbUnsubs = [];
     if (!dbRef) return;
-    const id = S.universe;
-    dbUnsub = dbRef.doc("market/" + id).onSnapshot((snap) => {
-      const d = snap.exists ? snap.data() : null;
-      if (d && !d.universeId && id === "sp500") d.universeId = "sp500";
-      applyLive(d);
-    }, () => {});
+    listIds().forEach((id) => {
+      dbUnsubs.push(dbRef.doc("market/" + id).onSnapshot((snap) => {
+        const d = snap.exists ? snap.data() : null;
+        if (d && !d.universeId) d.universeId = id;
+        applyLive(d);
+      }, () => {}));
+    });
   }
   async function initLive() {
     startFetching();
@@ -1033,14 +1246,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function applySide() {
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
-      const nm = (S.draft && S.draft.name) || "Screens";
+      const nm = S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
       $("toggleSide").textContent = "☰ " + nm;
-      $("toggleSide").title = "Screens and rules";
+      $("toggleSide").title = S.tab === "watch" ? "Watchlists" : "Screens and rules";
       $("toggleSide").setAttribute("aria-expanded", String(!!S.drawer));
     } else {
       if (S.drawer) setDrawer(false);
       $("layout").classList.toggle("collapsed", S.collapsed);
-      $("toggleSide").textContent = S.collapsed ? "Show screens" : "Hide screens";
+      const what = S.tab === "watch" ? "watchlists" : "screens";
+      $("toggleSide").textContent = (S.collapsed ? "Show " : "Hide ") + what;
       $("toggleSide").setAttribute("aria-expanded", String(!S.collapsed));
     }
   }
@@ -1053,6 +1267,42 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   document.addEventListener("click", (e) => { const m = $("colMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("colMenu").open = false; if (S.drawer) setDrawer(false); } });
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
+  $("tabScreener").addEventListener("click", () => setTab("screener"));
+  $("tabWatch").addEventListener("click", () => setTab("watch"));
+  document.querySelector(".side-tabs").addEventListener("keydown", (e) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key) || e.target.getAttribute("role") !== "tab") return;
+    setTab(S.tab === "watch" ? "screener" : "watch"); $(S.tab === "watch" ? "tabWatch" : "tabScreener").focus();
+  });
+  $("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const t = $("addTicker").value.trim().toUpperCase().split(/[\s—–]+/)[0].replace(/^\$/, "");
+    if (!t) return;
+    const m = tickerMap(), row = m.get(t) || m.get(t.replace("-", "."));
+    if (!row) { wtoast(`${t} isn't in the S&P 500 or Russell 1000 data.`); return; }
+    const wl = activeWL();
+    if (wl.items.some((i) => i.ticker === row.ticker)) { wtoast(`${row.ticker} is already in ${wl.name}.`); return; }
+    $("addTicker").value = "";
+    await toggleWatch(row.ticker, row.price);
+  });
+  $("newWatch").addEventListener("click", async () => {
+    const wl = { id: "w-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: `Watchlist ${S.watchlists.length + 1}`, items: [], created: Date.now() };
+    S.activeWatch = wl.id; lsSet("screener.activeWatch", wl.id);
+    await saveWL(wl); applySide();
+    $("watchName").focus(); $("watchName").select();
+  });
+  let nameTimer;
+  $("watchName").addEventListener("input", (e) => {
+    const wl = activeWL(); wl.name = e.target.value.slice(0, 100) || "Watchlist";
+    clearTimeout(nameTimer); nameTimer = setTimeout(() => saveWL(wl), 600);
+    applySide();
+  });
+  $("deleteWatch").addEventListener("click", async () => {
+    if (!S.wDeleteArmed) { S.wDeleteArmed = true; renderWatchSide(); return; }
+    S.wDeleteArmed = false;
+    const wl = activeWL(); await wstore.remove(wl.id);
+    S.activeWatch = (S.watchlists[0] || {}).id || null; lsSet("screener.activeWatch", S.activeWatch);
+    wtoast(`Deleted “${wl.name}”`); renderWatchSide(); renderResults(); applySide();
+  });
 
   // ---------- CSV import ----------
   function parseCSV(text) {
@@ -1120,6 +1370,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
 
   // ---------- Boot ----------
   store.loadLocal();
+  wstore.load();
   const savedData = lsGet("screener.data");
   if (Array.isArray(savedData) && savedData.length) S.csv = savedData;
   const lastActive = lsGet("screener.active");
@@ -1144,8 +1395,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   applySide();
   renderStorageNote(); refreshAll();
+  setTab(location.hash === "#watchlist" ? "watch" : lsGet("screener.tab") === "watch" ? "watch" : "screener");
   loadBuiltins();
-  store.init();
+  store.init().finally(() => wstore.init());
   initLive();
   loadIndex();
 })();

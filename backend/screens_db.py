@@ -1,13 +1,15 @@
-"""Saved screens (filters) in SQLite.
+"""Saved screens (filters) and watchlists in SQLite.
 
-Used by the always-on server (backend/server.py) for the /api/screens endpoints.
-The database file is data/screener.db (override with SCREENER_DB).
+Used by the always-on server (backend/server.py) for /api/screens and
+/api/watchlists. The database file is data/screener.db (override with SCREENER_DB).
 
-Table:
+Tables:
   screens(id TEXT PRIMARY KEY, name TEXT, rules TEXT (JSON), sectors TEXT (JSON),
           created INTEGER (ms), updated INTEGER (ms))
+  watchlists(id TEXT PRIMARY KEY, name TEXT, items TEXT (JSON: [{ticker, addedAt, addedPrice}]),
+             created INTEGER (ms), updated INTEGER (ms))
 
-Inspect it with:  sqlite3 data/screener.db "select id, name, rules from screens"
+Inspect with:  sqlite3 data/screener.db "select id, name, items from watchlists"
 """
 from __future__ import annotations
 
@@ -39,6 +41,9 @@ def _connect(path: str = DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.execute("""CREATE TABLE IF NOT EXISTS screens (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, rules TEXT NOT NULL, sectors TEXT NOT NULL,
+        created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS watchlists (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, items TEXT NOT NULL,
         created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
     return conn
 
@@ -107,3 +112,62 @@ def upsert(screen_id: str, body: dict, path: str = DB_PATH) -> dict:
 def delete(screen_id: str, path: str = DB_PATH) -> bool:
     with _lock, _connect(path) as conn:
         return conn.execute("DELETE FROM screens WHERE id = ?", (screen_id,)).rowcount > 0
+
+
+# ---- watchlists ------------------------------------------------------------
+
+TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,11}$")
+MAX_ITEMS = 500
+
+
+def validate_watchlist(wl_id: str, body: dict) -> dict:
+    if not ID_RE.match(wl_id or ""):
+        raise InvalidScreen("id must be 1-64 letters, digits, - or _")
+    if not isinstance(body, dict):
+        raise InvalidScreen("body must be a JSON object")
+    name = str(body.get("name") or "").strip()[:100] or "Watchlist"
+    items_in = body.get("items") or []
+    if not isinstance(items_in, list) or len(items_in) > MAX_ITEMS:
+        raise InvalidScreen(f"items must be a list of at most {MAX_ITEMS} stocks")
+    items, seen = [], set()
+    for it in items_in:
+        t = str((it or {}).get("ticker") or "").strip().upper() if isinstance(it, dict) else ""
+        if not TICKER_RE.match(t):
+            raise InvalidScreen(f"bad ticker: {it!r}")
+        if t in seen:
+            continue
+        seen.add(t)
+        added_at = it.get("addedAt")
+        price = it.get("addedPrice")
+        items.append({"ticker": t,
+                      "addedAt": int(added_at) if isinstance(added_at, (int, float)) else None,
+                      "addedPrice": float(price) if isinstance(price, (int, float)) and price > 0 else None})
+    created = body.get("created")
+    return {"id": wl_id, "name": name, "items": items,
+            "created": int(created) if isinstance(created, (int, float)) else None}
+
+
+def list_watchlists(path: str = DB_PATH) -> list[dict]:
+    with _lock, _connect(path) as conn:
+        rows = conn.execute("SELECT id, name, items, created, updated FROM watchlists ORDER BY created").fetchall()
+    return [{"id": r[0], "name": r[1], "items": json.loads(r[2]), "created": r[3], "updated": r[4]} for r in rows]
+
+
+def upsert_watchlist(wl_id: str, body: dict, path: str = DB_PATH) -> dict:
+    w = validate_watchlist(wl_id, body)
+    now = int(time.time() * 1000)
+    with _lock, _connect(path) as conn:
+        exists = conn.execute("SELECT created FROM watchlists WHERE id = ?", (wl_id,)).fetchone()
+        if not exists and conn.execute("SELECT COUNT(*) FROM watchlists").fetchone()[0] >= MAX_SCREENS:
+            raise InvalidScreen(f"at most {MAX_SCREENS} watchlists")
+        created = exists[0] if exists else (w["created"] or now)
+        conn.execute("""INSERT INTO watchlists (id, name, items, created, updated) VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET name=excluded.name, items=excluded.items,
+                        updated=excluded.updated""",
+                     (wl_id, w["name"], json.dumps(w["items"]), created, now))
+    return {**w, "created": created, "updated": now}
+
+
+def delete_watchlist(wl_id: str, path: str = DB_PATH) -> bool:
+    with _lock, _connect(path) as conn:
+        return conn.execute("DELETE FROM watchlists WHERE id = ?", (wl_id,)).rowcount > 0
