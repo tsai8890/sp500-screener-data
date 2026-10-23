@@ -51,32 +51,46 @@ Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russe
 
 The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` task lists, tables, code blocks, links, and `$NVDA` to link a ticker. Pin a note to keep it at the top. Notes save automatically (about a second after you stop typing, and when you switch notes or leave the page). Every edit is also kept in the browser, so if a save fails it is retried and nothing is lost; the status next to the editor says where the note was saved and when.
 
-Where notes are stored, in order of preference:
+Where notes are stored: see **Saving to GitHub** below; otherwise the always-on server (SQLite table `notes` via `/api/notes`), otherwise the browser (localStorage) with *Export all notes (.md)* for backups.
 
-1. **A GitHub repository** (any copy of the page except the Claude preview): open *Save notes to GitHub* under the notes list and enter a repository (`owner/name`), a folder (default `notes`) and a fine-grained access token with **Contents: Read and write** on that repository only. Each note becomes `<folder>/<id>.md`:
+## Saving to GitHub (screens, watchlists and notes)
 
-   ```markdown
-   ---
-   id: n-mvk7fc6yqkbl
-   pinned: true
-   created: 2026-10-23T00:00:59.002Z
-   updated: 2026-10-23T00:01:05.720Z
-   ---
+Open the **Settings** tab (bottom of the left rail, or `#settings`) to keep everything permanently in a GitHub repository. Works on any copy of the page except the Claude preview (which saves to your Claude account instead).
 
-   # AAPL
-   ...
-   ```
+1. Create a **private** repository, e.g. `your-name/screener-data` (anyone can read a public one; the page warns you).
+2. Create a fine-grained token (GitHub → Settings → Developer settings → Fine-grained tokens) with access to **only that repository** and **Contents: Read and write**.
+3. In Settings, enter the repository, a folder (default `screener`) and the token, then **Connect**. Whatever this browser already had is uploaded.
 
-   Saves are commits, so GitHub keeps the full history. Use a **private** repository: notes in a public one can be read by anyone (the page warns you). The token is stored only in that browser.
-2. **The always-on server**: SQLite table `notes` via `/api/notes`.
-3. **The browser** (localStorage), with *Export all notes (.md)* for backups.
+The repository then holds:
+
+```
+screener/
+  screens.json       {"updated": ..., "screens": [{id, name, rules, sectors, created, updated}]}
+  watchlists.json    {"updated": ..., "watchlists": [{id, name, items: [{ticker, addedAt, addedPrice}]}]}
+  notes/<id>.md      one Markdown file per note, with front matter:
+```
+
+```markdown
+---
+id: n-mvk7fc6yqkbl
+pinned: true
+created: 2026-10-23T00:00:59.002Z
+updated: 2026-10-23T00:01:05.720Z
+---
+
+# AAPL
+...
+```
+
+Every save is a commit, so GitHub keeps the full history. Connect the same repository and token on another device and it loads the same data; something deleted on one device disappears on the others at their next load. A copy always stays in the browser: if GitHub can't be reached, changes are kept and retried, and the Settings tab shows what is saved and when. *Download everything (.json)* there makes a full backup. The token is stored only in that browser and sent only to api.github.com.
 
 ## Where saved screens and watchlists live
 
 | Where the page runs | Saved screens go to |
 |---|---|
 | Always-on server | SQLite, `data/screener.db` (tables `screens` and `watchlists`), shared by everyone using that server. Inspect with `sqlite3 data/screener.db "select id, name, rules from screens"`. |
-| GitHub Pages | The visitor's browser (localStorage). Use **Export screens (JSON)** / **Import screens** in the screens panel to back them up or move them between devices. |
+| GitHub Pages, connected to GitHub in Settings | `screens.json` / `watchlists.json` in your repository (see above). |
+| GitHub Pages, not connected | The visitor's browser (localStorage). Use **Export screens (JSON)** / **Import screens** in the screens panel to back them up or move them between devices. |
 
 Built-in screens always come from `data/screens.json`. To make one of your screens a built-in for everyone, export it and copy it into that file's `builtin` list (ids starting with `b-`).
 

@@ -115,6 +115,26 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .hcard a .desc { font-size: 12px; color: var(--muted); }
 /* ---------- Notes ---------- */
 .note-search { padding-top: 10px; border-top: 0; }
+#ghSection, #ghClaudeNote { display: flex; flex-direction: column; gap: 8px; }
+#ghSection[hidden], #ghClaudeNote[hidden] { display: none; }
+.set-head { padding: 18px 20px 6px; }
+.set-head h2 { font-family: var(--font-display); font-size: 20px; margin: 0 0 4px; }
+.set-list { display: flex; flex-direction: column; padding: 8px 20px 4px; }
+.set-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.set-row:last-child { border-bottom: 0; }
+.set-row .ic { width: 36px; height: 36px; border-radius: 9px; background: var(--sunk); display: grid; place-items: center; color: var(--accent); }
+.set-row .ic svg { width: 19px; height: 19px; }
+.set-row .what { font-weight: 600; font-size: 15px; }
+.set-row .where { grid-column: 2; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.set-row .where a { color: var(--accent); text-decoration: none; }
+.set-row .where a:hover { text-decoration: underline; }
+.set-row .where.warn { color: var(--fail); font-weight: 600; }
+.set-row .when { grid-column: 3; grid-row: 1 / 3; font-size: 12px; color: var(--muted); text-align: right; font-family: var(--font-data); }
+.set-row .when.ok::before { content: "✓ "; color: var(--pass); }
+.set-row .when.warn { color: var(--fail); font-family: var(--font-body); font-weight: 600; max-width: 220px; }
+.set-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 20px 18px; border-top: 1px solid var(--line); }
+.rail .rail-gap { flex: none; height: 14px; }
+@media (max-width: 820px) { .rail .rail-gap { display: none; } }
 .gh-in { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-size: 13px; }
 #ghMsg.warn { color: var(--fail); font-weight: 600; }
 .storage-note.warn { color: var(--fail); font-weight: 600; }
@@ -494,25 +514,27 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         <div class="note-list" id="noteList"></div>
         <div class="storage-note" id="notesNote"></div>
         <div class="storage-note row" id="notesFile"><button class="linkbtn" id="exportNotes" type="button">Export all notes (.md)</button></div>
+        <div class="storage-note row"><button class="linkbtn" id="notesToSettings" type="button">Change where notes are saved →</button></div>
+      </div>
+      <div id="settingsSide" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <div class="panel-head"><p class="eyebrow">Save to GitHub</p></div>
         <div class="section" id="ghSection">
-          <details class="import" id="ghBox">
-            <summary>Save notes to GitHub</summary>
-            <div class="inner">
-              <p class="hint">Each note becomes a Markdown file in a GitHub repository, with its full history. Use a <b>private</b> repository: notes in a public one can be read by anyone.</p>
-              <label class="eyebrow" for="ghRepo">Repository</label>
-              <input class="gh-in" id="ghRepo" placeholder="your-name/notes" autocomplete="off" spellcheck="false">
-              <label class="eyebrow" for="ghFolder">Folder</label>
-              <input class="gh-in" id="ghFolder" value="notes" autocomplete="off" spellcheck="false">
-              <label class="eyebrow" for="ghToken">Access token</label>
-              <input class="gh-in" id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-              <p class="hint">A fine-grained token with <b>Contents: Read and write</b> on that repository only. It is kept in this browser and sent only to api.github.com.</p>
-              <div class="row">
-                <button class="btn primary" id="ghConnect" type="button">Connect</button>
-                <button class="btn" id="ghDisconnect" type="button" hidden>Disconnect</button>
-              </div>
-              <div class="toast" id="ghMsg" role="status"></div>
-            </div>
-          </details>
+          <p class="hint">Keep your screens, watchlists and notes in a GitHub repository: saved for good, with full history, on every device. Use a <b>private</b> repository: anyone can read a public one.</p>
+          <label class="eyebrow" for="ghRepo">Repository</label>
+          <input class="gh-in" id="ghRepo" placeholder="your-name/screener-notes" autocomplete="off" spellcheck="false">
+          <label class="eyebrow" for="ghFolder">Folder in the repository</label>
+          <input class="gh-in" id="ghFolder" value="screener" autocomplete="off" spellcheck="false">
+          <label class="eyebrow" for="ghToken">Access token</label>
+          <input class="gh-in" id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+          <p class="hint">Create a <b>fine-grained token</b> on GitHub (Settings → Developer settings) with access to that one repository and <b>Contents: Read and write</b>. It is kept only in this browser and sent only to api.github.com.</p>
+          <div class="row">
+            <button class="btn primary" id="ghConnect" type="button">Connect</button>
+            <button class="btn" id="ghDisconnect" type="button" hidden>Disconnect</button>
+          </div>
+          <div class="toast" id="ghMsg" role="status"></div>
+        </div>
+        <div class="section" id="ghClaudeNote" hidden>
+          <p class="hint">In this Claude preview everything is saved to your Claude account automatically. Saving to GitHub works on your published site.</p>
         </div>
       </div>
       <div class="drawer-foot m-only"><button class="btn primary" id="showResults" type="button">Show results</button></div>
@@ -556,6 +578,17 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         </div>
       </div>
       <div class="table-wrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+      <div id="settingsView" hidden>
+        <div class="set-head">
+          <h2>Where your data is saved</h2>
+          <p class="hint" id="setSummary"></p>
+        </div>
+        <div class="set-list" id="setList"></div>
+        <div class="set-foot" id="setExport">
+          <button class="btn" id="exportAll" type="button">Download everything (.json)</button>
+          <span class="hint">A full copy of your screens, watchlists and notes, for your own backup.</span>
+        </div>
       </div>
       <div id="notesView" hidden>
         <div class="note-bar">
@@ -720,6 +753,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       return true;
     },
     async init() {
+      if (gh.ready) {
+        this.mode = "github";
+        try { await ghScreens.pull(); } catch (e) { ghScreens.error = e.message; }
+        if (!findScreen(S.activeId)) selectScreen("b-starter");
+        renderScreens(); renderStorageNote();
+        return;
+      }
       if (await this.initServer()) return;
       const c = window.claude;
       if (!c || !c.use) return;
@@ -750,6 +790,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       } catch (e) { /* stay local */ }
     },
     async put(screen) {
+      if (this.mode === "github") {
+        screen.updated = Date.now();
+        const i = S.userScreens.findIndex((s) => s.id === screen.id);
+        if (i >= 0) S.userScreens[i] = screen; else S.userScreens.push(screen);
+        this.saveLocal(); ghScreens.schedule(); return true;
+      }
       if (this.mode === "server") {
         try {
           const saved = await api("PUT", screensUrl() + "/" + encodeURIComponent(screen.id), screen);
@@ -767,6 +813,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       this.saveLocal(); return true;
     },
     async remove(id) {
+      if (this.mode === "github") { S.userScreens = S.userScreens.filter((s) => s.id !== id); this.saveLocal(); ghScreens.schedule(); return; }
       if (this.mode === "server") {
         try { await api("DELETE", screensUrl() + "/" + encodeURIComponent(id)); S.userScreens = S.userScreens.filter((x) => x.id !== id); return; }
         catch (e) { toast("Couldn't delete on the server: " + e.message); return; }
@@ -778,6 +825,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
   };
   function renderStorageNote() {
+    if (store.mode === "github") {
+      $("storageNote").textContent = ghScreens.error ? `Not saved to GitHub yet (${ghScreens.error}); kept in this browser, retrying.`
+        : `Your screens are saved to GitHub (${gh.cfg.repo})` + (ghScreens.lastSaved ? ` · ${savedWhen(ghScreens.lastSaved)}` : "") + ".";
+      $("storageNote").className = "storage-note" + (ghScreens.error ? " warn" : "");
+      $("screenFile").hidden = false;
+      return;
+    }
+    $("storageNote").className = "storage-note";
     $("storageNote").textContent = store.mode === "server"
       ? "Your screens are saved on the server (SQLite) and shared by everyone using this site."
       : store.mode === "cloud"
@@ -968,7 +1023,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const pct = (v) => (v == null ? "–" : FIELDS.chg.fmt(v));
   const mean = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
   function renderResults() {
-    if (S.tab === "notes") return;
+    if (S.tab === "notes" || S.tab === "settings") return;
     const watch = S.tab === "watch";
     const d = S.draft;
     const cols = visibleCols().concat(watch ? [{ key: "since" }] : []);
@@ -1228,7 +1283,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (document.activeElement !== $("watchName")) $("watchName").value = cur.name;
     $("deleteWatch").textContent = S.wDeleteArmed ? "Confirm delete" : "Delete watchlist";
     $("deleteWatch").classList.toggle("confirm", !!S.wDeleteArmed);
-    $("watchNote").textContent = wstore.mode === "server" ? "Saved on the server (SQLite)."
+    $("watchNote").textContent = wstore.mode === "github"
+      ? (ghWatch.error ? `Not saved to GitHub yet (${ghWatch.error}); kept in this browser, retrying.` : `Saved to GitHub (${gh.cfg.repo})` + (ghWatch.lastSaved ? ` · ${savedWhen(ghWatch.lastSaved)}` : "") + ".")
+      : wstore.mode === "server" ? "Saved on the server (SQLite)."
       : wstore.mode === "cloud" ? "Saved to your account." : "Saved in this browser.";
     const key = m.size + ":" + Object.values(S.liveBy).map((l) => l.stamp).join(",");
     if (key !== tickerListKey) {   // rebuild the ticker suggestions only when the data changed
@@ -1243,7 +1300,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     saveLocal() { lsSet("screener.watchlists", S.watchlists.filter((w) => w.items.length || w.saved)); },
     async init() {
       const local = S.watchlists.filter((w) => w.items.length || w.saved);
-      if (store.mode === "server") {
+      if (gh.ready) {
+        this.mode = "github";
+        try { await ghWatch.pull(); } catch (e) { ghWatch.error = e.message; }
+      } else if (store.mode === "server") {
         try {
           const j = await api("GET", API_ROOT + "watchlists");
           this.mode = "server";
@@ -1270,9 +1330,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       renderWatchSide(); renderResults(); renderRail();
     },
     async put(w) {
-      w.saved = true;
+      w.saved = true; w.updated = Date.now();
       const i = S.watchlists.findIndex((x) => x.id === w.id);
       if (i >= 0) S.watchlists[i] = w; else S.watchlists.push(w);
+      if (this.mode === "github") { this.saveLocal(); ghWatch.schedule(); return; }
       if (this.mode === "server") {
         try { const saved = await api("PUT", API_ROOT + "watchlists/" + encodeURIComponent(w.id), w); S.watchlists[S.watchlists.findIndex((x) => x.id === w.id)] = saved; return; }
         catch (e) { wtoast("Couldn't save to the server: " + e.message + ". Saved in this browser instead."); this.mode = "local"; }
@@ -1284,6 +1345,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
     async remove(id) {
       S.watchlists = S.watchlists.filter((w) => w.id !== id);
+      if (this.mode === "github") { this.saveLocal(); ghWatch.schedule(); return; }
       if (this.mode === "server") { try { await api("DELETE", API_ROOT + "watchlists/" + encodeURIComponent(id)); return; } catch (e) { wtoast("Couldn't delete on the server: " + e.message); return; } }
       if (this.mode === "cloud") { try { await this.col.doc(id).delete(); return; } catch (e) { this.mode = "local"; } }
       this.saveLocal();
@@ -1380,15 +1442,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     token: () => { try { return localStorage.getItem("screener.ghToken") || ""; } catch (e) { return ""; } },
     b64: (t) => btoa(unescape(encodeURIComponent(t))),
     unb64: (t) => decodeURIComponent(escape(atob(t.replace(/\s/g, "")))),
-    async call(method, path, body) {
-      const r = await fetch("https://api.github.com" + path, { method, cache: "no-store",
+    async call(method, path, body, keepalive) {
+      const r = await fetch("https://api.github.com" + path, { method, cache: "no-store", keepalive: !!keepalive,
         headers: { Authorization: "Bearer " + this.token(), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "Content-Type": "application/json" } : {}) },
         body: body ? JSON.stringify(body) : undefined });
       const j = r.status === 204 ? {} : await r.json().catch(() => ({}));
       if (!r.ok) { const e = new Error(j.message || "GitHub said " + r.status); e.status = r.status; throw e; }
       return j;
     },
-    path(id) { return `/repos/${this.cfg.repo}/contents/${this.cfg.folder ? this.cfg.folder + "/" : ""}${id}.md`; },
+    ready: false,   // connected and reachable this visit
+    dir(sub) { return [this.cfg.folder, sub].filter(Boolean).join("/"); },
+    path(id) { return `/repos/${this.cfg.repo}/contents/${this.dir("notes")}/${id}.md`; },
+    filePath(name) { return `/repos/${this.cfg.repo}/contents/${this.dir(name)}`; },
+    webUrl(sub) { return `https://github.com/${this.cfg.repo}/${/\.\w+$/.test(sub || "") ? "blob" : "tree"}/${this.cfg.branch}/${this.dir(sub)}`; },
     toFile(n) {
       const iso = (ms) => new Date(ms || Date.now()).toISOString();
       return `---\nid: ${n.id}\npinned: ${!!n.pinned}\ncreated: ${iso(n.created)}\nupdated: ${iso(n.updated)}\n---\n\n${n.body}`;
@@ -1407,7 +1473,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
     async list() {
       let files = [];
-      try { files = await this.call("GET", `/repos/${this.cfg.repo}/contents/${this.cfg.folder}?ref=${encodeURIComponent(this.cfg.branch)}`); }
+      try { files = await this.call("GET", `/repos/${this.cfg.repo}/contents/${this.dir("notes")}?ref=${encodeURIComponent(this.cfg.branch)}`); }
       catch (e) { if (e.status === 404) return []; throw e; }   // folder not created yet
       const md = (Array.isArray(files) ? files : []).filter((f) => f.type === "file" && /\.md$/.test(f.name));
       const out = await Promise.all(md.map(async (f) => {
@@ -1440,6 +1506,89 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       delete nstore.sha[id];
     },
   };
+  // Screens and watchlists on GitHub: one readable JSON file each (<folder>/screens.json, <folder>/watchlists.json).
+  // The browser keeps a copy too; items synced before and now missing from the file were deleted on another device.
+  function ghJsonFile({ kind, file, get, set, clean, after }) {
+    return {
+      sha: null, timer: 0, inflight: null, again: false, lastSaved: null, error: null,
+      syncedKey: () => "screener.gh.synced." + kind + ":" + gh.cfg.repo + "/" + gh.cfg.folder,
+      async pull() {
+        let remote = null;
+        try {
+          const j = await gh.call("GET", gh.filePath(file) + "?ref=" + encodeURIComponent(gh.cfg.branch));
+          this.sha = j.sha;
+          const parsed = JSON.parse(gh.unb64(j.content || "") || "{}");
+          remote = Array.isArray(parsed[kind]) ? parsed[kind] : [];
+        } catch (e) { if (e.status !== 404) throw e; this.sha = null; }
+        const local = get(), synced = new Set(lsGet(this.syncedKey()) || []);
+        let merged = local, changed = local.length > 0 && remote === null;
+        if (remote !== null) {
+          const byId = new Map(remote.map((x) => [x.id, x]));
+          local.forEach((l) => {
+            const r = byId.get(l.id);
+            if (!r) { if (!synced.has(l.id)) { byId.set(l.id, l); changed = true; } }   // new here: keep and upload
+            else if ((l.updated || 0) > (r.updated || 0)) { byId.set(l.id, l); changed = true; }   // edited here more recently
+          });
+          merged = [...byId.values()].sort((a, b) => (a.created || 0) - (b.created || 0));
+          lsSet(this.syncedKey(), remote.map((x) => x.id));
+        }
+        set(merged);
+        if (changed) this.schedule(0);
+        else this.lastSaved = this.lastSaved || Date.now();
+      },
+      schedule(delay = 1500) { clearTimeout(this.timer); this.pending = true; this.timer = setTimeout(() => this.write(), delay); renderSettings(); },
+      async write(keepalive) {
+        clearTimeout(this.timer);
+        if (this.inflight) { this.again = true; return this.inflight; }
+        const items = get().map(clean);
+        const body = { message: `Update ${kind}`, branch: gh.cfg.branch,
+          content: gh.b64(JSON.stringify({ updated: new Date().toISOString(), [kind]: items }, null, 2) + "\n") };
+        const attempt = async () => {
+          if (this.sha) body.sha = this.sha; else delete body.sha;
+          const j = await gh.call("PUT", gh.filePath(file), body, keepalive);
+          this.sha = j.content && j.content.sha;
+        };
+        this.inflight = (async () => {
+          try {
+            try { await attempt(); }
+            catch (e) {
+              if (e.status !== 409 && e.status !== 422) throw e;
+              try { this.sha = (await gh.call("GET", gh.filePath(file) + "?ref=" + encodeURIComponent(gh.cfg.branch))).sha; }   // file changed on GitHub: take its version number and save ours on top
+              catch (e2) { if (e2.status === 404) this.sha = null; else throw e2; }
+              await attempt();
+            }
+            lsSet(this.syncedKey(), items.map((x) => x.id));
+            this.lastSaved = Date.now(); this.error = null; this.pending = false;
+          } catch (e) {
+            this.error = e.message || "connection problem";
+            this.timer = setTimeout(() => this.write(), 15000);   // keep trying; the browser copy is safe meanwhile
+          } finally {
+            this.inflight = null; renderSettings(); after();
+            if (this.again) { this.again = false; this.write(); }
+          }
+        })();
+        return this.inflight;
+      },
+    };
+  }
+  const ghScreens = ghJsonFile({ kind: "screens", file: "screens.json",
+    get: () => S.userScreens, set: (l) => { S.userScreens = l; store.saveLocal(); },
+    clean: (x) => ({ id: x.id, name: x.name, rules: x.rules, sectors: x.sectors || [], created: x.created || null, updated: x.updated || null }),
+    after: () => renderStorageNote() });
+  const ghWatch = ghJsonFile({ kind: "watchlists", file: "watchlists.json",
+    get: () => S.watchlists.filter((w) => w.items.length || w.saved), set: (l) => { S.watchlists = l.map((w) => ({ ...w, saved: true })); wstore.saveLocal(); },
+    clean: (w) => ({ id: w.id, name: w.name, items: w.items, created: w.created || null, updated: w.updated || null }),
+    after: () => { if (S.tab === "watch") renderWatchSide(); } });
+  const savedWhen = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+  // Connect to GitHub before anything loads, so every store knows where to read from.
+  async function ghBoot() {
+    const cfg = lsGet("screener.gh");
+    if (!cfg || !gh.token() || window.claude) return;
+    try { await gh.connect(cfg.repo, cfg.folder); gh.ready = true; gh.bootError = null; }
+    catch (e) { gh.cfg = gh.cfg || { ...cfg, branch: "main" }; gh.bootError = e.message; }
+  }
+
   const nstore = {
     mode: "local", col: null, timers: {}, retry: {}, status: "", sha: {}, inflight: {},
     loadCache() { S.notes = (lsGet("screener.notes") || []).filter((n) => n && n.id); S.activeNote = lsGet("screener.activeNote"); },
@@ -1487,20 +1636,22 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       S.notes.filter((n) => n.dirty || !rmap.has(n.id) || (rmap.get(n.id).updated || 0) < (n.updated || 0)).forEach((n) => { if (n.body.trim()) this.save(n); });
     },
     async init() {
-      const ghCfg = lsGet("screener.gh");
-      if (ghCfg && gh.token() && !window.claude) {
+      if (gh.ready) {
         try {
-          await gh.connect(ghCfg.repo, ghCfg.folder);
           this.mode = "github"; this.adopt();
           this.merge(await gh.list(), { authoritative: true });
-        } catch (e) {
-          this.mode = "github-offline"; gh.cfg = gh.cfg || ghCfg;
-          this.setStatus("Couldn't reach GitHub (" + e.message + "). Your notes are kept in this browser until it works again.", "warn");
-          renderNoteList(); renderRail();
-          if (S.tab === "notes") openNote(S.activeNote, false);
-          setTimeout(() => { if (this.mode === "github-offline") this.init(); }, 30000);
-          return;
-        }
+        } catch (e) { gh.bootError = e.message; gh.ready = false; }
+      }
+      if (!gh.ready && lsGet("screener.gh") && gh.token() && !window.claude) {
+        // configured for GitHub but it can't be reached right now: keep everything here and try again
+        this.mode = "github-offline";
+        this.setStatus("Couldn't reach GitHub (" + (gh.bootError || "connection problem") + "). Your notes are kept in this browser until it works again.", "warn");
+        renderNoteList(); renderRail(); renderSettings();
+        if (S.tab === "notes") openNote(S.activeNote, false);
+        setTimeout(() => reconnectGitHub(), 30000);
+        return;
+      } else if (gh.ready) {
+        /* loaded above */
       } else if (store.mode === "server") {
         try { const j = await api("GET", API_ROOT + "notes"); this.mode = "server"; this.adopt(); this.merge(j.notes, { authoritative: true }); }
         catch (e) { this.mode = "local"; }
@@ -1512,7 +1663,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           renderNoteList(); renderRail(); this.refreshStatus();
         }, () => { this.mode = "local"; this.refreshStatus(); });
       }
-      renderNoteList(); renderRail(); this.refreshStatus();
+      renderNoteList(); renderRail(); this.refreshStatus(); renderSettings();
       if (S.tab === "notes") openNote(S.activeNote, false);
     },
     queue(n, delay = this.mode === "github" ? 2500 : 700) {
@@ -1543,12 +1694,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         }
         if (n.updated === snapshot) n.dirty = false;   // more typing may have happened meanwhile
         n.synced = true; delete this.retry[n.id];
-        this.writeCache(); this.refreshStatus();
+        this.writeCache(); this.refreshStatus(); this.lastSaved = Date.now(); this.lastError = null;
         if (S.tab === "notes") renderNoteList();
+        renderSettings();
         return true;
       } catch (e) {
         const wait = Math.min(60, (this.retry[n.id] || 2.5) * 2);
         this.retry[n.id] = wait;
+        this.lastError = e.message || "connection problem"; renderSettings();
         if (n.id === S.activeNote) this.setStatus(`Not saved ${this.where()} yet (${e.message || "connection problem"}). Kept in this browser; retrying in ${Math.round(wait)}s.`, "warn");
         this.timers[n.id] = setTimeout(() => this.save(n), wait * 1000);
         return false;
@@ -1593,17 +1746,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const nn = $("notesNote");
     nn.className = "storage-note";
     if (nstore.mode === "github" || nstore.mode === "github-offline") {
-      nn.textContent = `Notes are saved to GitHub: ${gh.cfg.repo}/${gh.cfg.folder || ""} (a backup copy stays in this browser).`;
+      nn.textContent = `Notes are saved to GitHub: ${gh.cfg.repo}/${gh.dir("notes")} (a backup copy stays in this browser).`;
       if (gh.cfg.private === false) { nn.textContent += " This repository is PUBLIC: anyone can read these notes."; nn.className = "storage-note warn"; }
     } else {
       nn.textContent = nstore.mode === "server" ? "Notes are saved on the server (SQLite), with a backup copy in this browser."
         : nstore.mode === "cloud" ? "Notes are saved to your account, with a backup copy in this browser."
-        : "Notes are saved in this browser only. Export them, or connect GitHub below, to keep a copy elsewhere.";
+        : "Notes are saved in this browser only. Export them, or save them to GitHub in Settings.";
     }
     $("notesFile").hidden = !!window.claude;
-    $("ghSection").hidden = !!window.claude;   // the Claude preview cannot reach GitHub; it saves to your account instead
-    const on = nstore.mode === "github" || nstore.mode === "github-offline";
-    $("ghConnect").textContent = on ? "Reconnect" : "Connect"; $("ghDisconnect").hidden = !on;
   }
   let previewT = 0;
   function renderPreview() {
@@ -1651,12 +1801,54 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   const PIN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4z"/><path d="M12 14v6"/></svg>';
 
+  // ---------- Settings: where everything is saved ----------
+  function renderSettings() {
+    if (!$("setList")) return;
+    const claude = !!window.claude, on = gh.ready || nstore.mode === "github-offline";
+    $("ghSection").hidden = claude; $("ghClaudeNote").hidden = !claude; $("setExport").hidden = claude;
+    $("ghConnect").textContent = on ? "Reconnect" : "Connect"; $("ghDisconnect").hidden = !on;
+    const modeText = (m) => m === "server" ? "Server (SQLite database)" : m === "cloud" ? "Your Claude account" : "This browser only: clearing browser data deletes it";
+    const ghWhere = (sub) => `GitHub · ${gh.cfg.repo}/${gh.dir(sub)}`;
+    const rows = [
+      { icon: "screener", what: "Screens", n: S.userScreens.length, unit: "saved screen", gh: store.mode === "github", file: "screens.json", st: ghScreens, mode: store.mode },
+      { icon: "watch", what: "Watchlists", n: S.watchlists.filter((w) => w.items.length || w.saved).length, unit: "watchlist", gh: wstore.mode === "github", file: "watchlists.json", st: ghWatch, mode: wstore.mode },
+      { icon: "notes", what: "Notes", n: S.notes.length, unit: "note", gh: nstore.mode === "github" || nstore.mode === "github-offline", file: "notes", mode: nstore.mode,
+        st: { lastSaved: nstore.lastSaved, error: nstore.mode === "github-offline" ? (gh.bootError || "GitHub unreachable") : nstore.lastError, pending: S.notes.some((x) => x.dirty) } },
+    ];
+    const box = $("setList"); box.textContent = "";
+    rows.forEach((r) => {
+      const ic = el("span", { class: "ic" }); ic.innerHTML = ICONS[r.icon];
+      const where = el("span", { class: "where" });
+      if (r.gh) where.append(el("a", { href: gh.webUrl(r.file), target: "_blank", rel: "noopener noreferrer", text: ghWhere(r.file) + " ↗" }));
+      else { where.textContent = modeText(r.mode); if (r.mode === "local") where.className = "where warn"; }
+      const when = r.st.error ? el("span", { class: "when warn", text: "Not saved yet: " + r.st.error + ". Kept in this browser; retrying." })
+        : r.st.pending ? el("span", { class: "when", text: "Saving…" })
+        : el("span", { class: "when" + (r.st.lastSaved ? " ok" : ""), text: r.st.lastSaved ? "Saved " + savedWhen(r.st.lastSaved) : r.gh ? "Up to date" : "" });
+      box.append(el("div", { class: "set-row" }, ic, el("span", { class: "what", text: `${r.what} · ${r.n} ${r.unit}${r.n === 1 ? "" : "s"}` }), when, where));
+    });
+    const anyLocal = rows.some((r) => r.mode === "local");
+    $("setSummary").textContent = claude ? "Everything here is saved to your Claude account."
+      : gh.ready ? `Connected to ${gh.cfg.repo}${gh.cfg.private ? " (private)" : " — PUBLIC repository: anyone can read these files"}. Every change is saved there and kept in this browser as a backup.`
+      : anyLocal ? "Some of your data lives only in this browser. Connect a GitHub repository on the left to keep it for good."
+      : "";
+  }
+  async function reconnectGitHub() {
+    await ghBoot();
+    if (!gh.ready) { renderSettings(); setTimeout(() => { if (!gh.ready && lsGet("screener.gh")) reconnectGitHub(); }, 30000); return; }
+    store.mode = "github"; wstore.mode = "github";
+    try { await ghScreens.pull(); } catch (e) { ghScreens.error = e.message; }
+    try { await ghWatch.pull(); } catch (e) { ghWatch.error = e.message; }
+    await nstore.init();
+    renderScreens(); renderStorageNote(); renderWatchSide(); renderResults(); renderRail(); renderSettings();
+  }
+
   // ---------- Tabs ----------
   // Sections shown as tabs down the left (a bottom bar on phones). To add a section:
   // add an entry here, a side panel with the matching id, and handle it in renderResults.
   const ICONS = {
     screener: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
     notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>',
   };
   const TABS = [
@@ -1665,6 +1857,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
     { id: "notes", label: "Notes", hash: "notes", panel: "notesSide", panelTitle: "Notes",
       badge: () => (S.notes.length ? String(S.notes.length) : "") },
+    { id: "settings", label: "Settings", hash: "settings", panel: "settingsSide", panelTitle: "Settings", gapBefore: true },
   ];
   function renderRail() {
     const rail = $("rail"), hadFocus = rail.contains(document.activeElement); rail.textContent = "";
@@ -1675,7 +1868,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       b.innerHTML = ICONS[t.id] || "";
       b.append(el("span", { class: "lbl", text: t.label }));
       const badge = t.badge && t.badge();
-      if (badge) b.append(el("span", { class: "badge", text: badge, "aria-label": badge + " stocks" }));
+      if (badge) b.append(el("span", { class: "badge", text: badge, "aria-label": badge + (t.id === "notes" ? " notes" : " stocks") }));
+      if (t.gapBefore) rail.append(el("div", { class: "rail-gap", "aria-hidden": "true" }));
       rail.append(b);
     });
     if (hadFocus) $("tab-" + S.tab).focus();
@@ -1683,21 +1877,24 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function setTab(tab) {
     S.tab = TABS.some((t) => t.id === tab) ? tab : "screener";
     lsSet("screener.tab", S.tab);
-    const watch = S.tab === "watch", notes = S.tab === "notes";
+    const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings";
     if (!notes) nstore.flushAll();
     TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
     renderRail();
     $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
-    $("resultsView").hidden = notes; $("notesView").hidden = !notes; $("footNote").hidden = notes;
+    $("resultsView").hidden = notes || settings; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("footNote").hidden = notes || settings;
     // keep these in place (just invisible) so nothing below moves when switching tabs
-    $("uniPick").style.visibility = watch || notes ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
-    $("pageTitle").textContent = notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
-    document.querySelector(".lede").textContent = notes
+    $("uniPick").style.visibility = watch || notes || settings ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
+    $("pageTitle").textContent = settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
+    document.querySelector(".lede").textContent = settings
+      ? "Choose where your screens, watchlists and notes are kept, and check when they were last saved."
+      : notes
       ? "Your research notes, written in Markdown. Pin the ones you want to keep on top."
       : watch ? "The stocks you're keeping an eye on, with live prices and the same metrics as the screener."
       : "Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.";
     if (watch) renderWatchSide();
     if (notes) { renderNoteList(); openNote(S.activeNote, false); $("showResults").textContent = "Open note"; }
+    if (settings) { renderSettings(); $("showResults").textContent = "Show status"; }
     renderResults(); applySide();
   }
 
@@ -1712,7 +1909,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
-    $("pageTitle").textContent = S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
+    $("pageTitle").textContent = S.tab === "settings" ? "Settings" : S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
     if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
@@ -1876,7 +2073,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
       const cur = S.tab === "notes" ? S.notes.find((n) => n.id === S.activeNote) : null;
-      const nm = S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
+      const nm = S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
       btns.forEach((b) => { b.textContent = "☰ " + nm; b.title = TABS.find((t) => t.id === S.tab).panelTitle; b.setAttribute("aria-expanded", String(!!S.drawer)); });
     } else {
       if (S.drawer) setDrawer(false);
@@ -1982,12 +2179,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     S.activeNote = null; openNote(null, false); renderRail();
     toast(`Deleted “${title}”`);
   });
-  const ghSaved = lsGet("screener.gh"); if (ghSaved) { $("ghRepo").value = ghSaved.repo || ""; $("ghFolder").value = ghSaved.folder ?? "notes"; }
+  const ghSaved = lsGet("screener.gh"); if (ghSaved) { $("ghRepo").value = ghSaved.repo || ""; $("ghFolder").value = ghSaved.folder ?? "screener"; }
+  $("notesToSettings").addEventListener("click", () => setTab("settings"));
   $("ghConnect").addEventListener("click", async () => {
     const repo = $("ghRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
     const folder = $("ghFolder").value.trim();
     const msg = $("ghMsg"); msg.className = "toast";
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { msg.textContent = "Enter the repository as owner/name, e.g. your-name/notes."; msg.className = "toast warn"; return; }
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { msg.textContent = "Enter the repository as owner/name, e.g. your-name/screener-notes."; msg.className = "toast warn"; return; }
     if ($("ghToken").value.trim()) { try { localStorage.setItem("screener.ghToken", $("ghToken").value.trim()); } catch (e) { /* shown below */ } }
     if (!gh.token()) { msg.textContent = "Paste an access token first."; msg.className = "toast warn"; return; }
     msg.textContent = "Connecting…";
@@ -1995,12 +2193,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const cfg = await gh.connect(repo, folder);
       lsSet("screener.gh", { repo: cfg.repo, folder: cfg.folder });
       $("ghToken").value = "";
+      gh.ready = true; gh.bootError = null;
+      store.mode = "github"; wstore.mode = "github";
+      await ghScreens.pull(); await ghWatch.pull();
       nstore.mode = "github"; nstore.adopt();
       nstore.merge(await gh.list(), { authoritative: true });
-      msg.textContent = `Connected to ${cfg.repo}. ${S.notes.length} note${S.notes.length === 1 ? "" : "s"} will be kept in ${cfg.folder || "the top folder"}/.`
-        + (cfg.private ? "" : " Warning: this repository is public, so anyone can read these notes.");
+      msg.textContent = `Connected to ${cfg.repo}. Your screens, watchlists and notes are now saved in ${cfg.folder || "the top folder"}/.`
+        + (cfg.private ? "" : " Warning: this repository is public, so anyone can read them.");
       msg.className = cfg.private ? "toast" : "toast warn";
-      renderNoteList(); renderRail(); openNote(S.activeNote, false);
+      renderScreens(); renderStorageNote(); renderWatchSide(); renderNoteList(); renderRail(); renderSettings();
     } catch (e) {
       msg.textContent = e.status === 401 ? "GitHub didn't accept that token." : e.status === 404 ? "Repository not found, or the token has no access to it." : "Couldn't connect: " + e.message;
       msg.className = "toast warn";
@@ -2008,9 +2209,16 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   $("ghDisconnect").addEventListener("click", () => {
     try { localStorage.removeItem("screener.ghToken"); localStorage.removeItem("screener.gh"); } catch (e) { /* nothing stored */ }
-    gh.cfg = null; nstore.mode = "local"; nstore.adopt();
-    $("ghMsg").textContent = "Disconnected. Notes stay in this browser; the files on GitHub are untouched."; $("ghMsg").className = "toast";
-    renderNoteList(); nstore.refreshStatus();
+    gh.ready = false; gh.cfg = null;
+    store.mode = "local"; store.saveLocal(); wstore.mode = "local"; wstore.saveLocal();
+    nstore.mode = "local"; nstore.adopt();
+    $("ghMsg").textContent = "Disconnected. Everything stays in this browser; the files on GitHub are untouched."; $("ghMsg").className = "toast";
+    renderNoteList(); nstore.refreshStatus(); renderStorageNote(); renderWatchSide(); renderSettings();
+  });
+  $("exportAll").addEventListener("click", () => {
+    const all = { exportedAt: new Date().toISOString(), screens: S.userScreens, watchlists: S.watchlists.filter((w) => w.items.length || w.saved), notes: S.notes.map(notePlain) };
+    const a = el("a", { href: URL.createObjectURL(new Blob([JSON.stringify(all, null, 2)], { type: "application/json" })), download: "screener-backup-" + new Date().toISOString().slice(0, 10) + ".json" });
+    document.body.append(a); a.click(); a.remove();
   });
   $("exportNotes").addEventListener("click", () => {
     const text = sortedNotes().map((n) => `<!-- note ${n.id} · updated ${new Date(n.updated).toISOString()}${n.pinned ? " · pinned" : ""} -->\n\n${n.body.trim()}\n`).join("\n---\n\n");
@@ -2018,14 +2226,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     document.body.append(a); a.click(); a.remove();
   });
   // never lose typing: save on hide/close, and warn before leaving while a save is pending
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nstore.flushAll(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { nstore.flushAll(); if (gh.ready) [ghScreens, ghWatch].forEach((f) => { if (f.pending) f.write(); }); } });
   window.addEventListener("pagehide", () => {
+    if (gh.ready) [ghScreens, ghWatch].forEach((f) => { if (f.pending) f.write(true); });
     nstore.writeCache();
     if (nstore.mode === "server") S.notes.filter((n) => n.dirty).forEach((n) => {
       try { fetch(API_ROOT + "notes/" + encodeURIComponent(n.id), { method: "PUT", keepalive: true, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(notePlain(n)) }); } catch (e) { /* the browser copy is kept */ }
     });
   });
-  window.addEventListener("beforeunload", (e) => { if (S.notes.some((n) => n.dirty) && nstore.mode !== "local") { nstore.flushAll(); e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("beforeunload", (e) => { if ((S.notes.some((n) => n.dirty) && nstore.mode !== "local") || (gh.ready && (ghScreens.pending || ghWatch.pending))) { nstore.flushAll(); e.preventDefault(); e.returnValue = ""; } });
   phoneMq.addEventListener("change", () => { if (S.tab === "notes") setNoteMode(S.noteMode || "split"); });
   $("rail").addEventListener("keydown", (e) => {   // arrow keys move between sections, as in a tab list
     const keys = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
@@ -2163,7 +2372,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const fromHash = TABS.find((t) => "#" + t.hash === location.hash);
   setTab(fromHash ? fromHash.id : lsGet("screener.tab") || "screener");
   loadBuiltins();
-  store.init().finally(() => { wstore.init(); nstore.init(); });
+  ghBoot().finally(() => store.init().finally(() => { wstore.init(); nstore.init(); renderSettings(); }));
   initLive();
   loadIndex();
 })();
