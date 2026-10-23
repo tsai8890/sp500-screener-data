@@ -113,6 +113,62 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .hcard a .what { font-weight: 600; font-size: 14px; }
 .hcard a .site { font-size: 12px; color: var(--accent); align-self: center; grid-row: 1 / 3; grid-column: 2; }
 .hcard a .desc { font-size: 12px; color: var(--muted); }
+/* ---------- Notes ---------- */
+.note-search { padding-top: 10px; border-top: 0; }
+.gh-in { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-size: 13px; }
+#ghMsg.warn { color: var(--fail); font-weight: 600; }
+.storage-note.warn { color: var(--fail); font-weight: 600; }
+.note-search .search { width: 100%; }
+.note-list { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 10px; }
+.note-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: start; padding: 8px 6px 8px 10px; border-radius: 7px; border: 1px solid transparent; cursor: pointer; }
+.note-item:hover { background: var(--sunk); }
+.note-item[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.note-item .nt { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item .ns { grid-column: 1; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item .nd { grid-column: 1; font-size: 11px; color: var(--muted); font-family: var(--font-data); }
+.note-item .pin { grid-column: 2; grid-row: 1 / 4; align-self: start; background: none; border: 0; padding: 4px; border-radius: 5px; cursor: pointer; color: var(--muted); opacity: .45; }
+.note-item:hover .pin, .note-item .pin.on, .note-item .pin:focus-visible { opacity: 1; }
+.note-item .pin.on { color: var(--accent); }
+.note-item .pin svg, .pin-btn svg { width: 15px; height: 15px; display: block; }
+.note-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.note-status { margin-left: auto; font-size: 12px; color: var(--muted); }
+.note-status.warn { color: var(--fail); font-weight: 600; }
+.note-status.ok::before { content: "✓ "; color: var(--pass); }
+.pin-btn { display: inline-flex; align-items: center; gap: 6px; }
+.pin-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--sunk); border-radius: 8px; }
+.seg button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.note-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: max(440px, calc(100vh - 230px)); }
+.note-body.write { grid-template-columns: minmax(0, 1fr); } .note-body.write .md { display: none; }
+.note-body.preview { grid-template-columns: minmax(0, 1fr); } .note-body.preview textarea { display: none; }
+#noteText { width: 100%; height: 100%; resize: none; border: 0; outline: none; padding: 18px 20px; background: var(--surface); font-family: var(--font-data); font-size: 14px; line-height: 1.65; color: var(--ink); border-radius: 0 0 0 10px; }
+#noteText:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+.note-body .md { overflow: auto; padding: 18px 22px; border-left: 1px solid var(--line); }
+.note-body.preview .md { border-left: 0; }
+.note-empty { padding: 60px 20px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* rendered Markdown */
+.md { line-height: 1.6; overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--font-display); line-height: 1.25; margin: 1.1em 0 .45em; text-wrap: balance; }
+.md h1 { font-size: 24px; } .md h2 { font-size: 19px; } .md h3 { font-size: 16px; } .md h4, .md h5, .md h6 { font-size: 14px; }
+.md p { margin: 0 0 .8em; }
+.md ul, .md ol { margin: 0 0 .8em; padding-left: 1.4em; }
+.md li { margin: .15em 0; }
+.md li.task { list-style: none; margin-left: -1.3em; }
+.md li.task input { margin-right: .45em; }
+.md code { font-family: var(--font-data); font-size: .9em; background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.md pre { background: var(--sunk); padding: 12px 14px; border-radius: 7px; overflow-x: auto; margin: 0 0 .9em; }
+.md pre code { background: none; padding: 0; }
+.md blockquote { margin: 0 0 .9em; padding: 2px 14px; border-left: 3px solid var(--accent); color: var(--muted); }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.md a { color: var(--accent); }
+.md a.tick { font-family: var(--font-data); text-decoration: none; background: var(--accent-soft); padding: 0 4px; border-radius: 4px; }
+.md .tbl { overflow-x: auto; margin: 0 0 .9em; }
+.md table { border-collapse: collapse; width: auto; min-width: 0; font-variant-numeric: tabular-nums; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; white-space: normal; }
+.md th { background: var(--sunk); font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); position: static; }
+.md .empty-preview { color: var(--muted); font-style: italic; }
 .add-row { display: flex; gap: 8px; }
 .add-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-size: 14px; text-transform: uppercase; }
 .add-row input::placeholder { text-transform: none; }
@@ -124,7 +180,7 @@ td.num.since.down { color: var(--down); }
 
 .layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 821px) {
-  #toggleSide { width: 136px; text-align: center; }   /* same width for "Hide screens" and "Hide watchlists" */
+  #toggleSide, #toggleSide2 { width: 136px; text-align: center; }   /* same width whatever the label */
   .layout.collapsed { grid-template-columns: minmax(0, 1fr); }
   .layout.collapsed > aside { display: none; }
   .m-only { display: none !important; }
@@ -285,7 +341,12 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
   .drawer-foot .btn { width: 100%; padding: 11px; }
   .screen-btn { padding: 10px; }
   .rule select, .rule input { padding: 8px; font-size: 16px; }   /* 16px stops iOS zooming on focus */
-  .name-in, .search, textarea, .add-row input, .wl-pop form input { font-size: 16px; }
+  .name-in, .search, textarea, .add-row input, .wl-pop form input, #noteText, .gh-in { font-size: 16px; }
+  .note-body { height: max(420px, calc(100vh - 250px)); }
+  .note-body.split { grid-template-columns: minmax(0, 1fr); } .note-body.split .md { display: none; }
+  .seg .split-only { display: none; }
+  #toggleSide2 { flex: 1 1 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note-status { margin-left: 0; flex: 1; text-align: right; }
 
   .summary { padding: 14px; gap: 10px 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .summary .big { grid-column: 1 / -1; }
@@ -427,13 +488,41 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
           <div class="row"><button class="btn danger" id="deleteWatch" type="button">Delete watchlist</button></div>
         </div>
       </div>
+      <div id="notesSide" role="tabpanel" aria-labelledby="tab-notes" hidden>
+        <div class="panel-head"><p class="eyebrow">Notes</p><button class="btn sm primary" id="newNote" type="button">+ New note</button></div>
+        <div class="section note-search"><input class="search" id="noteSearch" type="search" placeholder="Search notes" aria-label="Search notes" autocomplete="off"></div>
+        <div class="note-list" id="noteList"></div>
+        <div class="storage-note" id="notesNote"></div>
+        <div class="storage-note row" id="notesFile"><button class="linkbtn" id="exportNotes" type="button">Export all notes (.md)</button></div>
+        <div class="section" id="ghSection">
+          <details class="import" id="ghBox">
+            <summary>Save notes to GitHub</summary>
+            <div class="inner">
+              <p class="hint">Each note becomes a Markdown file in a GitHub repository, with its full history. Use a <b>private</b> repository: notes in a public one can be read by anyone.</p>
+              <label class="eyebrow" for="ghRepo">Repository</label>
+              <input class="gh-in" id="ghRepo" placeholder="your-name/notes" autocomplete="off" spellcheck="false">
+              <label class="eyebrow" for="ghFolder">Folder</label>
+              <input class="gh-in" id="ghFolder" value="notes" autocomplete="off" spellcheck="false">
+              <label class="eyebrow" for="ghToken">Access token</label>
+              <input class="gh-in" id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+              <p class="hint">A fine-grained token with <b>Contents: Read and write</b> on that repository only. It is kept in this browser and sent only to api.github.com.</p>
+              <div class="row">
+                <button class="btn primary" id="ghConnect" type="button">Connect</button>
+                <button class="btn" id="ghDisconnect" type="button" hidden>Disconnect</button>
+              </div>
+              <div class="toast" id="ghMsg" role="status"></div>
+            </div>
+          </details>
+        </div>
+      </div>
       <div class="drawer-foot m-only"><button class="btn primary" id="showResults" type="button">Show results</button></div>
     </aside>
     <div class="scrim" id="scrim"></div>
     <div class="wl-pop" id="wlPop" role="dialog" aria-labelledby="wlPopTitle" hidden></div>
     <div class="hcard" id="hcard" role="dialog" aria-label="Stock links" hidden></div>
 
-    <main class="panel" aria-label="Results">
+    <main class="panel" aria-label="Main">
+      <div id="resultsView">
       <div class="statusbar" role="status"><span class="tag" id="dataTag">Example data</span><span id="dataDesc">illustrative figures</span></div>
       <div class="summary">
         <div class="big" id="passCount">0 <small>/ 0 pass</small></div>
@@ -467,6 +556,28 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         </div>
       </div>
       <div class="table-wrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+      <div id="notesView" hidden>
+        <div class="note-bar">
+          <button class="btn sm" id="toggleSide2" type="button" aria-controls="sidePanel">Hide notes</button>
+          <div class="seg" id="noteMode" role="radiogroup" aria-label="Editor layout">
+            <button type="button" role="radio" data-mode="write">Write</button>
+            <button type="button" role="radio" data-mode="split" class="split-only">Split</button>
+            <button type="button" role="radio" data-mode="preview">Preview</button>
+          </div>
+          <span class="note-status" id="noteStatus" role="status" aria-live="polite"></span>
+          <button class="btn sm pin-btn" id="pinNote" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4z"/><path d="M12 14v6"/></svg><span>Pin</span></button>
+          <button class="btn sm danger" id="deleteNote" type="button">Delete</button>
+        </div>
+        <div class="note-body" id="noteBody">
+          <textarea id="noteText" spellcheck="true" aria-label="Note, in Markdown" placeholder="# Title&#10;&#10;Write in Markdown: **bold**, *italic*, - lists, [links](https://…), | tables |, and $NVDA to link a ticker."></textarea>
+          <div class="md" id="notePreview" aria-label="Preview"></div>
+        </div>
+        <div class="note-empty" id="noteEmpty" hidden>
+          <p>No notes yet.</p>
+          <button class="btn primary" id="newNote2" type="button">Write your first note</button>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -566,7 +677,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const S = {
     data: SAMPLE, source: "sample", live: null, csv: null,
     userScreens: [], activeId: "b-starter", draft: clone(BUILTINS[0]), dirty: false,
-    universe: "sp500", liveBy: {}, tab: "screener", watchlists: [], activeWatch: null, sort: { key: "mktCap", dir: "desc" }, showMiss: false, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
+    universe: "sp500", liveBy: {}, tab: "screener", watchlists: [], activeWatch: null, notes: [], activeNote: null, sort: { key: "mktCap", dir: "desc" }, showMiss: false, hidden: new Set(), collapsed: false, q: "", deleteArmed: false,
   };
   const $ = (id) => document.getElementById(id);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -857,6 +968,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const pct = (v) => (v == null ? "–" : FIELDS.chg.fmt(v));
   const mean = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
   function renderResults() {
+    if (S.tab === "notes") return;
     const watch = S.tab === "watch";
     const d = S.draft;
     const cols = visibleCols().concat(watch ? [{ key: "since" }] : []);
@@ -1178,17 +1290,381 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
   };
 
+  // ---------- Markdown (small, safe renderer: everything is escaped first) ----------
+  const escHtml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  function mdInline(t) {
+    const keep = [];
+    const stash = (html) => "\u0000" + (keep.push(html) - 1) + "\u0000";
+    t = escHtml(t);
+    t = t.replace(/`([^`]+)`/g, (_, c) => stash("<code>" + c + "</code>"));
+    t = t.replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g, (_, txt, url) => stash(`<a href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>`));
+    t = t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_, pre, url) => pre + stash(`<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`));
+    t = t.replace(/\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g, (_, tk) => stash(`<a class="tick" href="https://finance.yahoo.com/quote/${tk.replace(".", "-")}/" target="_blank" rel="noopener noreferrer">$${tk}</a>`));
+    t = t.replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => "<strong>" + (a || b) + "</strong>");
+    t = t.replace(/(^|[^*\w])\*(?!\s)(.+?)\*(?!\w)/g, "$1<em>$2</em>").replace(/(^|[^_\w])_(?!\s)(.+?)_(?!\w)/g, "$1<em>$2</em>");
+    t = t.replace(/~~(.+?)~~/g, "<del>$1</del>");
+    return t.replace(/\u0000(\d+)\u0000/g, (_, i) => keep[+i]);
+  }
+  function renderMarkdown(src) {
+    const lines = src.replace(/\r\n?/g, "\n").split("\n"), out = [];
+    const isTableSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(l);
+    const cells = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+    const listRe = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+    let i = 0;
+    while (i < lines.length) {
+      const l = lines[i];
+      if (/^\s*$/.test(l)) { i++; continue; }
+      let m;
+      if ((m = l.match(/^\s*(```|~~~)\s*([\w+-]*)\s*$/))) {          // fenced code
+        const fence = m[1], buf = []; i++;
+        while (i < lines.length && !lines[i].trim().startsWith(fence)) buf.push(lines[i++]);
+        i++; out.push("<pre><code>" + escHtml(buf.join("\n")) + "</code></pre>"); continue;
+      }
+      if ((m = l.match(/^\s*(#{1,6})\s+(.*?)\s*#*\s*$/))) { out.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`); i++; continue; }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+      if (/^\s*>/.test(l)) {                                          // blockquote
+        const buf = [];
+        while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+        out.push("<blockquote>" + renderMarkdown(buf.join("\n")) + "</blockquote>"); continue;
+      }
+      if (l.includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1])) {   // table
+        const head = cells(l); i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].includes("|") && !/^\s*$/.test(lines[i])) rows.push(cells(lines[i++]));
+        out.push('<div class="tbl"><table><thead><tr>' + head.map((c) => "<th>" + mdInline(c) + "</th>").join("") + "</tr></thead><tbody>" +
+          rows.map((r) => "<tr>" + head.map((_, k) => "<td>" + mdInline(r[k] || "") + "</td>").join("") + "</tr>").join("") + "</tbody></table></div>");
+        continue;
+      }
+      if (listRe.test(l)) {                                           // lists (nesting by indent)
+        const items = [];
+        while (i < lines.length && (listRe.test(lines[i]) || (/^\s{2,}\S/.test(lines[i]) && items.length))) {
+          const lm = lines[i].match(listRe);
+          if (lm) items.push({ indent: lm[1].replace(/\t/g, "    ").length, ordered: /\d/.test(lm[2]), text: lm[3] });
+          else items[items.length - 1].text += " " + lines[i].trim();
+          i++;
+        }
+        const build = (start, indent) => {
+          const tag = items[start].ordered ? "ol" : "ul";
+          let html = "<" + tag + ">", k = start;
+          while (k < items.length && items[k].indent >= indent) {
+            if (items[k].indent > indent) { const [inner, next] = build(k, items[k].indent); html = html.replace(/<\/li>$/, inner + "</li>"); k = next; continue; }
+            const task = items[k].text.match(/^\[( |x|X)\]\s+(.*)$/);
+            html += task ? `<li class="task"><input type="checkbox" disabled${task[1] !== " " ? " checked" : ""}>${mdInline(task[2])}</li>` : "<li>" + mdInline(items[k].text) + "</li>";
+            k++;
+          }
+          return [html + "</" + tag + ">", k];
+        };
+        out.push(build(0, items[0].indent)[0]); continue;
+      }
+      const buf = [];                                                 // paragraph (single newlines kept as breaks)
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^\s*(#{1,6}\s|```|~~~|>)/.test(lines[i]) && !listRe.test(lines[i]) &&
+             !(lines[i].includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1]))) buf.push(lines[i++]);
+      out.push("<p>" + buf.map(mdInline).join("<br>") + "</p>");
+    }
+    return out.join("\n");
+  }
+
+  // ---------- Notes ----------
+  // Every edit is written to this browser at once (a backup that survives reloads),
+  // then saved to the server (SQLite) or your account, retrying until it succeeds.
+  const noteTitle = (n) => { const f = (n.body || "").split("\n").find((x) => x.trim()); return f ? f.replace(/^\s*#{1,6}\s*/, "").replace(/[*_`~]/g, "").trim().slice(0, 80) || "Untitled" : "Untitled note"; };
+  const noteSnippet = (n) => { const ls = (n.body || "").split("\n").filter((x) => x.trim()); return (ls[1] || "").replace(/^\s*([#>*+-]|\d+[.)])+\s*/, "").replace(/[*_`~|]/g, "").trim().slice(0, 120); };
+  const noteWhen = (ms) => { const d = new Date(ms), now = new Date();
+    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+      : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === now.getFullYear() ? undefined : "numeric" }); };
+  const notePlain = (n) => ({ id: n.id, body: n.body, pinned: !!n.pinned, created: n.created, updated: n.updated });
+
+  // GitHub storage: one file per note, <folder>/<id>.md, with the note's details in front matter.
+  const gh = {
+    cfg: null,   // { repo, folder, branch, private }
+    token: () => { try { return localStorage.getItem("screener.ghToken") || ""; } catch (e) { return ""; } },
+    b64: (t) => btoa(unescape(encodeURIComponent(t))),
+    unb64: (t) => decodeURIComponent(escape(atob(t.replace(/\s/g, "")))),
+    async call(method, path, body) {
+      const r = await fetch("https://api.github.com" + path, { method, cache: "no-store",
+        headers: { Authorization: "Bearer " + this.token(), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "Content-Type": "application/json" } : {}) },
+        body: body ? JSON.stringify(body) : undefined });
+      const j = r.status === 204 ? {} : await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error(j.message || "GitHub said " + r.status); e.status = r.status; throw e; }
+      return j;
+    },
+    path(id) { return `/repos/${this.cfg.repo}/contents/${this.cfg.folder ? this.cfg.folder + "/" : ""}${id}.md`; },
+    toFile(n) {
+      const iso = (ms) => new Date(ms || Date.now()).toISOString();
+      return `---\nid: ${n.id}\npinned: ${!!n.pinned}\ncreated: ${iso(n.created)}\nupdated: ${iso(n.updated)}\n---\n\n${n.body}`;
+    },
+    fromFile(name, text) {
+      const m = text.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
+      const meta = {}; (m ? m[1] : "").split("\n").forEach((l) => { const k = l.match(/^(\w+):\s*(.*)$/); if (k) meta[k[1]] = k[2].trim(); });
+      const t = (v) => (v && !isNaN(Date.parse(v)) ? Date.parse(v) : null);
+      return { id: meta.id || name.replace(/\.md$/, ""), body: m ? m[2] : text, pinned: meta.pinned === "true", created: t(meta.created) || Date.now(), updated: t(meta.updated) || Date.now() };
+    },
+    async connect(repo, folder) {
+      const info = await this.call("GET", `/repos/${repo}`);
+      if (!info.permissions || !info.permissions.push) throw new Error("This token can read but not write that repository.");
+      this.cfg = { repo: info.full_name, folder: folder.replace(/^\/+|\/+$/g, ""), branch: info.default_branch, private: !!info.private };
+      return this.cfg;
+    },
+    async list() {
+      let files = [];
+      try { files = await this.call("GET", `/repos/${this.cfg.repo}/contents/${this.cfg.folder}?ref=${encodeURIComponent(this.cfg.branch)}`); }
+      catch (e) { if (e.status === 404) return []; throw e; }   // folder not created yet
+      const md = (Array.isArray(files) ? files : []).filter((f) => f.type === "file" && /\.md$/.test(f.name));
+      const out = await Promise.all(md.map(async (f) => {
+        const j = await this.call("GET", `/repos/${this.cfg.repo}/contents/${f.path}?ref=${encodeURIComponent(this.cfg.branch)}`);
+        const note = this.fromFile(f.name, this.unb64(j.content || ""));
+        nstore.sha[note.id] = j.sha;
+        return note;
+      }));
+      return out;
+    },
+    async put(n) {
+      const body = { message: `${nstore.sha[n.id] ? "Update" : "Add"} note: ${noteTitle(n)}`, content: this.b64(this.toFile(n)), branch: this.cfg.branch };
+      if (nstore.sha[n.id]) body.sha = nstore.sha[n.id];
+      try {
+        const j = await this.call("PUT", this.path(n.id), body);
+        nstore.sha[n.id] = j.content && j.content.sha;
+      } catch (e) {
+        if (e.status === 409 || e.status === 422) {   // our copy of the file version is out of date: refresh it and try once more
+          try { const cur = await this.call("GET", this.path(n.id) + "?ref=" + encodeURIComponent(this.cfg.branch)); nstore.sha[n.id] = cur.sha; }
+          catch (e2) { if (e2.status === 404) delete nstore.sha[n.id]; else throw e2; }
+          const again = { ...body, sha: nstore.sha[n.id] }; if (!again.sha) delete again.sha;
+          const j = await this.call("PUT", this.path(n.id), again);
+          nstore.sha[n.id] = j.content && j.content.sha;
+        } else throw e;
+      }
+    },
+    async del(id) {
+      if (!nstore.sha[id]) { try { nstore.sha[id] = (await this.call("GET", this.path(id))).sha; } catch (e) { if (e.status === 404) return; throw e; } }
+      await this.call("DELETE", this.path(id), { message: "Delete note " + id, sha: nstore.sha[id], branch: this.cfg.branch });
+      delete nstore.sha[id];
+    },
+  };
+  const nstore = {
+    mode: "local", col: null, timers: {}, retry: {}, status: "", sha: {}, inflight: {},
+    loadCache() { S.notes = (lsGet("screener.notes") || []).filter((n) => n && n.id); S.activeNote = lsGet("screener.activeNote"); },
+    writeCache() {
+      const ok = lsSet("screener.notes", S.notes.map((n) => ({ ...notePlain(n), dirty: !!n.dirty, synced: !!n.synced })));
+      if (!ok && this.mode === "local") this.setStatus("This browser refused to store notes. Export them now so nothing is lost.", "warn");
+      return ok;
+    },
+    where() { return this.mode === "github" ? "to GitHub" : this.mode === "server" ? "on the server" : this.mode === "cloud" ? "to your account" : "in this browser"; },
+    backendKey() { return this.mode === "github" ? "github:" + gh.cfg.repo + "/" + gh.cfg.folder : this.mode; },
+    // switching where notes are stored: everything here is treated as not yet uploaded there
+    adopt() {
+      if (lsGet("screener.notes.backend") === this.backendKey()) return;
+      S.notes.forEach((n) => { n.synced = false; if (n.body.trim()) n.dirty = true; });
+      this.sha = {};
+      lsSet("screener.notes.backend", this.backendKey());
+    },
+    setStatus(text, kind) { this.status = text; const el2 = $("noteStatus"); el2.textContent = text; el2.className = "note-status" + (kind ? " " + kind : ""); },
+    refreshStatus() {
+      const n = S.notes.find((x) => x.id === S.activeNote);
+      if (!n) return this.setStatus("");
+      if (this.retry[n.id]) return;   // keep the error message visible
+      if (n.dirty) return this.setStatus("Saving…");
+      this.setStatus(`Saved ${this.where()} · ${new Date(n.updated).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`, "ok");
+    },
+    merge(remote, { authoritative }) {
+      // newest copy of each note wins; local edits that haven't reached the remote are kept
+      const byId = new Map(S.notes.map((n) => [n.id, n]));
+      remote.forEach((r) => {
+        const l = byId.get(r.id);
+        if (!l) { byId.set(r.id, { ...r, synced: true }); return; }
+        if ((r.updated || 0) > (l.updated || 0) && !l.dirty) {
+          byId.set(r.id, { ...r, synced: true });
+          if (r.id === S.activeNote && document.activeElement !== $("noteText")) $("noteText").value = r.body;
+        } else if (!l.dirty) l.synced = true;
+      });
+      if (authoritative) {   // gone remotely and not edited here since: it was deleted elsewhere
+        const ids = new Set(remote.map((r) => r.id));
+        for (const [id, n] of byId) if (n.synced && !n.dirty && !ids.has(id)) byId.delete(id);
+      }
+      S.notes = [...byId.values()];
+      this.writeCache();
+      // anything newer here than there goes up now
+      const rmap = new Map(remote.map((r) => [r.id, r]));
+      S.notes.filter((n) => n.dirty || !rmap.has(n.id) || (rmap.get(n.id).updated || 0) < (n.updated || 0)).forEach((n) => { if (n.body.trim()) this.save(n); });
+    },
+    async init() {
+      const ghCfg = lsGet("screener.gh");
+      if (ghCfg && gh.token() && !window.claude) {
+        try {
+          await gh.connect(ghCfg.repo, ghCfg.folder);
+          this.mode = "github"; this.adopt();
+          this.merge(await gh.list(), { authoritative: true });
+        } catch (e) {
+          this.mode = "github-offline"; gh.cfg = gh.cfg || ghCfg;
+          this.setStatus("Couldn't reach GitHub (" + e.message + "). Your notes are kept in this browser until it works again.", "warn");
+          renderNoteList(); renderRail();
+          if (S.tab === "notes") openNote(S.activeNote, false);
+          setTimeout(() => { if (this.mode === "github-offline") this.init(); }, 30000);
+          return;
+        }
+      } else if (store.mode === "server") {
+        try { const j = await api("GET", API_ROOT + "notes"); this.mode = "server"; this.adopt(); this.merge(j.notes, { authoritative: true }); }
+        catch (e) { this.mode = "local"; }
+      } else if (store.mode === "cloud" && store.profile) {
+        this.mode = "cloud"; this.adopt();
+        this.col = store.profile.collection("notes");
+        this.col.onSnapshot((snap) => {
+          this.merge(snap.docs.map((x) => x.data()).filter(Boolean).map(clone), { authoritative: !snap.metadata.fromCache });
+          renderNoteList(); renderRail(); this.refreshStatus();
+        }, () => { this.mode = "local"; this.refreshStatus(); });
+      }
+      renderNoteList(); renderRail(); this.refreshStatus();
+      if (S.tab === "notes") openNote(S.activeNote, false);
+    },
+    queue(n, delay = this.mode === "github" ? 2500 : 700) {
+      n.dirty = true; this.writeCache(); this.refreshStatus();
+      clearTimeout(this.timers[n.id]);
+      this.timers[n.id] = setTimeout(() => this.save(n), delay);
+    },
+    async save(n) {
+      clearTimeout(this.timers[n.id]);
+      this.writeCache();
+      if (this.mode === "local") { n.dirty = false; n.synced = false; this.writeCache(); delete this.retry[n.id]; this.refreshStatus(); return true; }
+      if (this.mode === "github-offline") { this.refreshStatus(); return false; }   // kept here; uploaded once GitHub answers
+      if (this.inflight[n.id]) { n.again = true; return this.inflight[n.id]; }   // one save at a time per note
+      const run = this._save(n).finally(() => { delete this.inflight[n.id]; if (n.again) { n.again = false; if (n.dirty) this.save(n); } });
+      this.inflight[n.id] = run;
+      return run;
+    },
+    async _save(n) {
+      const snapshot = n.updated;
+      try {
+        if (this.mode === "github") {
+          await gh.put(n);
+        } else if (this.mode === "server") {
+          const saved = await api("PUT", API_ROOT + "notes/" + encodeURIComponent(n.id), notePlain(n));
+          if (saved.stale) Object.assign(n, { body: saved.body, pinned: saved.pinned, updated: saved.updated });
+        } else {
+          await this.col.doc(n.id).set(notePlain(n));
+        }
+        if (n.updated === snapshot) n.dirty = false;   // more typing may have happened meanwhile
+        n.synced = true; delete this.retry[n.id];
+        this.writeCache(); this.refreshStatus();
+        if (S.tab === "notes") renderNoteList();
+        return true;
+      } catch (e) {
+        const wait = Math.min(60, (this.retry[n.id] || 2.5) * 2);
+        this.retry[n.id] = wait;
+        if (n.id === S.activeNote) this.setStatus(`Not saved ${this.where()} yet (${e.message || "connection problem"}). Kept in this browser; retrying in ${Math.round(wait)}s.`, "warn");
+        this.timers[n.id] = setTimeout(() => this.save(n), wait * 1000);
+        return false;
+      }
+    },
+    flushAll() { S.notes.filter((n) => n.dirty && n.body.trim()).forEach((n) => this.save(n)); },
+    async remove(id) {
+      clearTimeout(this.timers[id]); delete this.retry[id];
+      S.notes = S.notes.filter((n) => n.id !== id); this.writeCache();
+      try {
+        if (this.mode === "github") await gh.del(id);
+        if (this.mode === "server") await api("DELETE", API_ROOT + "notes/" + encodeURIComponent(id));
+        if (this.mode === "cloud") await this.col.doc(id).delete();
+      } catch (e) { toast("Couldn't delete the note " + this.where() + ": " + e.message); }
+    },
+  };
+  function sortedNotes() {
+    const q = ($("noteSearch").value || "").trim().toLowerCase();
+    return S.notes.filter((n) => !q || n.body.toLowerCase().includes(q))
+      .sort((a, b) => (b.pinned - a.pinned) || (b.updated || 0) - (a.updated || 0));
+  }
+  function renderNoteList() {
+    const box = $("noteList"); box.textContent = "";
+    const list = sortedNotes(), pinned = list.filter((n) => n.pinned), rest = list.filter((n) => !n.pinned);
+    const item = (n) => {
+      const on = n.id === S.activeNote;
+      const pin = el("button", { class: "pin" + (n.pinned ? " on" : ""), type: "button", "aria-pressed": String(!!n.pinned),
+        "aria-label": (n.pinned ? "Unpin " : "Pin ") + noteTitle(n), title: n.pinned ? "Unpin" : "Pin to top",
+        onclick: (e) => { e.stopPropagation(); togglePin(n); } });
+      pin.innerHTML = PIN_ICON;
+      const row = el("div", { class: "note-item", role: "button", tabindex: "0", "aria-current": String(on),
+        onclick: () => { openNote(n.id, true); if (isPhone()) setDrawer(false); },
+        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNote(n.id, true); if (isPhone()) setDrawer(false); } } },
+        el("span", { class: "nt", text: noteTitle(n) }), pin,
+        el("span", { class: "ns", text: noteSnippet(n) || " " }),
+        el("span", { class: "nd", text: noteWhen(n.updated || n.created) + (n.dirty ? " · saving" : "") }));
+      return row;
+    };
+    if (pinned.length) { box.append(el("div", { class: "group-label", text: "Pinned" })); pinned.forEach((n) => box.append(item(n))); }
+    if (rest.length) { if (pinned.length) box.append(el("div", { class: "group-label", text: "Notes" })); rest.forEach((n) => box.append(item(n))); }
+    if (!list.length) box.append(el("p", { class: "hint", style: "padding: 4px 10px", text: S.notes.length ? "No notes match your search." : "No notes yet." }));
+    const nn = $("notesNote");
+    nn.className = "storage-note";
+    if (nstore.mode === "github" || nstore.mode === "github-offline") {
+      nn.textContent = `Notes are saved to GitHub: ${gh.cfg.repo}/${gh.cfg.folder || ""} (a backup copy stays in this browser).`;
+      if (gh.cfg.private === false) { nn.textContent += " This repository is PUBLIC: anyone can read these notes."; nn.className = "storage-note warn"; }
+    } else {
+      nn.textContent = nstore.mode === "server" ? "Notes are saved on the server (SQLite), with a backup copy in this browser."
+        : nstore.mode === "cloud" ? "Notes are saved to your account, with a backup copy in this browser."
+        : "Notes are saved in this browser only. Export them, or connect GitHub below, to keep a copy elsewhere.";
+    }
+    $("notesFile").hidden = !!window.claude;
+    $("ghSection").hidden = !!window.claude;   // the Claude preview cannot reach GitHub; it saves to your account instead
+    const on = nstore.mode === "github" || nstore.mode === "github-offline";
+    $("ghConnect").textContent = on ? "Reconnect" : "Connect"; $("ghDisconnect").hidden = !on;
+  }
+  let previewT = 0;
+  function renderPreview() {
+    const n = S.notes.find((x) => x.id === S.activeNote);
+    $("notePreview").innerHTML = n && n.body.trim() ? renderMarkdown(n.body) : '<p class="empty-preview">Nothing to preview yet.</p>';
+  }
+  function setNoteMode(mode) {
+    S.noteMode = mode; lsSet("screener.noteMode", mode);
+    const eff = isPhone() && mode === "split" ? "write" : mode;
+    $("noteBody").className = "note-body " + eff;
+    document.querySelectorAll("#noteMode button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.mode === eff)));
+    if (eff !== "write") renderPreview();
+  }
+  function openNote(id, focus) {
+    const prev = S.notes.find((n) => n.id === S.activeNote);
+    // leaving an empty note: drop it rather than keep a blank entry
+    if (prev && prev.id !== id && !prev.body.trim()) { nstore.remove(prev.id); }
+    else if (prev && prev.dirty) nstore.save(prev);
+    const n = S.notes.find((x) => x.id === id) || sortedNotes()[0] || S.notes[0];
+    S.activeNote = n ? n.id : null; lsSet("screener.activeNote", S.activeNote);
+    $("noteEmpty").hidden = !!n; $("noteBody").hidden = !n;
+    document.querySelector(".note-bar").hidden = !n;
+    if (n) {
+      if ($("noteText").value !== n.body) $("noteText").value = n.body;
+      $("pinNote").setAttribute("aria-pressed", String(!!n.pinned));
+      $("pinNote").querySelector("span").textContent = n.pinned ? "Pinned" : "Pin";
+      setNoteMode(S.noteMode || (isPhone() ? "write" : "split"));
+      if (focus) $("noteText").focus();
+    }
+    S.nDeleteArmed = false; $("deleteNote").textContent = "Delete"; $("deleteNote").classList.remove("confirm");
+    renderNoteList(); nstore.refreshStatus(); applySide();
+  }
+  function newNote() {
+    const now = Date.now();
+    const n = { id: "n-" + now.toString(36) + Math.random().toString(36).slice(2, 6), body: "", pinned: false, created: now, updated: now };
+    S.notes.unshift(n);
+    openNote(n.id, true);
+    renderRail();
+  }
+  function togglePin(n) {
+    n.pinned = !n.pinned; n.updated = Date.now();
+    nstore.queue(n, 0);
+    if (n.id === S.activeNote) { $("pinNote").setAttribute("aria-pressed", String(n.pinned)); $("pinNote").querySelector("span").textContent = n.pinned ? "Pinned" : "Pin"; }
+    renderNoteList();
+  }
+  const PIN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4z"/><path d="M12 14v6"/></svg>';
+
   // ---------- Tabs ----------
   // Sections shown as tabs down the left (a bottom bar on phones). To add a section:
   // add an entry here, a side panel with the matching id, and handle it in renderResults.
   const ICONS = {
     screener: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
+    notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>',
   };
   const TABS = [
     { id: "screener", label: "Screener", hash: "screener", panel: "screenerSide", panelTitle: "Screens" },
     { id: "watch", label: "Watchlist", hash: "watchlist", panel: "watchSide", panelTitle: "Watchlists",
       badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
+    { id: "notes", label: "Notes", hash: "notes", panel: "notesSide", panelTitle: "Notes",
+      badge: () => (S.notes.length ? String(S.notes.length) : "") },
   ];
   function renderRail() {
     const rail = $("rail"), hadFocus = rail.contains(document.activeElement); rail.textContent = "";
@@ -1207,17 +1683,21 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function setTab(tab) {
     S.tab = TABS.some((t) => t.id === tab) ? tab : "screener";
     lsSet("screener.tab", S.tab);
-    const watch = S.tab === "watch";
+    const watch = S.tab === "watch", notes = S.tab === "notes";
+    if (!notes) nstore.flushAll();
     TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
     renderRail();
     $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
+    $("resultsView").hidden = notes; $("notesView").hidden = !notes; $("footNote").hidden = notes;
     // keep these in place (just invisible) so nothing below moves when switching tabs
-    $("uniPick").style.visibility = watch ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
-    $("pageTitle").textContent = watch ? "Watchlist" : uName() + " Screener";
-    document.querySelector(".lede").textContent = watch
-      ? "The stocks you're keeping an eye on, with live prices and the same metrics as the screener."
+    $("uniPick").style.visibility = watch || notes ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
+    $("pageTitle").textContent = notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
+    document.querySelector(".lede").textContent = notes
+      ? "Your research notes, written in Markdown. Pin the ones you want to keep on top."
+      : watch ? "The stocks you're keeping an eye on, with live prices and the same metrics as the screener."
       : "Build a screen from valuation and growth rules, save it, and switch between saved screens to compare what passes.";
     if (watch) renderWatchSide();
+    if (notes) { renderNoteList(); openNote(S.activeNote, false); $("showResults").textContent = "Open note"; }
     renderResults(); applySide();
   }
 
@@ -1232,7 +1712,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
-    $("pageTitle").textContent = S.tab === "watch" ? "Watchlist" : uName() + " Screener";
+    $("pageTitle").textContent = S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
     if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
@@ -1389,28 +1869,30 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("layout").classList.toggle("drawer-open", open);
     document.body.style.overflow = open ? "hidden" : "";
     $("toggleSide").setAttribute("aria-expanded", String(open));
-    if (open) $("closeDrawer").focus(); else if (isPhone()) $("toggleSide").focus();
+    if (open) $("closeDrawer").focus(); else if (isPhone()) $(S.tab === "notes" ? "toggleSide2" : "toggleSide").focus();
   }
   function applySide() {
+    const btns = [$("toggleSide"), $("toggleSide2")];
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
-      const nm = S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
-      $("toggleSide").textContent = "☰ " + nm;
-      $("toggleSide").title = S.tab === "watch" ? "Watchlists" : "Screens and rules";
-      $("toggleSide").setAttribute("aria-expanded", String(!!S.drawer));
+      const cur = S.tab === "notes" ? S.notes.find((n) => n.id === S.activeNote) : null;
+      const nm = S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
+      btns.forEach((b) => { b.textContent = "☰ " + nm; b.title = TABS.find((t) => t.id === S.tab).panelTitle; b.setAttribute("aria-expanded", String(!!S.drawer)); });
     } else {
       if (S.drawer) setDrawer(false);
       $("layout").classList.toggle("collapsed", S.collapsed);
-      const what = S.tab === "watch" ? "watchlists" : "screens";
-      $("toggleSide").textContent = (S.collapsed ? "Show " : "Hide ") + what;
-      $("toggleSide").setAttribute("aria-expanded", String(!S.collapsed));
+      const what = TABS.find((t) => t.id === S.tab).panelTitle.toLowerCase();
+      btns.forEach((b) => { b.textContent = (S.collapsed ? "Show " : "Hide ") + what; b.setAttribute("aria-expanded", String(!S.collapsed)); });
     }
   }
-  $("toggleSide").addEventListener("click", () => {
+  function toggleSidePanel() {
     if (isPhone()) return setDrawer(true);
     S.collapsed = !S.collapsed; lsSet("screener.collapsed", S.collapsed); applySide();
-  });
+  }
+  $("toggleSide").addEventListener("click", toggleSidePanel);
+  $("toggleSide2").addEventListener("click", toggleSidePanel);
   ["closeDrawer", "showResults", "scrim"].forEach((id) => $(id).addEventListener("click", () => setDrawer(false)));
+  $("showResults").addEventListener("click", () => { if (S.tab === "notes") $("noteText").focus(); });
   phoneMq.addEventListener("change", applySide);
   document.addEventListener("click", (e) => { const m = $("colMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
   document.addEventListener("keydown", (e) => {
@@ -1476,6 +1958,75 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   window.addEventListener("scroll", () => { if (cardFor) hideCard(0); }, { passive: true });
   document.querySelector(".table-wrap").addEventListener("scroll", () => { if (cardFor) hideCard(0); }, { passive: true });
   $("search").addEventListener("input", (e) => { S.q = e.target.value; renderResults(); });
+  $("noteText").addEventListener("input", (e) => {
+    const n = S.notes.find((x) => x.id === S.activeNote); if (!n) return;
+    n.body = e.target.value; n.updated = Date.now();
+    nstore.queue(n);
+    clearTimeout(previewT); previewT = setTimeout(() => { if (!$("noteBody").classList.contains("write")) renderPreview(); renderNoteList(); applySide(); }, 160);
+  });
+  $("noteText").addEventListener("blur", () => { const n = S.notes.find((x) => x.id === S.activeNote); if (n && n.dirty) nstore.save(n); });
+  $("noteText").addEventListener("keydown", (e) => {   // Tab indents instead of leaving the editor; Ctrl/Cmd+S saves now
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); const n = S.notes.find((x) => x.id === S.activeNote); if (n) nstore.save(n); return; }
+    if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.execCommand("insertText", false, "  "); }
+  });
+  $("newNote").addEventListener("click", () => { newNote(); if (isPhone()) setDrawer(false); });
+  $("newNote2").addEventListener("click", newNote);
+  $("noteSearch").addEventListener("input", renderNoteList);
+  $("pinNote").addEventListener("click", () => { const n = S.notes.find((x) => x.id === S.activeNote); if (n) togglePin(n); });
+  document.querySelectorAll("#noteMode button").forEach((b) => b.addEventListener("click", () => setNoteMode(b.dataset.mode)));
+  $("deleteNote").addEventListener("click", async () => {
+    const n = S.notes.find((x) => x.id === S.activeNote); if (!n) return;
+    if (!S.nDeleteArmed) { S.nDeleteArmed = true; $("deleteNote").textContent = "Confirm delete"; $("deleteNote").classList.add("confirm"); return; }
+    const title = noteTitle(n);
+    await nstore.remove(n.id);
+    S.activeNote = null; openNote(null, false); renderRail();
+    toast(`Deleted “${title}”`);
+  });
+  const ghSaved = lsGet("screener.gh"); if (ghSaved) { $("ghRepo").value = ghSaved.repo || ""; $("ghFolder").value = ghSaved.folder ?? "notes"; }
+  $("ghConnect").addEventListener("click", async () => {
+    const repo = $("ghRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
+    const folder = $("ghFolder").value.trim();
+    const msg = $("ghMsg"); msg.className = "toast";
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { msg.textContent = "Enter the repository as owner/name, e.g. your-name/notes."; msg.className = "toast warn"; return; }
+    if ($("ghToken").value.trim()) { try { localStorage.setItem("screener.ghToken", $("ghToken").value.trim()); } catch (e) { /* shown below */ } }
+    if (!gh.token()) { msg.textContent = "Paste an access token first."; msg.className = "toast warn"; return; }
+    msg.textContent = "Connecting…";
+    try {
+      const cfg = await gh.connect(repo, folder);
+      lsSet("screener.gh", { repo: cfg.repo, folder: cfg.folder });
+      $("ghToken").value = "";
+      nstore.mode = "github"; nstore.adopt();
+      nstore.merge(await gh.list(), { authoritative: true });
+      msg.textContent = `Connected to ${cfg.repo}. ${S.notes.length} note${S.notes.length === 1 ? "" : "s"} will be kept in ${cfg.folder || "the top folder"}/.`
+        + (cfg.private ? "" : " Warning: this repository is public, so anyone can read these notes.");
+      msg.className = cfg.private ? "toast" : "toast warn";
+      renderNoteList(); renderRail(); openNote(S.activeNote, false);
+    } catch (e) {
+      msg.textContent = e.status === 401 ? "GitHub didn't accept that token." : e.status === 404 ? "Repository not found, or the token has no access to it." : "Couldn't connect: " + e.message;
+      msg.className = "toast warn";
+    }
+  });
+  $("ghDisconnect").addEventListener("click", () => {
+    try { localStorage.removeItem("screener.ghToken"); localStorage.removeItem("screener.gh"); } catch (e) { /* nothing stored */ }
+    gh.cfg = null; nstore.mode = "local"; nstore.adopt();
+    $("ghMsg").textContent = "Disconnected. Notes stay in this browser; the files on GitHub are untouched."; $("ghMsg").className = "toast";
+    renderNoteList(); nstore.refreshStatus();
+  });
+  $("exportNotes").addEventListener("click", () => {
+    const text = sortedNotes().map((n) => `<!-- note ${n.id} · updated ${new Date(n.updated).toISOString()}${n.pinned ? " · pinned" : ""} -->\n\n${n.body.trim()}\n`).join("\n---\n\n");
+    const a = el("a", { href: URL.createObjectURL(new Blob([text], { type: "text/markdown" })), download: "notes-" + new Date().toISOString().slice(0, 10) + ".md" });
+    document.body.append(a); a.click(); a.remove();
+  });
+  // never lose typing: save on hide/close, and warn before leaving while a save is pending
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nstore.flushAll(); });
+  window.addEventListener("pagehide", () => {
+    nstore.writeCache();
+    if (nstore.mode === "server") S.notes.filter((n) => n.dirty).forEach((n) => {
+      try { fetch(API_ROOT + "notes/" + encodeURIComponent(n.id), { method: "PUT", keepalive: true, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(notePlain(n)) }); } catch (e) { /* the browser copy is kept */ }
+    });
+  });
+  window.addEventListener("beforeunload", (e) => { if (S.notes.some((n) => n.dirty) && nstore.mode !== "local") { nstore.flushAll(); e.preventDefault(); e.returnValue = ""; } });
+  phoneMq.addEventListener("change", () => { if (S.tab === "notes") setNoteMode(S.noteMode || "split"); });
   $("rail").addEventListener("keydown", (e) => {   // arrow keys move between sections, as in a tab list
     const keys = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
     if (!(e.key in keys) && e.key !== "Home" && e.key !== "End") return;
@@ -1583,6 +2134,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   // ---------- Boot ----------
   store.loadLocal();
   wstore.load();
+  nstore.loadCache();
+  S.noteMode = lsGet("screener.noteMode");
   const savedData = lsGet("screener.data");
   if (Array.isArray(savedData) && savedData.length) S.csv = savedData;
   const lastActive = lsGet("screener.active");
@@ -1610,7 +2163,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const fromHash = TABS.find((t) => "#" + t.hash === location.hash);
   setTab(fromHash ? fromHash.id : lsGet("screener.tab") || "screener");
   loadBuiltins();
-  store.init().finally(() => wstore.init());
+  store.init().finally(() => { wstore.init(); nstore.init(); });
   initLive();
   loadIndex();
 })();

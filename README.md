@@ -47,6 +47,30 @@ python -m backend.server                  # always-on server: open http://localh
 
 Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete) and `/api/watchlists` (same verbs; each watchlist is `{name, items: [{ticker, addedAt, addedPrice}]}`).
 
+## Notes
+
+The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` task lists, tables, code blocks, links, and `$NVDA` to link a ticker. Pin a note to keep it at the top. Notes save automatically (about a second after you stop typing, and when you switch notes or leave the page). Every edit is also kept in the browser, so if a save fails it is retried and nothing is lost; the status next to the editor says where the note was saved and when.
+
+Where notes are stored, in order of preference:
+
+1. **A GitHub repository** (any copy of the page except the Claude preview): open *Save notes to GitHub* under the notes list and enter a repository (`owner/name`), a folder (default `notes`) and a fine-grained access token with **Contents: Read and write** on that repository only. Each note becomes `<folder>/<id>.md`:
+
+   ```markdown
+   ---
+   id: n-mvk7fc6yqkbl
+   pinned: true
+   created: 2026-10-23T00:00:59.002Z
+   updated: 2026-10-23T00:01:05.720Z
+   ---
+
+   # AAPL
+   ...
+   ```
+
+   Saves are commits, so GitHub keeps the full history. Use a **private** repository: notes in a public one can be read by anyone (the page warns you). The token is stored only in that browser.
+2. **The always-on server**: SQLite table `notes` via `/api/notes`.
+3. **The browser** (localStorage), with *Export all notes (.md)* for backups.
+
 ## Where saved screens and watchlists live
 
 | Where the page runs | Saved screens go to |

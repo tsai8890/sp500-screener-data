@@ -20,6 +20,9 @@ What it does:
         GET    /api/watchlists       saved watchlists (same database)
         PUT    /api/watchlists/<id>  create or replace one watchlist
         DELETE /api/watchlists/<id>  delete one watchlist
+        GET    /api/notes            Markdown notes (same database)
+        PUT    /api/notes/<id>       save one note: {body, pinned, created, updated}
+        DELETE /api/notes/<id>       delete one note
 
 Settings (environment variables):
   HOST (0.0.0.0)  PORT (8000)
@@ -50,7 +53,7 @@ PRICE_INTERVAL = int(os.environ.get("PRICE_INTERVAL", "60"))
 FUND_INTERVAL = int(os.environ.get("FUNDAMENTALS_INTERVAL", "1800"))
 PRICES_ALWAYS = os.environ.get("PRICES_ALWAYS", "0") == "1"
 SCREENS_TOKEN = os.environ.get("SCREENS_TOKEN", "")
-MAX_BODY = 64 * 1024
+MAX_BODY = 1024 * 1024   # notes can be long
 
 
 class State:
@@ -188,6 +191,8 @@ class Handler(BaseHTTPRequestHandler):
             with STATE.lock:
                 body = STATE.index
             return self._send(200, body, "application/json") if body else self._json(503, {"error": "No data yet"})
+        if path == "/api/notes":
+            return self._json(200, {"notes": screens_db.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/watchlists":
             return self._json(200, {"watchlists": screens_db.list_watchlists(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/screens":
@@ -214,9 +219,9 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(obj).encode(), "application/json")
 
     def _target(self) -> tuple[str, str] | None:
-        """("screens" | "watchlists", id) for /api/screens/<id> or /api/watchlists/<id>."""
+        """("screens" | "watchlists" | "notes", id) for /api/<kind>/<id>."""
         path = self.path.split("?", 1)[0]
-        for kind in ("screens", "watchlists"):
+        for kind in ("screens", "watchlists", "notes"):
             prefix = f"/api/{kind}/"
             if path.startswith(prefix):
                 return kind, path[len(prefix):]
@@ -233,11 +238,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(401, {"error": "Missing or wrong token"})
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0 or length > MAX_BODY:
-            return self._json(413 if length else 400, {"error": "Body must be JSON, at most 64 KB"})
+            return self._json(413 if length else 400, {"error": "Body must be JSON, at most 1 MB"})
         try:
             body = json.loads(self.rfile.read(length))
             kind, sid = target
-            save = screens_db.upsert if kind == "screens" else screens_db.upsert_watchlist
+            save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": screens_db.upsert_note}[kind]
             return self._json(200, save(sid, body))
         except (ValueError, screens_db.InvalidScreen) as e:
             return self._json(400, {"error": str(e)})
@@ -249,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return self._json(401, {"error": "Missing or wrong token"})
         kind, sid = target
-        remove = screens_db.delete if kind == "screens" else screens_db.delete_watchlist
+        remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": screens_db.delete_note}[kind]
         return self._json(200, {"deleted": remove(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors

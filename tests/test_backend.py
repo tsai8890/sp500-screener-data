@@ -144,6 +144,25 @@ class Watchlists(unittest.TestCase):
                 screens_db.validate_watchlist("w", body)
 
 
+class Notes(unittest.TestCase):
+    def test_save_pin_stale_and_delete(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "s.db")
+            md = "# NVDA thesis\n\n- data center **growth**\n- watch margins"
+            out = screens_db.upsert_note("n-1", {"body": md, "pinned": True, "created": 1, "updated": 100}, path=db)
+            self.assertEqual((out["body"], out["pinned"], out["updated"]), (md, True, 100))
+            stale = screens_db.upsert_note("n-1", {"body": "old text", "updated": 50}, path=db)   # older copy loses
+            self.assertTrue(stale["stale"])
+            self.assertEqual(screens_db.list_notes(path=db)[0]["body"], md)
+            screens_db.upsert_note("n-2", {"body": "second", "updated": 200}, path=db)
+            self.assertEqual([n["id"] for n in screens_db.list_notes(path=db)], ["n-1", "n-2"])   # pinned first
+            self.assertTrue(screens_db.delete_note("n-1", path=db))
+            self.assertEqual([n["id"] for n in screens_db.list_notes(path=db)], ["n-2"])
+        for nid, body in [("../x", {}), ("ok", {"body": 5}), ("ok", {"body": "x" * 200_001})]:
+            with self.assertRaises(screens_db.InvalidScreen):
+                screens_db.validate_note(nid, body)
+
+
 class Universes(unittest.TestCase):
     def test_clean_and_union(self):
         df = pd.DataFrame({"Symbol": ["AAPL", "brk.b", "AAPL", None], "Company": ["Apple", "Berkshire", "dup", "x"],
