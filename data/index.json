@@ -1,1 +1,1 @@
-{"default":"sp500","builtAt":"2026-10-26T17:43:04Z","universes":[{"id":"sp500","name":"S&P 500","count":503,"file":"data/sp500.json"},{"id":"russell1000","name":"Russell 1000","count":1021,"file":"data/russell1000.json"}]}
+{"default":"sp500","builtAt":"2026-10-26T19:04:59Z","universes":[{"id":"sp500","name":"S&P 500","count":503,"file":"data/sp500.json"},{"id":"russell1000","name":"Russell 1000","count":1021,"file":"data/russell1000.json"}]}
