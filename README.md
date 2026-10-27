@@ -15,7 +15,7 @@ P/E, PEG, market cap and dividend yield depend on the share price, so they are r
 
 ## Run it
 
-Needs Python 3.10 to 3.14 (pandas has no ready-made packages for other versions yet). `run.sh` picks a suitable one if several are installed; if it says none is, run `brew install python@3.13` and try again. To force one: `PYTHON=python3.12 ./run.sh`.
+Needs Python 3.10 to 3.14 (pandas has no ready-made packages for other versions yet). `run.sh` picks a suitable one if several are installed; if it says none is, install Python 3.13 with the macOS installer from [python.org](https://www.python.org/downloads/macos/) (or `brew install python@3.13` if you use Homebrew) and try again. To force one: `PYTHON=python3.12 ./run.sh`.
 
 ```bash
 git clone https://github.com/tsai8890/sp500-screener-data ~/sp500-screener && cd ~/sp500-screener

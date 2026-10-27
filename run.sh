@@ -13,13 +13,16 @@ cd "$(dirname "$0")"
 # other version pip tries to compile them from source, which usually fails.
 SUPPORTED="3.13 3.12 3.11 3.10 3.14"
 
+FIX="Install Python 3.13 from https://www.python.org/downloads/macos/ (the macOS installer), then run ./run.sh again."
+
 py_version() { "$1" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || true; }
 supported() { [[ " $SUPPORTED " == *" $1 "* ]]; }
 
 pick_python() {
   if [ -n "${PYTHON:-}" ]; then echo "$PYTHON"; return; fi
   for v in $SUPPORTED; do
-    for p in "python$v" "/opt/homebrew/bin/python$v" "/usr/local/bin/python$v"; do
+    for p in "python$v" "/usr/local/bin/python$v" "/Library/Frameworks/Python.framework/Versions/$v/bin/python$v" \
+             "/opt/homebrew/bin/python$v" "$HOME/.local/bin/python$v"; do
       if command -v "$p" >/dev/null 2>&1; then echo "$p"; return; fi
     done
   done
@@ -37,11 +40,11 @@ if [ ! -f .venv/.installed ] || [ backend/requirements.txt -nt .venv/.installed 
     PY="$(pick_python)"
     VER="$(py_version "$PY")"
     if [ -z "$VER" ]; then
-      echo "Python not found ($PY). Install it with:  brew install python@3.13" >&2; exit 1
+      echo "Python not found ($PY). $FIX" >&2; exit 1
     fi
     if ! supported "$VER"; then
       echo "Python $VER ($PY) isn't supported by pandas yet; it needs one of: $SUPPORTED." >&2
-      echo "Fix:  brew install python@3.13   then run ./run.sh again" >&2
+      echo "$FIX" >&2
       exit 1
     fi
     echo "Creating .venv with Python $VER ($PY)..."
