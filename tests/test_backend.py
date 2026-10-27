@@ -18,7 +18,7 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import build, common, fundamentals, prices, screens_db, universe  # noqa: E402
+from backend import build, common, fundamentals, notes_store, prices, screens_db, universe  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -145,22 +145,60 @@ class Watchlists(unittest.TestCase):
 
 
 class Notes(unittest.TestCase):
+    T = 1_761_000_000_000   # an Oct 2025 timestamp in ms
+
     def test_save_pin_stale_and_delete(self):
+        T = self.T
         with tempfile.TemporaryDirectory() as d:
-            db = os.path.join(d, "s.db")
             md = "# NVDA thesis\n\n- data center **growth**\n- watch margins"
-            out = screens_db.upsert_note("n-1", {"body": md, "pinned": True, "created": 1, "updated": 100}, path=db)
-            self.assertEqual((out["body"], out["pinned"], out["updated"]), (md, True, 100))
-            stale = screens_db.upsert_note("n-1", {"body": "old text", "updated": 50}, path=db)   # older copy loses
+            out = notes_store.upsert_note("n-1", {"body": md, "pinned": True, "created": T, "updated": T + 100}, folder=d)
+            self.assertEqual((out["body"], out["pinned"], out["updated"]), (md, True, T + 100))
+            with open(os.path.join(d, "n-1.md"), encoding="utf-8") as f:
+                text = f.read()
+            self.assertTrue(text.startswith("---\nid: n-1\npinned: true\n"))
+            self.assertTrue(text.endswith("\n---\n\n" + md))
+            stale = notes_store.upsert_note("n-1", {"body": "old text", "updated": T + 50}, folder=d)   # older copy loses
             self.assertTrue(stale["stale"])
-            self.assertEqual(screens_db.list_notes(path=db)[0]["body"], md)
-            screens_db.upsert_note("n-2", {"body": "second", "updated": 200}, path=db)
-            self.assertEqual([n["id"] for n in screens_db.list_notes(path=db)], ["n-1", "n-2"])   # pinned first
-            self.assertTrue(screens_db.delete_note("n-1", path=db))
-            self.assertEqual([n["id"] for n in screens_db.list_notes(path=db)], ["n-2"])
+            got = notes_store.list_notes(folder=d)[0]
+            self.assertEqual((got["body"], got["created"], got["updated"]), (md, T, T + 100))
+            notes_store.upsert_note("n-2", {"body": "second", "updated": T + 200}, folder=d)
+            self.assertEqual([n["id"] for n in notes_store.list_notes(folder=d)], ["n-1", "n-2"])   # pinned first
+            self.assertTrue(notes_store.delete_note("n-1", folder=d))
+            self.assertFalse(notes_store.delete_note("../n-2", folder=d))
+            self.assertEqual([n["id"] for n in notes_store.list_notes(folder=d)], ["n-2"])
         for nid, body in [("../x", {}), ("ok", {"body": 5}), ("ok", {"body": "x" * 200_001})]:
             with self.assertRaises(screens_db.InvalidScreen):
                 screens_db.validate_note(nid, body)
+
+    def test_files_edited_by_hand(self):
+        with tempfile.TemporaryDirectory() as d:
+            notes_store.upsert_note("n-1", {"body": "v1", "updated": self.T}, folder=d)
+            path = os.path.join(d, "n-1.md")
+            with open(path, "a", encoding="utf-8") as f:
+                f.write("\nadded in an editor")
+            got = notes_store.list_notes(folder=d)[0]
+            self.assertEqual(got["body"], "v1\nadded in an editor")
+            self.assertGreater(got["updated"], self.T)   # the edit counts as newer
+            with open(os.path.join(d, "ideas.md"), "w", encoding="utf-8") as f:   # plain file, no front matter
+                f.write("# Ideas\n\n$AAPL")
+            open(os.path.join(d, "bad name.md"), "w").close()   # not a valid id: ignored
+            ideas = [n for n in notes_store.list_notes(folder=d) if n["id"] == "ideas"]
+            self.assertEqual(ideas[0]["body"], "# Ideas\n\n$AAPL")
+            self.assertEqual(len(notes_store.list_notes(folder=d)), 2)
+
+    def test_migrate_from_sqlite(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "s.db")
+            conn = sqlite3.connect(db)
+            conn.execute("CREATE TABLE notes (id TEXT PRIMARY KEY, body TEXT, pinned INTEGER, created INTEGER, updated INTEGER)")
+            conn.execute("INSERT INTO notes VALUES ('n-old', '# Old', 1, ?, ?)", (self.T, self.T + 5))
+            conn.commit(); conn.close()
+            folder = os.path.join(d, "notes")
+            self.assertEqual(notes_store.migrate_from_sqlite(db, folder=folder), 1)
+            self.assertEqual(notes_store.migrate_from_sqlite(db, folder=folder), 0)   # only once
+            n = notes_store.list_notes(folder=folder)[0]
+            self.assertEqual((n["id"], n["body"], n["pinned"], n["updated"]), ("n-old", "# Old", True, self.T + 5))
 
 
 class Universes(unittest.TestCase):

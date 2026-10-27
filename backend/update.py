@@ -1,4 +1,4 @@
-"""Command line used by GitHub Actions (and handy locally).
+"""Command line for one-off data refreshes (the server does this on its own schedule).
 
   python -m backend.update fundamentals   # refresh fundamentals, then rebuild sp500.json
   python -m backend.update prices         # refresh prices (only while the market is open), rebuild

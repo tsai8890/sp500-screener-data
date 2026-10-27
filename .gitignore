@@ -1,4 +1,9 @@
 __pycache__/
 *.pyc
-data/screener.db
-data/*.db-journal
+.venv/
+
+# Everything the local server writes stays on this computer, out of git:
+# market data, the SQLite database (screens + watchlists), notes and logs.
+data/*
+!data/screens.json
+logs/

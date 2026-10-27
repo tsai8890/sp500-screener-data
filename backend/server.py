@@ -1,6 +1,9 @@
-"""Always-on screener server (Python standard library only, plus the backend's own deps).
+"""Local screener server (Python standard library only, plus the backend's own deps).
 
-  python -m backend.server
+  python -m backend.server        (or ./run.sh)
+
+Everything stays on this machine: market data in data/*.json, saved screens and
+watchlists in SQLite (data/screener.db), notes as Markdown files (data/notes/*.md).
 
 What it does:
   * prices: every minute while the US market is open (and 15 min after the close)
@@ -20,17 +23,19 @@ What it does:
         GET    /api/watchlists       saved watchlists (same database)
         PUT    /api/watchlists/<id>  create or replace one watchlist
         DELETE /api/watchlists/<id>  delete one watchlist
-        GET    /api/notes            Markdown notes (same database)
+        GET    /api/notes            Markdown notes (files in data/notes/)
         PUT    /api/notes/<id>       save one note: {body, pinned, created, updated}
         DELETE /api/notes/<id>       delete one note
+        GET /api/storage           where screens, watchlists and notes are kept
 
 Settings (environment variables):
-  HOST (0.0.0.0)  PORT (8000)
+  HOST (127.0.0.1: this computer only; 0.0.0.0 to allow other devices)  PORT (8000)
   ALLOWED_ORIGINS  comma-separated origins allowed to call the API from a browser, or * (default)
   PRICE_INTERVAL (60 s)  FUNDAMENTALS_INTERVAL (1800 s)
   PRICES_ALWAYS (0)  set to 1 to keep fetching prices when the market is closed
   SCREENS_TOKEN  if set, PUT/DELETE on /api/screens need "Authorization: Bearer <token>"
-  SCREENER_DB  SQLite file for saved screens (data/screener.db)
+  SCREENER_DB  SQLite file for saved screens and watchlists (data/screener.db)
+  SCREENER_NOTES_DIR  folder for notes (data/notes)
 """
 from __future__ import annotations
 
@@ -41,12 +46,12 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import build, fundamentals, prices, screens_db
+from . import build, fundamentals, notes_store, prices, screens_db
 from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
                      parse_iso, read_json, universe_path, utc_now)
 from .universe import UNIVERSES
 
-HOST = os.environ.get("HOST", "0.0.0.0")
+HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
 PRICE_INTERVAL = int(os.environ.get("PRICE_INTERVAL", "60"))
@@ -192,7 +197,9 @@ class Handler(BaseHTTPRequestHandler):
                 body = STATE.index
             return self._send(200, body, "application/json") if body else self._json(503, {"error": "No data yet"})
         if path == "/api/notes":
-            return self._json(200, {"notes": screens_db.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
+            return self._json(200, {"notes": notes_store.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
+        if path == "/api/storage":
+            return self._json(200, storage_info())
         if path == "/api/watchlists":
             return self._json(200, {"watchlists": screens_db.list_watchlists(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/screens":
@@ -242,7 +249,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length))
             kind, sid = target
-            save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": screens_db.upsert_note}[kind]
+            save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": notes_store.upsert_note}[kind]
             return self._json(200, save(sid, body))
         except (ValueError, screens_db.InvalidScreen) as e:
             return self._json(400, {"error": str(e)})
@@ -254,7 +261,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return self._json(401, {"error": "Missing or wrong token"})
         kind, sid = target
-        remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": screens_db.delete_note}[kind]
+        remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": notes_store.delete_note}[kind]
         return self._json(200, {"deleted": remove(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors
@@ -262,12 +269,22 @@ class Handler(BaseHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
+def storage_info() -> dict:
+    return {"db": os.path.abspath(screens_db.DB_PATH), "notesDir": os.path.abspath(notes_store.NOTES_DIR),
+            "dataDir": os.path.abspath(os.path.dirname(screens_db.DB_PATH))}
+
+
 def main() -> None:
+    moved = notes_store.migrate_from_sqlite(screens_db.DB_PATH)
+    if moved:
+        print(f"Moved {moved} notes from the SQLite database into {notes_store.NOTES_DIR}", flush=True)
     threading.Thread(target=fundamentals_loop, name="fundamentals", daemon=True).start()
     threading.Thread(target=prices_loop, name="prices", daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"Screener server on http://{HOST}:{PORT}  (prices every {PRICE_INTERVAL}s while the "
-          f"market is open, fundamentals every {FUND_INTERVAL}s)", flush=True)
+    shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
+    print(f"Screener server on http://{shown}:{PORT}  (prices every {PRICE_INTERVAL}s while the "
+          f"market is open, fundamentals every {FUND_INTERVAL}s)\n"
+          f"  screens + watchlists: {storage_info()['db']}\n  notes: {storage_info()['notesDir']}", flush=True)
     httpd.serve_forever()
 
 

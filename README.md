@@ -2,73 +2,68 @@
 
 A stock screener for the S&P 500 and the Russell 1000 (pick the list at the top of the page). You build screens from rules on price, P/E, forward P/E, PEG, revenue growth, net margin, dividend yield and market cap, save them, and switch between them to compare results. Sections are tabs down the left side of the page (a bottom bar on phones); the second keeps your **watchlists**: star any stock (☆) or add it by ticker, and see the same live metrics plus the change since you added it. Open the site with `#watchlist` to land on that tab.
 
-**Live site: https://tsai8890.github.io/sp500-screener-data/**
+It runs entirely on your own computer: one Python process downloads the market data, serves the page at **http://localhost:8000**, and keeps everything you save in the `data/` folder. Nothing is stored on GitHub or any other service; the only outside connection is to Yahoo Finance (and Wikipedia / iShares for the stock lists).
 
-The backend runs in two ways, from the same Python code:
-
-| | GitHub (running now) | Always-on server (`backend/server.py`) |
-|---|---|---|
-| Prices | every 10 min during US market hours (:03, :13, ...) | every minute during US market hours |
-| Fundamentals | every 30 min (:07, :37) | every 30 min |
-| Runs on | GitHub Actions, free | any Linux machine or VM |
-| Page reads | `data/sp500.json` from GitHub Pages | `/api/sp500` from the server |
+| | |
+|---|---|
+| Prices | every minute during US market hours |
+| Fundamentals | every 30 minutes |
+| Screens, watchlists | SQLite: `data/screener.db` |
+| Notes | Markdown files: `data/notes/<id>.md` |
 
 P/E, PEG, market cap and dividend yield depend on the share price, so they are recalculated from the latest price every time prices update. The slower fundamentals (EPS, implied growth, revenue growth, margins, dividends) refresh every 30 minutes.
 
-## Layout
+## Run it
 
-| Path | What it is |
-|---|---|
-| `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. To add a section tab, add an entry to `TABS` in the script, a side panel with the matching id, and its rendering in `renderResults`. |
-| `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
-| `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
-| `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
-| `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
-| `backend/update.py` | Command line used by GitHub Actions. |
-| `backend/server.py` | Always-on server: scheduler plus HTTP (standard library only). |
-| `backend/screens_db.py` | Saved screens and watchlists in SQLite (`data/screener.db`), used by the server's `/api/screens` and `/api/watchlists`. |
-| `data/screens.json` | The built-in screens everyone sees. Edit it to change them. |
-| `data/` | `fundamentals.json`, `prices.json` and the merged `sp500.json` the page reads. |
-| `.github/workflows/` | `fundamentals.yml` (every 30 min) and `prices.yml` (every 10 min in market hours). |
-| `tests/` | Offline unit tests: `python -m unittest discover -s tests`. |
-| `Dockerfile`, `deploy/` | Ways to run the always-on server. |
-
-## Run locally
+Needs Python 3.10 or newer (`python3 --version`).
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
-pip install -r backend/requirements.txt
-
-python -m backend.update fundamentals     # one-off refresh, writes data/
-python -m backend.update prices --force   # prices even if the market is closed
-
-python -m backend.server                  # always-on server: open http://localhost:8000
+git clone https://github.com/tsai8890/sp500-screener-data ~/sp500-screener && cd ~/sp500-screener
+./run.sh
 ```
 
-Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), and `/api/screens` for saved screens (`GET` list, `PUT /api/screens/<id>` save, `DELETE /api/screens/<id>` delete) and `/api/watchlists` (same verbs; each watchlist is `{name, items: [{ticker, addedAt, addedPrice}]}`).
+Then open http://localhost:8000. The first run creates `.venv` and installs the packages; the first data download (about 1,000 stocks) takes a few minutes, and the page fills in by itself when it is done. Stop with Ctrl+C.
 
-## Notes
+### Start automatically on macOS
 
-The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` task lists, tables, code blocks, links, and `$NVDA` to link a ticker. Pin a note to keep it at the top. Notes save automatically (about a second after you stop typing, and when you switch notes or leave the page). Every edit is also kept in the browser, so if a save fails it is retried and nothing is lost; the status next to the editor says where the note was saved and when.
-
-Where notes are stored: see **Saving to GitHub** below; otherwise the always-on server (SQLite table `notes` via `/api/notes`), otherwise the browser (localStorage) with *Export all notes (.md)* for backups.
-
-## Saving to GitHub (screens, watchlists and notes)
-
-Open the **Settings** tab (bottom of the left rail, or `#settings`) to keep everything permanently in a GitHub repository. Works on any copy of the page except the Claude preview (which saves to your Claude account instead).
-
-1. Create a **private** repository, e.g. `your-name/screener-data` (anyone can read a public one; the page warns you).
-2. Create a fine-grained token (GitHub → Settings → Developer settings → Fine-grained tokens) with access to **only that repository** and **Contents: Read and write**.
-3. In Settings, enter the repository, a folder (default `screener`) and the token, then **Connect**. Whatever this browser already had is uploaded.
-
-The repository then holds:
-
+```bash
+deploy/macos-autostart.sh install     # runs in the background now and at every login
+deploy/macos-autostart.sh status
+deploy/macos-autostart.sh restart     # after a git pull
+deploy/macos-autostart.sh uninstall
 ```
-screener/
-  screens.json       {"updated": ..., "screens": [{id, name, rules, sectors, created, updated}]}
-  watchlists.json    {"updated": ..., "watchlists": [{id, name, items: [{ticker, addedAt, addedPrice}]}]}
-  notes/<id>.md      one Markdown file per note, with front matter:
-```
+
+Logs go to `logs/server.log`. Keep the folder outside `~/Documents`, `~/Desktop` and `~/Downloads` (for example `~/sp500-screener`): macOS blocks background services from those folders unless you grant them Full Disk Access.
+
+### Settings
+
+Environment variables, for `./run.sh` or the autostart (`PORT=8080 deploy/macos-autostart.sh install`):
+
+| Variable | Default | |
+|---|---|---|
+| `PORT` | `8000` | |
+| `HOST` | `127.0.0.1` | only this computer can open the page. Set `0.0.0.0` to open it from your phone on the same Wi-Fi (`http://<your-mac's-ip>:8000`); then also set `SCREENS_TOKEN`. |
+| `PRICE_INTERVAL` | `60` | seconds between price updates while the market is open |
+| `FUNDAMENTALS_INTERVAL` | `1800` | seconds between fundamentals updates |
+| `PRICES_ALWAYS` | `0` | `1` keeps fetching prices when the market is closed |
+| `SCREENS_TOKEN` | | if set, saving and deleting need this token; in the browser console run `localStorage.setItem("screener.token", JSON.stringify("<token>"))` once |
+| `SCREENER_DATA_DIR` | `data` | where market data, the database and notes live |
+| `SCREENER_DB` | `data/screener.db` | |
+| `SCREENER_NOTES_DIR` | `data/notes` | |
+
+## Where your data is
+
+Everything is in `data/`, which git ignores (except `data/screens.json`, the built-in screens). Back up that folder to keep a copy, or use **Download everything (.json)** in the Settings tab.
+
+| What | Where | |
+|---|---|---|
+| Saved screens | `data/screener.db`, table `screens` | `sqlite3 data/screener.db "select id, name, rules from screens"` |
+| Watchlists | `data/screener.db`, table `watchlists` | each is `{name, items: [{ticker, addedAt, addedPrice}]}` |
+| Notes | `data/notes/<id>.md` | one Markdown file per note (below) |
+| Market data | `data/sp500.json`, `data/russell1000.json`, `fundamentals.json`, `prices.json`, `universes.json`, `index.json` | rebuilt by the server |
+| Built-in screens | `data/screens.json` | edit it to change them; ids start with `b-` |
+
+Each note file has a small front matter block, then the note:
 
 ```markdown
 ---
@@ -82,50 +77,49 @@ updated: 2026-10-23T00:01:05.720Z
 ...
 ```
 
-Every save is a commit, so GitHub keeps the full history. Connect the same repository and token on another device and it loads the same data; something deleted on one device disappears on the others at their next load. A copy always stays in the browser: if GitHub can't be reached, changes are kept and retried, and the Settings tab shows what is saved and when. *Download everything (.json)* there makes a full backup. The token is stored only in that browser and sent only to api.github.com.
+You can edit, add or delete these files with any editor while the server runs; reload the page to see the change. A file edited by hand counts as updated at that moment, so it wins over an older copy still open in a browser. A new `.md` file needs no front matter: its name (letters, digits, `-` and `_`) becomes its id.
 
-## Where saved screens and watchlists live
+Notes from older versions that were kept in the SQLite `notes` table are moved into `data/notes/` automatically the first time the server starts.
 
-| Where the page runs | Saved screens go to |
+### Bringing data over from the old hosted site
+
+The page on `localhost` can't see what the old GitHub Pages site kept in your browser or in a GitHub repository, so import it once:
+
+1. On the old site, open **Settings → Download everything (.json)**. (Or, if you synced to a GitHub repository, clone it; you need its `screener/` folder.)
+2. With the local server stopped or running, either works:
+
+```bash
+.venv/bin/python -m backend.import_backup ~/Downloads/screener-backup-2026-10-27.json
+.venv/bin/python -m backend.import_backup ~/screener-data/screener      # a synced GitHub folder
+```
+
+Nothing is deleted, and running it again is harmless. Reload the page afterwards.
+
+If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
+
+## Notes tab
+
+The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` task lists, tables, code blocks, links, and `$NVDA` to link a ticker. Pin a note to keep it at the top. Notes save automatically (about a second after you stop typing, and when you switch notes or leave the page). Every edit is also kept in the browser, so if a save fails it is retried and nothing is lost; the status next to the editor says where the note was saved and when.
+
+## Layout
+
+| Path | What it is |
 |---|---|
-| Always-on server | SQLite, `data/screener.db` (tables `screens` and `watchlists`), shared by everyone using that server. Inspect with `sqlite3 data/screener.db "select id, name, rules from screens"`. |
-| GitHub Pages, connected to GitHub in Settings | `screens.json` / `watchlists.json` in your repository (see above). |
-| GitHub Pages, not connected | The visitor's browser (localStorage). Use **Export screens (JSON)** / **Import screens** in the screens panel to back them up or move them between devices. |
+| `index.html` | The whole frontend: plain HTML, CSS and JavaScript, no framework or build step. To add a section tab, add an entry to `TABS` in the script, a side panel with the matching id, and its rendering in `renderResults`. |
+| `run.sh` | Starts the server (creates `.venv` on first run). |
+| `deploy/macos-autostart.sh` | Runs the server in the background on macOS (launchd). |
+| `backend/server.py` | The server: update schedule plus HTTP (standard library only). |
+| `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
+| `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
+| `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
+| `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
+| `backend/screens_db.py` | Saved screens and watchlists in SQLite. |
+| `backend/notes_store.py` | Notes as Markdown files. |
+| `backend/update.py` | One-off refresh from the command line: `python -m backend.update fundamentals`, `prices --force`, or `all`. |
+| `tests/` | Offline unit tests: `.venv/bin/python -m unittest discover -s tests`. |
+| `Dockerfile` | Optional: run the server in a container instead (`docker run -p 8000:8000 -v screener-data:/app/data ...`). |
 
-Built-in screens always come from `data/screens.json`. To make one of your screens a built-in for everyone, export it and copy it into that file's `builtin` list (ids starting with `b-`).
-
-On a public server anyone can change the saved screens. Set `SCREENS_TOKEN` to require a token for saving and deleting; then, in your browser's console on the site, run `localStorage.setItem("screener.token", JSON.stringify("<token>"))` once.
-
-Server settings (environment variables): `PORT` (8000), `HOST` (0.0.0.0), `ALLOWED_ORIGINS` (`*`, or a comma-separated list such as `https://tsai8890.github.io`), `PRICE_INTERVAL` (60 seconds), `FUNDAMENTALS_INTERVAL` (1800 seconds), `PRICES_ALWAYS` (set to 1 to fetch prices outside market hours), `SCREENS_TOKEN` (token required to save/delete screens), `SCREENER_DB` (SQLite path, default `data/screener.db`).
-
-## Deploy the always-on server (every-minute prices)
-
-Any small Linux VM works, for example Oracle Cloud's Always Free VM or Google Cloud's free e2-micro.
-
-**With Docker**
-
-```bash
-git clone https://github.com/tsai8890/sp500-screener-data && cd sp500-screener-data
-docker build -t sp500-screener .
-docker run -d --restart unless-stopped -p 8000:8000 -v screener-data:/app/data sp500-screener
-```
-
-**Without Docker (systemd)**
-
-```bash
-git clone https://github.com/tsai8890/sp500-screener-data ~/sp500-screener-data && cd ~/sp500-screener-data
-python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
-sudo cp deploy/sp500-screener.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now sp500-screener
-```
-
-Open port 8000 in the VM's firewall, then visit `http://<vm-ip>:8000`. The server hosts the page itself, so nothing else is needed.
-
-To make the GitHub Pages site read from the server instead, the server needs HTTPS (browsers block plain-HTTP requests from an HTTPS page). Put it behind a domain with HTTPS (for example Caddy, or a Cloudflare Tunnel), then add this line to the `<head>` of `index.html`:
-
-```html
-<meta name="screener-api" content="https://your-domain/api/sp500">
-```
+Server endpoints: `/` (the page), `/api/data/<list>` (data for `sp500` or `russell1000`), `/api/index` (available lists), `/api/health` (update times and last errors), `/api/storage` (where data is kept), and `/api/screens`, `/api/watchlists`, `/api/notes` (`GET` list, `PUT /api/<kind>/<id>` save, `DELETE /api/<kind>/<id>` delete).
 
 ## Data format
 
@@ -148,5 +142,4 @@ Units: `price` in USD; `chg` is the % change from the previous session's close; 
 ## Notes
 
 - Yahoo Finance data through `yfinance` is free but unofficial; heavy polling can get rate-limited. A stock that fails keeps its previous values. If too many fail, the run errors out and the previous files stay in place.
-- GitHub may start scheduled runs late, so on GitHub prices are typically 10-20 minutes old during market hours.
 - Exchange holidays are not modelled; on those days prices simply don't change.
