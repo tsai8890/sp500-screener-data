@@ -18,9 +18,7 @@ DOMAIN="gui/$(id -u)"
 case "${1:-}" in
   install)
     # make sure .venv exists before launchd starts it
-    if [ ! -x .venv/bin/python ]; then
-      python3 -m venv .venv && .venv/bin/pip install --quiet -r backend/requirements.txt && touch .venv/.installed
-    fi
+    ./run.sh --setup
     mkdir -p logs "$HOME/Library/LaunchAgents"
     cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
