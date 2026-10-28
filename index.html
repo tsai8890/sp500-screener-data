@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  // Theme before first paint: dark by default; Settings -> Theme can pick light or follow the system.
+  (function () {
+    var t = "dark";
+    try { t = JSON.parse(localStorage.getItem("screener.theme")) || "dark"; } catch (e) { /* default */ }
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
 <style>
 :root { color-scheme: light; --ts: 1; }
 body { margin: 0; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -124,6 +132,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .set-head h2 { font-family: var(--font-display); font-size: calc(21.5px * var(--ts)); margin: 0 0 4px; }
 .set-display { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .set-display .seg { margin-top: 12px; }
+.set-display .set-sub { margin-top: 22px; }
 .set-display .seg button { padding: 7px 14px; font-size: calc(14px * var(--ts)); }
 .set-list { display: flex; flex-direction: column; padding: 8px 20px 4px; }
 .set-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -295,7 +304,11 @@ td.num.since.down { color: var(--down); }
   #sidePanel.as-cards [role="tabpanel"] { display: flex; flex-direction: column; gap: 14px; }
   #sidePanel.as-cards .section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; gap: 12px; }
   #sidePanel.as-cards .section.side-list { padding: 4px 0 10px; gap: 0; }
-  #sidePanel.as-cards .section > .eyebrow:first-child, #sidePanel.as-cards .panel-head .eyebrow { color: var(--ink); font-size: calc(13px * var(--ts)); }
+  #sidePanel.as-cards .section > .eyebrow:first-child, #sidePanel.as-cards .panel-head .eyebrow {
+    color: var(--ink); font-family: var(--font-display); font-size: calc(18px * var(--ts)); font-weight: 700;
+    text-transform: none; letter-spacing: -0.005em; line-height: 1.25;
+  }
+  #sidePanel.as-cards .panel-head { padding: 14px 18px 8px; }
 }
 
 /* Saved screens list */
@@ -317,7 +330,7 @@ td.num.since.down { color: var(--down); }
 /* Rule editor */
 .name-in { width: 100%; font-family: var(--font-display); font-weight: 500; font-size: calc(19.5px * var(--ts)); border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; }
 .rules { display: flex; flex-direction: column; gap: 8px; }
-.rule { display: grid; grid-template-columns: minmax(0, 1.8fr) calc(50px * var(--ts)) minmax(0, 1fr) 22px; gap: 6px; align-items: center; }
+.rule { display: grid; grid-template-columns: minmax(0, 1.75fr) calc(48px * var(--ts)) minmax(0, 1fr) 22px; gap: 6px; align-items: center; }
 .rule select, .rule input { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 8px; min-width: 0; width: 100%; }
 .rule input { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(15px * var(--ts)); font-variant-numeric: tabular-nums; }
 .vals { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -661,6 +674,8 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
           <h2>Text size</h2>
           <p class="hint">Auto picks a size from the window width, larger on big monitors. Your browser's zoom (⌘+ / ⌘−) works as well.</p>
           <div class="seg" id="textSize" role="radiogroup" aria-label="Text size"></div>
+          <h2 class="set-sub">Theme</h2>
+          <div class="seg" id="themeSel" role="radiogroup" aria-label="Theme"></div>
         </div>
         <div class="set-head">
           <h2>Where your data is saved</h2>
@@ -866,6 +881,22 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     });
   }
   applyTextSize();
+
+  // ---------- Theme: dark (default), light, or follow the system ----------
+  function applyTheme() {
+    const pref = String(lsGet("screener.theme") || "dark");
+    if (pref === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", pref);
+    const box = document.getElementById("themeSel"); if (!box) return;
+    box.textContent = "";
+    [["dark", "Dark"], ["light", "Light"], ["system", "Same as system"]].forEach(([v, label]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(v === pref)); b.textContent = label;
+      b.addEventListener("click", () => { lsSet("screener.theme", v); applyTheme(); });
+      box.append(b);
+    });
+  }
+  applyTheme();
   window.addEventListener("resize", () => { if (String(lsGet("screener.textSize") || "auto") === "auto") applyTextSize(); });
 
   const allScreens = () => BUILTINS.concat(S.userScreens);

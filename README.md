@@ -98,6 +98,10 @@ Nothing is deleted, and running it again is harmless. Reload the page afterwards
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
 
+## Theme
+
+Dark by default. Settings → *Theme*: Dark, Light, or Same as system.
+
 ## Text size
 
 Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of window width, 115% up to 2400 px and 130% above that, for large monitors; or choose 100–175% yourself. Every font size and the widths tied to text scale together (CSS variable `--ts`).
