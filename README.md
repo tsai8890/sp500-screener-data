@@ -111,7 +111,7 @@ Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of windo
 The **Analysis** tab shows one company's revenue, profits and margins over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.
 
 - **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating and net margins, with the change in percentage points (pp: 45.0% → 47.5% is +2.5 pp).
-- Above the table: revenue growth of the latest quarter, year over year (YoY) and against the quarter before (QoQ); gross margin, net margin and net debt / EBITDA ((total debt − cash) ÷ EBITDA; negative means net cash).
+- Above the table: revenue growth of the latest quarter, year over year (YoY) and against the quarter before (QoQ); gross margin, net margin, P/E (the same live figure as the Screener, with forward P/E) and net debt / EBITDA ((total debt − cash) ÷ EBITDA; negative means net cash).
 
 The server also computes balance-sheet and cash-flow metrics (current and non-current assets and liabilities, debt, equity, ratios; operating cash flow, capex, free cash flow, buybacks, dividends); they are hidden on the page. To show them, add `"balance"` and/or `"cash"` to `SHOWN_SECTIONS` in `index.html`.
 

@@ -194,14 +194,13 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-meta .px { font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--ink); }
 .an-meta .up { color: var(--up); } .an-meta .down { color: var(--down); }
 .an-meta a { color: var(--accent); text-decoration: none; } .an-meta a:hover { text-decoration: underline; }
-.an-hi { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 10px 18px 18px; }
+.an-hi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 10px 18px 18px; }
 .an-card { background: var(--sunk); border-radius: 9px; padding: 10px 12px; min-width: 0; }
-.an-card .k { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); line-height: 1.25; min-height: 2.5em; }
-@media (min-width: 1700px) { .an-card .k { min-height: 0; } }
+.an-card .k { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .an-card .v { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(20.5px * var(--ts)); font-weight: 600; margin-top: 2px; white-space: nowrap; }
 .an-card .n { font-size: calc(13px * var(--ts)); color: var(--muted); line-height: 1.35; }
 .an-card .v.up, .an-card .n.up { color: var(--up); } .an-card .v.down, .an-card .n.down { color: var(--down); }
-@media (min-width: 821px) and (max-width: 1300px) { .an-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 821px) and (max-width: 2199px) { .an-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .an-sec { border-top: 14px solid var(--bg); }
 .an-sec:first-child { border-top-width: 1px; border-top-color: var(--line); }
 .an-sec h3 { font-family: var(--font-display); font-size: calc(19px * var(--ts)); margin: 0; padding: 12px 18px; display: flex; align-items: baseline; gap: 12px; background: var(--sunk); border-bottom: 1px solid var(--line); position: relative; }
@@ -1860,6 +1859,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (uid !== S.universe) {   // another list: only the watchlist and the list counts care
       renderUniverseSel();
       if (S.tab === "watch") { renderResults(); renderWatchSide(); }
+      if (S.tab === "analysis") renderAnalysis();
       return;
     }
     const first = !S.live;
@@ -1868,6 +1868,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // Later updates leave the rule editor alone so typing isn't interrupted.
     pickData(); renderData(); renderScreens(); renderResults();
     if (S.tab === "watch") renderWatchSide();
+    if (S.tab === "analysis") renderAnalysis();   // price, P/E and market cap come from the live data
   }
   const getJson = (url) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
   const listIds = () => UNIVERSE_LIST.map((u) => u.id);
@@ -2186,6 +2187,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     }
     card("Gross Margin", lastVal(A, "grossMargin"), "pct");
     card("Net Margin", lastVal(A, "netMargin"), "pct");
+    // valuation, from the same live data as the screener (price ÷ trailing 12-month EPS)
+    if (r.price != null) {
+      const fwd = r.fpe != null ? `Forward ${FIELDS.fpe.fmt(r.fpe)}×` : "Forward: –";
+      card("P/E Ratio", r.pe != null ? { v: r.pe, text: FIELDS.pe.fmt(r.pe) + "×" } : { v: 0, text: "N/A" }, "ratio",
+        r.pe != null ? fwd : "Losses over the last 12 months", "", "",
+        "Share price ÷ earnings per share over the last 12 months (same as the Screener). Forward P/E uses analysts' estimate for the next 12 months.");
+    }
     const nde = lastVal(A, "netDebtToEbitda");
     if (nde) card("Net Debt / EBITDA", nde.v <= 0 ? { ...nde, text: "Net cash" } : nde, "ratio",
       nde.v <= 0 ? "More cash than debt" : lastLabel(nde), "", nde.v <= 0 ? "up" : nde.v > 4 ? "down" : "",
