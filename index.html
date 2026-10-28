@@ -205,9 +205,9 @@ table.an-t td .sub { color: var(--muted); }
 table.an-t .ttm { background: var(--accent-soft); }
 table.an-t th.ttm { color: var(--accent); }
 table.an-t tr.grp td { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding-top: 14px; border-bottom-color: transparent; }
-table.an-t td.spark { width: 96px; padding-right: 18px; vertical-align: middle; }
-.spark svg { display: block; width: 84px; height: 24px; margin-left: auto; }
-.spark rect { fill: var(--accent); opacity: .55; } .spark rect.last { opacity: 1; } .spark rect.neg { fill: var(--fail); }
+table.an-t td.spark { width: 130px; padding-right: 18px; vertical-align: middle; }
+.spark svg { display: block; width: 112px; height: 34px; margin-left: auto; }
+.spark rect { fill: var(--accent); opacity: .4; } .spark rect.last { opacity: 1; } .spark rect.neg { fill: var(--fail); }
 .spark line { stroke: var(--line); stroke-width: 1; }
 .an-foot { font-size: 14px; color: var(--muted); padding: 12px 18px 16px; margin: 0; border-top: 1px solid var(--line); }
 .an-skel { height: 14px; border-radius: 4px; background: var(--sunk); margin: 10px 18px; }
@@ -1937,19 +1937,36 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     return String(v);
   }
   const fmtGrowth = (g) => (g == null ? "" : (g > 0 ? "+" : g < 0 ? "−" : "") + Math.abs(g).toFixed(1) + "%");
-  function spark(values) {
+  // Bars scaled to the row's own range (lowest to highest), so a 10% change is clearly visible.
+  // Rows that cross zero keep a zero line instead.
+  function spark(values, kind) {
     const vs = values.map((v) => (v == null ? null : v)), real = vs.filter((v) => v != null);
     if (real.length < 2) return null;
-    const max = Math.max(0, ...real), min = Math.min(0, ...real), span = max - min || 1;
-    const W = 84, H = 24, n = vs.length, bw = Math.min(12, (W - (n - 1) * 3) / n), gap = n > 1 ? (W - n * bw) / (n - 1) : 0;
-    const y0 = H * (max / span);
-    let out = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><line x1="0" x2="${W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}"/>`;
+    const W = 112, H = 34, n = vs.length, gap = 4, bw = Math.min(18, (W - (n - 1) * gap) / n);
+    const lo = Math.min(...real), hi = Math.max(...real), cross = lo < 0 && hi > 0;
+    let base, top, y0;
+    if (cross) { base = lo; top = hi; y0 = H * (hi / (hi - lo)); }
+    else if (hi === lo) { base = hi >= 0 ? hi - 1 : hi + 1; top = hi; }
+    else if (hi > 0) { base = lo - (hi - lo) * 0.25; top = hi; }       // all positive: lowest bar ~20% tall
+    else { base = hi + (hi - lo) * 0.25; top = lo; }                   // all negative: bars hang down
+    const hOf = (v) => {
+      if (cross) return Math.max(1.5, Math.abs(v) / (hi - lo) * H);
+      if (hi === lo) return H * 0.5;
+      return Math.max(2, (Math.abs(v - base) / Math.abs(top - base)) * H);
+    };
+    let out = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+    if (cross) out += `<line x1="0" x2="${W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}"/>`;
+    const step = n > 1 ? (W - bw) / (n - 1) : 0;
     vs.forEach((v, i) => {
       if (v == null) return;
-      const h = Math.max(1, Math.abs(v) / span * H), y = v >= 0 ? y0 - h : y0;
-      out += `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" class="${[i === n - 1 ? "last" : "", v < 0 ? "neg" : ""].join(" ").trim()}"/>`;
+      const h = hOf(v), y = cross ? (v >= 0 ? y0 - h : y0) : (top < 0 ? 0 : H - h);
+      out += `<rect x="${(i * step).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" class="${[i === n - 1 ? "last" : "", v < 0 ? "neg" : ""].join(" ").trim()}"/>`;
     });
-    const span2 = el("span", { class: "spark" }); span2.innerHTML = out + "</svg>"; return span2;
+    const first = real[0], last = real[real.length - 1];
+    let tip = "Oldest to newest; bars scaled to this row's range";
+    if (kind === "money" || kind === "eps") { const g = first ? (last - first) / Math.abs(first) * 100 : null; if (g != null && isFinite(g)) tip = `${fmtAn(first, kind)} → ${fmtAn(last, kind)} (${fmtGrowth(g)})`; }
+    else tip = `${fmtAn(first, kind)} → ${fmtAn(last, kind)}`;
+    const sp = el("span", { class: "spark", title: tip }); sp.innerHTML = out + "</svg>"; return sp;
   }
   function anItem(t, removable) {
     const r = tickerMap().get(t);
@@ -2081,7 +2098,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const thead = el("tr", {}, el("th", { text: "" }));
       const order = view.periods.map((_, i) => i).reverse();   // newest on the left
       order.map((i) => view.periods[i]).forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
-      thead.append(el("th", { class: "spark", text: "Trend", title: "Oldest to newest, left to right; the dark bar is the latest" }));
+      thead.append(el("th", { class: "spark", text: "Trend", title: "Oldest to newest, left to right; the dark bar is the latest. Bars are scaled to each row's own range; hover a chart for the numbers." }));
       const tb = el("tbody");
       sec.rows.forEach((row) => {
         const lbl = el("td", { class: "lbl" });
@@ -2098,7 +2115,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           }
           tr.append(td);
         });
-        const sp = el("td", { class: "spark" }), svg = spark(row.values.filter((_, i) => !view.periods[i].ttm));
+        const sp = el("td", { class: "spark" }), svg = spark(row.values.filter((_, i) => !view.periods[i].ttm), row.kind);
         if (svg) sp.append(svg);
         tr.append(sp);
         tb.append(tr);
