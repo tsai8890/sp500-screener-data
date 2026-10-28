@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -15,6 +16,7 @@ from .common import (FUNDAMENTALS_PATH, MARKET_CLOSE, MARKET_OPEN, NY, PRICES_PA
 from .universe import yahoo_symbol
 from .yahoo import GATE, is_rate_limit
 
+_file_lock = threading.Lock()   # prices.json is written by the schedule and by single-stock refreshes
 BATCH = 50     # tickers per download call
 WORKERS = 2    # batches downloaded at the same time (each ticker is its own Yahoo request)
 
@@ -82,14 +84,16 @@ def _rate_limited_in_last_download() -> bool:
     return any(is_rate_limit(v) for v in list(errors.values()))
 
 
-def _download(symbols: list[str]) -> dict[str, tuple]:
+def _download(symbols: list[str], priority: bool = False) -> dict[str, tuple]:
     """{symbol: (regular price, extended-hours (price, session, time) or None)}"""
     # with pre/post-market bars; outside regular hours ask for two days so the
     # last regular close is always included (before the open, today has none yet)
     period = "1d" if market_session(grace_minutes=0) else "2d"
     for attempt in range(3):
-        GATE.wait()
+        GATE.wait(priority=priority)
         if GATE.paused_for():
+            if priority:
+                return {}   # someone is waiting on the page: don't sit out a rate-limit pause
             continue
         try:
             df = yf.download(symbols, period=period, interval="1m", group_by="column",
@@ -152,6 +156,11 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
             if ext is not None:
                 ext_fresh[t] = list(ext)
 
+    with _file_lock:
+        return _merge_and_write(path, tickers, fresh, ext_fresh, got, started)
+
+
+def _merge_and_write(path, tickers, fresh, ext_fresh, got, started) -> dict:
     prev_file = read_json(path) or {}
     prev, prev_ext = prev_file.get("prices", {}), prev_file.get("ext", {})
     prices = {t: fresh.get(t, prev.get(t)) for t in tickers if t in fresh or t in prev}
@@ -167,3 +176,24 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
     print(f"Prices: done. {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
           f"in {time.time() - started:.1f}s -> {path}")
     return out
+
+
+def update_one(ticker: str, path: str = PRICES_PATH) -> dict | None:
+    """Fetch the latest price of one stock right away (the page's Refresh button) and
+    merge it into prices.json. Returns the updated file, or None if Yahoo gave nothing."""
+    sym = yahoo_symbol(ticker)
+    got = _download([sym], priority=True).get(sym)
+    if not got:
+        return None
+    reg, ext = got
+    with _file_lock:
+        data = read_json(path) or {"prices": {}, "ext": {}}
+        if reg is not None:
+            data.setdefault("prices", {})[ticker] = reg
+        data.setdefault("ext", {})
+        if ext is not None:
+            data["ext"][ticker] = list(ext)
+        else:
+            data["ext"].pop(ticker, None)
+        write_json(path, data)
+    return data

@@ -2149,6 +2149,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const when = new Date(d.fetchedAt);
       st.textContent = d.warning ? d.warning.replace(/\d{4}-\d\d-\d\dT[\d:.]+Z?/, when.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) : "Updated " + when.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
       if (d.warning) st.className = "note-status warn";
+      if (S.anQuoteErr) { st.textContent += " · " + S.anQuoteErr; st.className = "note-status warn"; }
     }
     const empty = $("anEmpty"), body = $("anBody");
     if (!d) {
@@ -2294,7 +2295,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("anTicker").value = ""; openAnalysis(t);
   });
   $("anClear").addEventListener("click", () => { lsSet("screener.anRecent", []); renderAnalysisSide(); });
-  $("anRefresh").addEventListener("click", () => { if (S.anTicker) loadAnalysis(S.anTicker, true); });
+  // Refresh: the statements, and this stock's price right now (instead of waiting for the 5-minute update)
+  $("anRefresh").addEventListener("click", () => {
+    const t = S.anTicker; if (!t) return;
+    S.anQuoteErr = null;
+    loadAnalysis(t, true);
+    fetch(API_ROOT + "quote/" + encodeURIComponent(t), { cache: "no-store" })
+      .then((r) => (r.ok ? fetchAll(apiUrl) : r.json().then((j) => { S.anQuoteErr = j.error || "Price not updated"; renderAnalysis(); })))
+      .catch(() => { S.anQuoteErr = "Price not updated: the server can't be reached"; renderAnalysis(); });
+  });
   AN_PERIOD.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     S.anPeriod = b.dataset.p; lsSet("screener.anPeriod", S.anPeriod); renderAnalysis();
   }));

@@ -30,6 +30,7 @@ What it does:
         PUT    /api/notes/<id>       save one note: {body, pinned, created, updated}
         DELETE /api/notes/<id>       delete one note
         GET /api/storage           where screens, watchlists and notes are kept
+        GET /api/quote/<ticker>    fetch one stock's latest price now (the Analysis Refresh button)
         GET /api/analysis/<ticker> financial statements and metrics for one stock
                                    (cached a day in data/analysis/; ?refresh=1 to refetch)
 
@@ -206,6 +207,24 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
+    def _quote(self, ticker: str) -> None:
+        """Fetch one stock's latest price now and rebuild the data the page reads."""
+        from urllib.parse import unquote
+        t = unquote(ticker).strip().upper().replace("-", ".")
+        if not analysis.TICKER_RE.match(t):
+            return self._json(400, {"error": "Not a ticker"})
+        if GATE.paused_for():
+            return self._json(503, {"error": "Yahoo is limiting requests right now; prices update again in a few minutes."})
+        try:
+            data = prices.update_one(t)
+        except Exception as e:  # noqa: BLE001
+            return self._json(502, {"error": f"Couldn't get the price from Yahoo Finance ({type(e).__name__})."})
+        if not data:
+            return self._json(404, {"error": f"Yahoo Finance returned no price for {t}."})
+        STATE.prices = data
+        STATE.rebuild()
+        return self._json(200, {"ticker": t, "price": data["prices"].get(t), "ext": data.get("ext", {}).get(t)})
+
     def _analysis(self, ticker: str, refresh: bool) -> None:
         from urllib.parse import unquote
         try:
@@ -246,6 +265,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"notes": notes_store.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/storage":
             return self._json(200, storage_info())
+        if path.startswith("/api/quote/"):
+            return self._quote(path[len("/api/quote/"):])
         if path.startswith("/api/analysis/"):
             return self._analysis(path[len("/api/analysis/"):], "refresh=1" in self.path.partition("?")[2])
         if path == "/api/watchlists":
