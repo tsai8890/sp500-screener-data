@@ -154,5 +154,6 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
 
     out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext}
     write_json(path, out)
-    print(f"Prices: {len(fresh)}/{len(tickers)} fresh in {time.time() - started:.1f}s -> {path}")
+    print(f"Prices: {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
+          f"in {time.time() - started:.1f}s -> {path}")
     return out
