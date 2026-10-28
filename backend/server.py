@@ -151,6 +151,8 @@ def prices_loop() -> None:
         if not STATE.fund:
             time.sleep(10)   # first run ever: wait for the first fundamentals, then fetch at once
             continue
+        if at_start and not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
+            print("Prices: no trading right now (weekdays 4:00-20:00 New York time); showing the last saved prices.", flush=True)
         at_start = False
         if not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
             continue
@@ -328,8 +330,9 @@ def main() -> None:
     threading.Thread(target=prices_loop, name="prices", daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
-    print(f"Screener server on http://{shown}:{PORT}  (prices every {PRICE_INTERVAL}s while the "
-          f"market is open, fundamentals every {FUND_INTERVAL}s)\n"
+    print(f"Screener server on http://{shown}:{PORT}\n"
+          f"  prices every {PRICE_INTERVAL // 60} min, weekdays 4:00-20:00 New York time (pre-market, regular, after-hours)\n"
+          f"  fundamentals: each stock refreshed every {FUND_INTERVAL / 3600:g} h\n"
           f"  screens + watchlists: {storage_info()['db']}\n  notes: {storage_info()['notesDir']}", flush=True)
     httpd.serve_forever()
 

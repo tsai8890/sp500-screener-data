@@ -151,6 +151,11 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
             "stocks": stocks,
         }
 
+    if todo:
+        from .yahoo import RPS
+        mins = max(1, round(len(todo) / max(RPS, 0.01) / 60))
+        print(f"Fundamentals: fetching {len(todo)} stocks from Yahoo Finance (about {mins} min; "
+              f"progress every {CHUNK})...", flush=True)
     for i in range(0, len(todo), CHUNK):
         chunk = todo[i:i + CHUNK]
         with ThreadPoolExecutor(max_workers=workers) as pool:

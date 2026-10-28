@@ -126,8 +126,18 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
     to_ticker = {yahoo_symbol(t): t for t in tickers}
     syms = list(to_ticker)
     batches = [syms[i:i + BATCH] for i in range(0, len(syms), BATCH)]
+    print(f"Prices: fetching {len(syms)} stocks from Yahoo Finance (incl. pre-market / after-hours)...", flush=True)
+    done = [0]
+
+    def run(batch):
+        got = _download(batch)
+        done[0] += len(batch)
+        if len(batches) > 4 and done[0] // BATCH % 5 == 0:   # a progress line every 250 stocks
+            print(f"Prices: {done[0]}/{len(syms)} ...", flush=True)
+        return got
+
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        parts = list(pool.map(_download, batches))
+        parts = list(pool.map(run, batches))
 
     fresh, ext_fresh, got = {}, {}, set()
     for part in parts:
@@ -154,6 +164,6 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
 
     out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext}
     write_json(path, out)
-    print(f"Prices: {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
+    print(f"Prices: done. {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
           f"in {time.time() - started:.1f}s -> {path}")
     return out

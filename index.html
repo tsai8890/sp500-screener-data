@@ -208,6 +208,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-sec:first-child { border-top-width: 1px; border-top-color: var(--line); }
 .an-sec h3 { font-family: var(--font-display); font-size: calc(19px * var(--ts)); margin: 0; padding: 12px 18px; display: flex; align-items: baseline; gap: 12px; background: var(--sunk); border-bottom: 1px solid var(--line); position: relative; }
 .an-sec h3::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.an-sec h3 .an-period { margin-left: auto; align-self: center; background: var(--bg); border: 1px solid var(--line); flex: none; }
+@media (max-width: 820px) { .an-sec h3 .hint { display: none; } }
+.an-sec h3 .an-period button { font-family: var(--font-body); font-size: calc(14px * var(--ts)); padding: 5px 14px; }
 .an-sec h3 .hint { font-family: var(--font-body); font-weight: 400; }
 .an-sec .table-wrap { border-top: 0; }
 @media (min-width: 821px) {
@@ -722,10 +725,6 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
       <div id="analysisView" hidden>
         <div class="note-bar an-bar">
           <button class="btn sm" id="toggleSide3" type="button" aria-controls="sidePanel">Hide stocks</button>
-          <div class="seg" id="anPeriod" role="radiogroup" aria-label="Periods">
-            <button type="button" role="radio" data-p="annual">Annual</button>
-            <button type="button" role="radio" data-p="quarterly">Quarterly</button>
-          </div>
           <span class="note-status" id="anState" role="status" aria-live="polite"></span>
           <button class="btn sm" id="anRefresh" type="button" hidden>Refresh</button>
         </div>
@@ -735,6 +734,10 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
           <div class="an-quick" id="anQuick"></div>
         </div>
         <div id="anBody" hidden>
+          <div class="seg an-period" id="anPeriod" role="radiogroup" aria-label="Show yearly or quarterly figures">
+            <button type="button" role="radio" data-p="annual">Year</button>
+            <button type="button" role="radio" data-p="quarterly">Quarter</button>
+          </div>
           <div class="an-head">
             <div class="an-id">
               <span class="an-tk" id="anTk"></span>
@@ -2009,6 +2012,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   S.anTicker = S.anTicker || lsGet("screener.anTicker") || null;
   S.anPeriod = lsGet("screener.anPeriod") === "quarterly" ? "quarterly" : "annual";
   const AN = { data: {}, loading: {}, error: {} };
+  const AN_PERIOD = $("anPeriod");   // the Year / Quarter switch; moved into the first section's title on each render
   const anRecent = () => (lsGet("screener.anRecent") || []).filter((t) => typeof t === "string");
   // Sections shown as tables. The server also computes "balance" and "cash" (the Debt / equity
   // card uses them); add their ids here to show those tables again.
@@ -2125,7 +2129,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function renderAnalysis() {
     const t = S.anTicker, d = t && AN.data[t], loading = t && AN.loading[t], err = t && AN.error[t];
-    document.querySelectorAll("#anPeriod button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.p === S.anPeriod)));
+    AN_PERIOD.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.p === S.anPeriod)));
     $("anRefresh").hidden = !d; $("anRefresh").disabled = !!loading;
     const st = $("anState"); st.className = "note-status";
     st.textContent = loading ? (d ? "Refreshing…" : "Loading " + t + " from Yahoo Finance…") : "";
@@ -2240,11 +2244,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         tb.append(tr);
       });
       const note = { profit: "Growth under each figure is year over year.", balance: "At the end of each period.", cash: "Negative figures are cash going out." }[sec.id];
+      const h3 = el("h3", {}, sec.title, el("span", { class: "hint", text: note }));
+      if (!box.querySelector(".an-period")) h3.append(AN_PERIOD);   // the Year / Quarter switch sits in the first section's title bar
       box.append(el("section", { class: "an-sec", "aria-label": sec.title },
-        el("h3", {}, sec.title, el("span", { class: "hint", text: note })),
+        h3,
         el("div", { class: "table-wrap" }, el("table", { class: "an-t" }, el("thead", {}, thead), tb))));
     });
-    const qNote = S.anPeriod === "quarterly" ? " Quarterly return on equity and assets are annualized (×4)." : " TTM = the last four reported quarters.";
+    const qNote = S.anPeriod === "quarterly" ? " Growth compares each quarter with the same quarter a year earlier." : " TTM = the last four reported quarters.";
     $("anFoot").textContent = `Source: Yahoo Finance, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
     applySide();
   }
@@ -2270,7 +2276,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   $("anClear").addEventListener("click", () => { lsSet("screener.anRecent", []); renderAnalysisSide(); });
   $("anRefresh").addEventListener("click", () => { if (S.anTicker) loadAnalysis(S.anTicker, true); });
-  document.querySelectorAll("#anPeriod button").forEach((b) => b.addEventListener("click", () => {
+  AN_PERIOD.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     S.anPeriod = b.dataset.p; lsSet("screener.anPeriod", S.anPeriod); renderAnalysis();
   }));
 
