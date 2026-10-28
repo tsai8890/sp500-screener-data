@@ -91,6 +91,42 @@ class Prices(unittest.TestCase):
         df = pd.DataFrame({"Close": [3.0, 3.25], "Open": [3, 3]})
         self.assertEqual(prices._last_prices(df, ["MSFT"]), {"MSFT": 3.25})
 
+    @staticmethod
+    def bars(times_prices):
+        idx = pd.DatetimeIndex([pd.Timestamp(t, tz="America/New_York") for t, _ in times_prices])
+        return pd.Series([p for _, p in times_prices], index=idx)
+
+    def test_after_hours_price_kept_apart(self):
+        reg, ext = prices._split(self.bars([("2026-10-27 15:58", 100.0), ("2026-10-27 15:59", 101.0),
+                                            ("2026-10-27 16:30", 103.0), ("2026-10-27 19:59", 104.5)]))
+        self.assertEqual(reg, 101.0)
+        self.assertEqual(ext[:2], (104.5, "post"))
+        self.assertEqual(ext[2], "2026-10-27T23:59:00Z")
+
+    def test_pre_market_next_morning(self):
+        reg, ext = prices._split(self.bars([("2026-10-27 15:59", 101.0), ("2026-10-27 17:00", 102.0),
+                                            ("2026-10-28 07:15", 99.0)]))
+        self.assertEqual((reg, ext[:2]), (101.0, (99.0, "pre")))
+
+    def test_no_extended_price_while_market_is_open(self):
+        reg, ext = prices._split(self.bars([("2026-10-28 08:00", 99.0), ("2026-10-28 10:15", 100.5)]))
+        self.assertEqual((reg, ext), (100.5, None))
+
+    def test_update_stores_extended_and_build_adds_columns(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "prices.json")
+            orig = prices._download
+            prices._download = lambda syms: {s: (100.0, (102.0, "post", "2026-10-27T23:00:00Z")) for s in syms}
+            try:
+                out = prices.update(["AAPL"], path=path)
+            finally:
+                prices._download = orig
+            self.assertEqual(out["ext"]["AAPL"][:2], [102.0, "post"])
+            fund = {"stocks": {"AAPL": {"name": "Apple", "sector": "Tech", "shares": 1e9, "eps": 5, "price": 99, "prevClose": 98}}, "order": ["AAPL"]}
+            data = build.combine(fund, out)
+            row = dict(zip(data["cols"], data["rows"][0]))
+            self.assertEqual((row["xPrice"], row["xChg"], row["xSession"]), (102.0, 2.0, "post"))
+
     def test_update_maps_symbols_and_keeps_previous(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "prices.json")

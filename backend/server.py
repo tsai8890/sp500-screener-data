@@ -6,7 +6,8 @@ Everything stays on this machine: market data in data/*.json, saved screens and
 watchlists in SQLite (data/screener.db), notes as Markdown files (data/notes/*.md).
 
 What it does:
-  * prices: every 5 minutes while the US market is open (and 15 min after the close)
+  * prices: every 5 minutes from 4:00 to 20:00 New York time on weekdays, i.e. the
+    regular session plus pre-market and after-hours (shown separately on the page)
   * fundamentals: each stock refreshed every 6 hours (they change at most once a quarter)
   * all Yahoo requests share one pace (YAHOO_RPS) and pause automatically when Yahoo
     answers "Too Many Requests" (backend/yahoo.py)
@@ -148,7 +149,7 @@ def prices_loop() -> None:
         time.sleep(PRICE_INTERVAL - (time.time() % PRICE_INTERVAL))
         if not STATE.fund:
             continue
-        if not (PRICES_ALWAYS or market_session() or STATE.prices is None):
+        if not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
             continue
         if GATE.paused_for():
             continue   # Yahoo asked us to slow down; skip this round

@@ -6,7 +6,7 @@ It runs entirely on your own computer: one Python process downloads the market d
 
 | | |
 |---|---|
-| Prices | every 5 minutes during US market hours |
+| Prices | every 5 minutes, 4:00–20:00 New York time on weekdays (regular session plus pre-market and after-hours) |
 | Fundamentals | each stock every 6 hours |
 | Screens, watchlists | SQLite: `data/screener.db` |
 | Notes | Markdown files: `data/notes/<id>.md` |
@@ -97,6 +97,10 @@ The page on `localhost` can't see what the old GitHub Pages site kept in your br
 Nothing is deleted, and running it again is harmless. Reload the page afterwards.
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
+
+## Pre-market and after-hours prices
+
+The price shown everywhere (and used for P/E, market cap, dividend yield and day change) is the last **regular-session** price. Outside 9:30–16:00 ET, the latest pre-market or after-hours trade is shown under it, e.g. `AH $213.10 +0.42%` (AH = after hours, PM = pre-market), with the change against the regular close. It disappears once the regular session opens. In `data/prices.json` these are under `"ext"`; in the data files, the columns `xPrice`, `xChg`, `xSession`.
 
 ## Theme
 

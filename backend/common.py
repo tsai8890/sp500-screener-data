@@ -24,6 +24,8 @@ def universe_path(uid: str) -> str:
 NY = ZoneInfo("America/New_York")
 MARKET_OPEN = dtime(9, 30)
 MARKET_CLOSE = dtime(16, 0)
+PRE_OPEN = dtime(4, 0)       # pre-market trading starts
+POST_CLOSE = dtime(20, 0)    # after-hours trading ends
 
 
 def utc_now() -> datetime:
@@ -43,15 +45,17 @@ def parse_iso(s: str | None) -> datetime | None:
         return None
 
 
-def market_session(now: datetime | None = None, grace_minutes: int = 15) -> bool:
-    """True on weekdays from 9:30 to 16:00 New York time, plus a short grace
-    period after the close so the closing price is captured.
+def market_session(now: datetime | None = None, grace_minutes: int = 15, extended: bool = False) -> bool:
+    """True on weekdays from 9:30 to 16:00 New York time (4:00 to 20:00 with
+    extended=True: pre-market and after-hours), plus a short grace period after
+    the close so the last price is captured.
     Exchange holidays are not modelled; on those days prices simply don't change."""
     now = (now or utc_now()).astimezone(NY)
     if now.weekday() >= 5:
         return False
-    open_dt = now.replace(hour=MARKET_OPEN.hour, minute=MARKET_OPEN.minute, second=0, microsecond=0)
-    close_dt = now.replace(hour=MARKET_CLOSE.hour, minute=MARKET_CLOSE.minute, second=0, microsecond=0)
+    start, end = (PRE_OPEN, POST_CLOSE) if extended else (MARKET_OPEN, MARKET_CLOSE)
+    open_dt = now.replace(hour=start.hour, minute=start.minute, second=0, microsecond=0)
+    close_dt = now.replace(hour=end.hour, minute=end.minute, second=0, microsecond=0)
     return open_dt <= now <= close_dt + timedelta(minutes=grace_minutes)
 
 

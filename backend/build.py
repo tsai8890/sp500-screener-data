@@ -9,10 +9,11 @@ from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, UNIVERSES_PATH,
                      universe_path, utc_now, write_json)
 from .universe import DEFAULT, UNIVERSES
 
-COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield"]
+COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield",
+        "xPrice", "xChg", "xSession"]   # pre-market / after-hours: price, % vs the regular close, "pre" or "post"
 
 
-def row(ticker: str, f: dict, price: float | None) -> list:
+def row(ticker: str, f: dict, price: float | None, ext: list | None = None) -> list:
     price = price or f.get("price")
     eps, growth = f.get("eps"), f.get("growth")
     pe = price / eps if price and eps and eps > 0 else None
@@ -25,7 +26,13 @@ def row(ticker: str, f: dict, price: float | None) -> list:
     chg = (price / prev - 1) * 100 if price and prev else None   # % vs previous session's close
     return [ticker, f.get("name", ""), f.get("sector", ""),
             num(price, nd=2), num(chg, nd=2), num(cap, nd=1), num(pe, nd=1), num(fpe, nd=1), num(peg, nd=2),
-            f.get("revGrowth"), f.get("netMargin"), num(div, nd=2)]
+            f.get("revGrowth"), f.get("netMargin"), num(div, nd=2), *_ext(ext, price)]
+
+
+def _ext(ext: list | None, price: float | None) -> list:
+    if not ext or not ext[0] or not price:
+        return [None, None, None]
+    return [num(ext[0], nd=2), num((ext[0] / price - 1) * 100, nd=2), ext[1]]
 
 
 def combine(fund: dict, prices: dict | None, tickers: list[str] | None = None,
@@ -33,7 +40,8 @@ def combine(fund: dict, prices: dict | None, tickers: list[str] | None = None,
     stocks = fund.get("stocks", {})
     order = tickers if tickers is not None else (fund.get("order") or list(stocks))
     live = (prices or {}).get("prices", {})
-    rows = [row(t, stocks[t], live.get(t)) for t in order if t in stocks]
+    ext = (prices or {}).get("ext", {})
+    rows = [row(t, stocks[t], live.get(t), ext.get(t)) for t in order if t in stocks]
     return {
         "asOf": (prices or {}).get("asOf") or fund.get("asOf"),   # time of the newest prices
         "pricesAsOf": (prices or {}).get("asOf"),

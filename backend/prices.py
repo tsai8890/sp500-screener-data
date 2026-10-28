@@ -8,7 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import yfinance as yf
 
-from .common import FUNDAMENTALS_PATH, PRICES_PATH, iso, num, read_json, utc_now, write_json
+from datetime import timezone
+
+from .common import (FUNDAMENTALS_PATH, MARKET_CLOSE, MARKET_OPEN, NY, PRICES_PATH, iso, market_session, num,
+                     read_json, utc_now, write_json)
 from .universe import yahoo_symbol
 from .yahoo import GATE, is_rate_limit
 
@@ -16,23 +19,62 @@ BATCH = 50     # tickers per download call
 WORKERS = 2    # batches downloaded at the same time (each ticker is its own Yahoo request)
 
 
-def _last_prices(frame: pd.DataFrame, symbols: list[str]) -> dict[str, float]:
-    """Last non-empty close per symbol from a yf.download() frame."""
-    if frame is None or frame.empty:
-        return {}
+def _close_frame(frame: pd.DataFrame, symbols: list[str]) -> pd.DataFrame:
     if isinstance(frame.columns, pd.MultiIndex):
         lvl0 = frame.columns.get_level_values(0)
-        close = frame["Close"] if "Close" in lvl0 else frame.xs("Close", axis=1, level=1)
-    else:  # single symbol, flat columns
-        close = frame[["Close"]].rename(columns={"Close": symbols[0]})
+        return frame["Close"] if "Close" in lvl0 else frame.xs("Close", axis=1, level=1)
+    return frame[["Close"]].rename(columns={"Close": symbols[0]})   # single symbol, flat columns
+
+
+def _is_regular(ts) -> bool:
+    t = ts.time()
+    return MARKET_OPEN <= t < MARKET_CLOSE
+
+
+def _split(series: pd.Series):
+    """(last regular-session price, (extended-hours price, "pre"/"post", iso time) or None).
+
+    The extended price is the last trade after the latest regular-session bar:
+    after hours the same day, or pre-market the next day. While the market is
+    open the latest bar is a regular one, so there is none."""
+    s = series.dropna()
+    s = s[s > 0]
+    if not len(s):
+        return None, None
+    if not isinstance(s.index, pd.DatetimeIndex):
+        return num(s.iloc[-1], nd=4), None          # no timestamps: treat everything as regular
+    idx = s.index.tz_convert(NY) if s.index.tz is not None else s.index.tz_localize(NY)
+    s = pd.Series(s.values, index=idx)
+    reg_mask = [_is_regular(t) for t in idx]
+    reg = s[reg_mask]
+    if not len(reg):
+        return None, (num(s.iloc[-1], nd=4), "pre" if idx[-1].time() < MARKET_OPEN else "post", iso(idx[-1].astimezone(timezone.utc)))
+    last_reg_t = reg.index[-1]
+    after = s[s.index > last_reg_t]
+    ext = None
+    if len(after):
+        t = after.index[-1]
+        session = "post" if t.date() == last_reg_t.date() and t.time() >= MARKET_CLOSE else "pre"
+        ext = (num(after.iloc[-1], nd=4), session, iso(t.astimezone(timezone.utc)))
+    return num(reg.iloc[-1], nd=4), ext
+
+
+def _parse(frame: pd.DataFrame, symbols: list[str]) -> dict[str, tuple]:
+    """{symbol: (regular price or None, extended (price, session, time) or None)}"""
+    if frame is None or frame.empty:
+        return {}
+    close = _close_frame(frame, symbols)
     out = {}
     for sym in close.columns:
-        s = close[sym].dropna()
-        if len(s):
-            v = num(s.iloc[-1], nd=4)
-            if v and v > 0:
-                out[str(sym)] = v
+        reg, ext = _split(close[sym])
+        if reg is not None or ext is not None:
+            out[str(sym)] = (reg, ext)
     return out
+
+
+def _last_prices(frame: pd.DataFrame, symbols: list[str]) -> dict[str, float]:
+    """Last regular-session close per symbol from a yf.download() frame."""
+    return {k: v[0] for k, v in _parse(frame, symbols).items() if v[0] is not None}
 
 
 def _rate_limited_in_last_download() -> bool:
@@ -40,15 +82,19 @@ def _rate_limited_in_last_download() -> bool:
     return any(is_rate_limit(v) for v in list(errors.values()))
 
 
-def _download(symbols: list[str]) -> dict[str, float]:
+def _download(symbols: list[str]) -> dict[str, tuple]:
+    """{symbol: (regular price, extended-hours (price, session, time) or None)}"""
+    # with pre/post-market bars; outside regular hours ask for two days so the
+    # last regular close is always included (before the open, today has none yet)
+    period = "1d" if market_session(grace_minutes=0) else "2d"
     for attempt in range(3):
         GATE.wait()
         if GATE.paused_for():
             continue
         try:
-            df = yf.download(symbols, period="1d", interval="1m", group_by="column",
-                             auto_adjust=False, prepost=False, threads=False, progress=False)
-            got = _last_prices(df, symbols)
+            df = yf.download(symbols, period=period, interval="1m", group_by="column",
+                             auto_adjust=False, prepost=True, ignore_tz=False, threads=False, progress=False)
+            got = _parse(df, symbols)
             if _rate_limited_in_last_download():
                 GATE.limited()
             elif got:
@@ -65,9 +111,11 @@ def _download(symbols: list[str]) -> dict[str, float]:
 
 
 def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
-    """Fetch the latest 1-minute close for every ticker and write prices.json.
+    """Fetch the latest 1-minute prices for every ticker and write prices.json.
 
-    Tickers whose download fails keep their previous price."""
+    "prices": last regular-session price per ticker (used for P/E, market cap ...).
+    "ext": latest pre-market / after-hours trade, [price, "pre"|"post", time], for
+    tickers that have one. Tickers whose download fails keep their previous values."""
     started = time.time()
     if tickers is None:
         fund = read_json(FUNDAMENTALS_PATH) or {}
@@ -81,18 +129,30 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         parts = list(pool.map(_download, batches))
 
-    fresh = {}
+    fresh, ext_fresh, got = {}, {}, set()
     for part in parts:
-        for sym, price in part.items():
-            if sym in to_ticker:
-                fresh[to_ticker[sym]] = price
+        for sym, val in part.items():
+            if sym not in to_ticker:
+                continue
+            t = to_ticker[sym]
+            reg, ext = val if isinstance(val, tuple) else (val, None)
+            got.add(t)
+            if reg is not None:
+                fresh[t] = reg
+            if ext is not None:
+                ext_fresh[t] = list(ext)
 
-    prev = (read_json(path) or {}).get("prices", {})
+    prev_file = read_json(path) or {}
+    prev, prev_ext = prev_file.get("prices", {}), prev_file.get("ext", {})
     prices = {t: fresh.get(t, prev.get(t)) for t in tickers if t in fresh or t in prev}
-    if len(fresh) < 0.5 * len(tickers):
-        raise RuntimeError(f"Only {len(fresh)}/{len(tickers)} prices fetched; keeping the previous file.")
+    # a stock that came back has exactly the extended price Yahoo gave (none while the market is open);
+    # one that failed keeps what it had
+    ext = {t: (ext_fresh[t] if t in got else prev_ext[t]) for t in tickers
+           if (t in got and t in ext_fresh) or (t not in got and t in prev_ext)}
+    if len(got) < 0.5 * len(tickers):
+        raise RuntimeError(f"Only {len(got)}/{len(tickers)} prices fetched; keeping the previous file.")
 
-    out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices}
+    out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext}
     write_json(path, out)
     print(f"Prices: {len(fresh)}/{len(tickers)} fresh in {time.time() - started:.1f}s -> {path}")
     return out

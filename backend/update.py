@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.what in ("fundamentals", "all"):
             fundamentals.update()
         if args.what in ("prices", "all"):
-            if args.force or args.what == "all" or market_session():
+            if args.force or args.what == "all" or market_session(extended=True):
                 prices.update()
             else:
                 print("Market closed: prices not fetched.")
