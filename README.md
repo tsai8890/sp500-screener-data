@@ -100,7 +100,9 @@ If the page can't reach the server, it keeps your changes in the browser and sav
 
 ## Pre-market and after-hours prices
 
-The price shown everywhere (and used for P/E, market cap, dividend yield and day change) is the last **regular-session** price. Outside 9:30–16:00 ET, the latest pre-market or after-hours trade is shown under it, e.g. `AH $213.10 +0.42%` (AH = after hours, PM = pre-market), with the change against the regular close. It disappears once the regular session opens. In `data/prices.json` these are under `"ext"`; in the data files, the columns `xPrice`, `xChg`, `xSession`.
+The page shows one price per stock: the latest trade. Outside 9:30–16:00 ET that is the pre-market or after-hours price, tagged **PM** or **AH** (hover the tag for the regular-session close). The change next to it is always against the previous session's close, so after hours it includes both the day's move and the after-hours move. Screens, sorting and the watchlist's "since added" use this same price. P/E, market cap and dividend yield stay on the regular-session price.
+
+In `data/prices.json` extended-hours trades are under `"ext"`; in the data files, the columns `xPrice`, `xChg` (vs the regular close) and `xSession`.
 
 ## Theme
 

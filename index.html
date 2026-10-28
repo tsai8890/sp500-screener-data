@@ -417,10 +417,8 @@ td .co { color: var(--muted); font-size: calc(14px * var(--ts)); display: block;
 .colmenu .menu .menu-foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); margin-top: 4px; padding: 8px 4px 2px; }
 td .sub { display: block; font-size: calc(14px * var(--ts)); line-height: 1.3; margin-top: 1px; }
 td .sub.up { color: var(--up); }
-.sub.ext { color: var(--muted); white-space: nowrap; }
-.sub.ext .xl { font-size: .82em; font-weight: 600; letter-spacing: .04em; margin-right: 4px; text-transform: uppercase; }
-.sub.ext .up { color: var(--up); } .sub.ext .down { color: var(--down); }
-.an-meta .sub.ext { font-size: inherit; }
+.xtag { font-family: var(--font-body); font-size: .72em; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-right: 5px; vertical-align: 1px; cursor: help; }
 td .sub.down { color: var(--down); }
 td .sub.hit-pass, td .sub.hit-fail { display: inline-block; padding: 0 4px; border-radius: 3px; }
 th .subsort::before { content: "/"; margin: 0 5px 0 4px; color: var(--line); }
@@ -1259,7 +1257,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           const c = r.s.chg, rc = ruleFields.has("chg") ? (r.fails.includes("chg") ? " hit-fail" : " hit-pass") : "";
           cell.append(el("span", { class: "sub " + (c > 0 ? "up" : c < 0 ? "down" : "") + rc, text: FIELDS.chg.fmt(c) }));
         }
-        if (k === "price" && r.s.xPrice != null) cell.append(extLine(r.s, true));
+        if (k === "price" && r.s.session) cell.prepend(sessionTag(r.s));
         row.append(cell);
       });
       return row;
@@ -1860,11 +1858,22 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const apiUrl = (id) => API_ROOT + "data/" + id;
   const fileUrl = (id) => "data/" + id + ".json";
   let pollTimer = null;
+  // One price: the latest trade. Outside regular hours that is the pre-market / after-hours
+  // price (tagged PM / AH); its change is against the previous session's close, like during the day.
+  // P/E, market cap and dividend yield stay on the regular-session price (computed by the server).
+  function latestPrice(o) {
+    if (o.xPrice == null || o.price == null) return o;
+    o.regPrice = o.price; o.regChg = o.chg; o.session = o.xSession;
+    const prevClose = o.chg != null ? o.price / (1 + o.chg / 100) : null;
+    o.price = o.xPrice;
+    o.chg = prevClose ? Math.round((o.xPrice / prevClose - 1) * 10000) / 100 : o.xChg;
+    return o;
+  }
   function applyLive(d) {
     if (!d || !Array.isArray(d.rows) || !Array.isArray(d.cols)) return;
     const uid = d.universeId || "sp500", stamp = d.builtAt || d.asOf, prev = S.liveBy[uid];
     if (prev && prev.stamp && stamp && stamp <= prev.stamp) return;
-    const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return o; }).filter((o) => o.ticker);
+    const rows = d.rows.map((r) => { const o = {}; d.cols.forEach((k, i) => { o[k] = r[i] ?? null; }); return latestPrice(o); }).filter((o) => o.ticker);
     if (!rows.length) return;
     S.liveBy[uid] = { stamp, asOf: d.asOf, pricesAsOf: d.pricesAsOf, fundamentalsAsOf: d.fundamentalsAsOf, rows };
     mapCache = null;
@@ -2167,8 +2176,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (r.price != null) {
       const px = el("span", { class: "px", text: FIELDS.price.fmt(r.price) + " " });
       if (r.chg != null) px.append(el("span", { class: r.chg > 0 ? "up" : r.chg < 0 ? "down" : "", text: FIELDS.chg.fmt(r.chg) }));
+      if (r.session) px.prepend(sessionTag(r, true));
       meta.append(px);
-      if (r.xPrice != null) meta.append(extLine(r, false));
     }
     if (r.mktCap != null) meta.append(el("span", { text: "Mkt cap " + fmtMoney(r.mktCap * 1e9) }));
     const u = linkUrls(t);
@@ -2280,13 +2289,12 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     S.anPeriod = b.dataset.p; lsSet("screener.anPeriod", S.anPeriod); renderAnalysis();
   }));
 
-  // Pre-market / after-hours price, shown under the regular price ("AH $213.10 +0.42%")
-  function extLine(r, short) {
-    const post = r.xSession === "post", name = post ? "After hours" : "Pre-market";
-    const c = r.xChg;
-    return el("span", { class: "sub ext", title: `${name}: ${FIELDS.price.fmt(r.xPrice)} (${c == null ? "–" : FIELDS.chg.fmt(c)} vs the ${post ? "close" : "last close"})` },
-      el("span", { class: "xl", text: short ? (post ? "AH" : "PM") : name }), FIELDS.price.fmt(r.xPrice) + " ",
-      el("span", { class: c > 0 ? "up" : c < 0 ? "down" : "", text: c == null ? "" : FIELDS.chg.fmt(c) }));
+  // "AH" / "PM" before a price that comes from after-hours or pre-market trading
+  function sessionTag(r, long) {
+    const post = r.session === "post", name = post ? "After hours" : "Pre-market";
+    const tip = `${name} price. Regular-session ${post ? "close" : "last close"}: ${r.regPrice != null ? FIELDS.price.fmt(r.regPrice) : "–"}`
+      + (r.regChg != null ? ` (${FIELDS.chg.fmt(r.regChg)} that day)` : "") + ". Change is against the previous session's close.";
+    return el("span", { class: "xtag", title: tip, text: long ? name : post ? "AH" : "PM" });
   }
 
   // ---------- Link card: hover (or tap) a ticker or company name ----------
