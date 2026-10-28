@@ -144,11 +144,14 @@ def fundamentals_loop() -> None:
 
 
 def prices_loop() -> None:
+    at_start = True   # fetch right away when the server starts, then on the interval
     while True:
-        # wake on the minute boundary
-        time.sleep(PRICE_INTERVAL - (time.time() % PRICE_INTERVAL))
+        if not at_start:
+            time.sleep(PRICE_INTERVAL - (time.time() % PRICE_INTERVAL))   # wake on the interval boundary
         if not STATE.fund:
+            time.sleep(10)   # first run ever: wait for the first fundamentals, then fetch at once
             continue
+        at_start = False
         if not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
             continue
         if GATE.paused_for():
