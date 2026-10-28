@@ -6,12 +6,12 @@ It runs entirely on your own computer: one Python process downloads the market d
 
 | | |
 |---|---|
-| Prices | every minute during US market hours |
-| Fundamentals | every 30 minutes |
+| Prices | every 5 minutes during US market hours |
+| Fundamentals | each stock every 6 hours |
 | Screens, watchlists | SQLite: `data/screener.db` |
 | Notes | Markdown files: `data/notes/<id>.md` |
 
-P/E, PEG, market cap and dividend yield depend on the share price, so they are recalculated from the latest price every time prices update. The slower fundamentals (EPS, implied growth, revenue growth, margins, dividends) refresh every 30 minutes.
+P/E, PEG, market cap and dividend yield depend on the share price, so they are recalculated from the latest price every time prices update. The slower fundamentals (EPS, implied growth, revenue growth, margins, dividends) refresh every 6 hours; they change at most once a quarter.
 
 ## Run it
 
@@ -22,7 +22,7 @@ git clone https://github.com/tsai8890/sp500-screener-data ~/sp500-screener && cd
 ./run.sh
 ```
 
-Then open http://localhost:8000. The first run creates `.venv` and installs the packages; the first data download (about 1,000 stocks) takes a few minutes, and the page fills in by itself when it is done. Stop with Ctrl+C.
+Then open http://localhost:8000. The first run creates `.venv` and installs the packages; the first data download (about 1,000 stocks) takes about 20 minutes, because requests to Yahoo are paced; the page fills in by itself, 100 stocks at a time. Stop with Ctrl+C.
 
 ### Start automatically on macOS
 
@@ -43,8 +43,9 @@ Environment variables, for `./run.sh` or the autostart (`PORT=8080 deploy/macos-
 |---|---|---|
 | `PORT` | `8000` | |
 | `HOST` | `127.0.0.1` | only this computer can open the page. Set `0.0.0.0` to open it from your phone on the same Wi-Fi (`http://<your-mac's-ip>:8000`); then also set `SCREENS_TOKEN`. |
-| `PRICE_INTERVAL` | `60` | seconds between price updates while the market is open |
-| `FUNDAMENTALS_INTERVAL` | `1800` | seconds between fundamentals updates |
+| `PRICE_INTERVAL` | `300` | seconds between price updates while the market is open |
+| `FUNDAMENTALS_INTERVAL` | `21600` | how old (seconds) a stock's fundamentals may get before they are fetched again |
+| `YAHOO_RPS` | `1` | Yahoo requests per second, for prices and fundamentals together |
 | `PRICES_ALWAYS` | `0` | `1` keeps fetching prices when the market is closed |
 | `SCREENS_TOKEN` | | if set, saving and deleting need this token; in the browser console run `localStorage.setItem("screener.token", JSON.stringify("<token>"))` once |
 | `SCREENER_DATA_DIR` | `data` | where market data, the database and notes live |
@@ -141,5 +142,5 @@ Units: `price` in USD; `chg` is the % change from the previous session's close; 
 
 ## Notes
 
-- Yahoo Finance data through `yfinance` is free but unofficial; heavy polling can get rate-limited. A stock that fails keeps its previous values. If too many fail, the run errors out and the previous files stay in place.
+- Yahoo Finance data through `yfinance` is free but unofficial, and Yahoo limits how many requests one IP address may make. All requests go through one pace (`backend/yahoo.py`, `YAHOO_RPS`); when Yahoo answers "Too Many Requests" everything pauses for 1 minute, then 2, 4, 8, up to 15, and picks up where it left off. A stock that fails keeps its previous values. If you still see the message often, lower `YAHOO_RPS` (e.g. `YAHOO_RPS=0.5 ./run.sh`) or raise `PRICE_INTERVAL`.
 - Exchange holidays are not modelled; on those days prices simply don't change.

@@ -1,4 +1,4 @@
-yfinance
+yfinance>=0.2.54   # older versions get "Too Many Requests" from Yahoo far more often
 pandas
 lxml
 requests

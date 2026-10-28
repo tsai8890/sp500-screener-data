@@ -53,7 +53,7 @@ if [ ! -f .venv/.installed ] || [ backend/requirements.txt -nt .venv/.installed 
   echo "Installing packages..."
   .venv/bin/python -m pip install --quiet --upgrade pip
   # binary packages only: a clear error instead of a long failed compile
-  .venv/bin/python -m pip install --quiet --only-binary=pandas,numpy,lxml -r backend/requirements.txt
+  .venv/bin/python -m pip install --quiet --upgrade --only-binary=pandas,numpy,lxml -r backend/requirements.txt
   touch .venv/.installed
 fi
 

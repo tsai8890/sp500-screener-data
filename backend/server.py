@@ -6,8 +6,10 @@ Everything stays on this machine: market data in data/*.json, saved screens and
 watchlists in SQLite (data/screener.db), notes as Markdown files (data/notes/*.md).
 
 What it does:
-  * prices: every minute while the US market is open (and 15 min after the close)
-  * fundamentals: every 30 minutes
+  * prices: every 5 minutes while the US market is open (and 15 min after the close)
+  * fundamentals: each stock refreshed every 6 hours (they change at most once a quarter)
+  * all Yahoo requests share one pace (YAHOO_RPS) and pause automatically when Yahoo
+    answers "Too Many Requests" (backend/yahoo.py)
   * after each update, rebuilds data/sp500.json and keeps it in memory
   * serves the page and the data:
         GET /                  the screener page (index.html)
@@ -31,7 +33,7 @@ What it does:
 Settings (environment variables):
   HOST (127.0.0.1: this computer only; 0.0.0.0 to allow other devices)  PORT (8000)
   ALLOWED_ORIGINS  comma-separated origins allowed to call the API from a browser, or * (default)
-  PRICE_INTERVAL (60 s)  FUNDAMENTALS_INTERVAL (1800 s)
+  PRICE_INTERVAL (300 s)  FUNDAMENTALS_INTERVAL (21600 s = 6 h)  YAHOO_RPS (1 request/second)
   PRICES_ALWAYS (0)  set to 1 to keep fetching prices when the market is closed
   SCREENS_TOKEN  if set, PUT/DELETE on /api/screens need "Authorization: Bearer <token>"
   SCREENER_DB  SQLite file for saved screens and watchlists (data/screener.db)
@@ -50,12 +52,13 @@ from . import build, fundamentals, notes_store, prices, screens_db
 from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
                      parse_iso, read_json, universe_path, utc_now)
 from .universe import UNIVERSES
+from .yahoo import GATE
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
-PRICE_INTERVAL = int(os.environ.get("PRICE_INTERVAL", "60"))
-FUND_INTERVAL = int(os.environ.get("FUNDAMENTALS_INTERVAL", "1800"))
+PRICE_INTERVAL = int(os.environ.get("PRICE_INTERVAL", "300"))
+FUND_INTERVAL = int(os.environ.get("FUNDAMENTALS_INTERVAL", "21600"))
 PRICES_ALWAYS = os.environ.get("PRICES_ALWAYS", "0") == "1"
 SCREENS_TOKEN = os.environ.get("SCREENS_TOKEN", "")
 MAX_BODY = 1024 * 1024   # notes can be long
@@ -106,20 +109,32 @@ def _age(asof: str | None) -> float:
 
 
 def fundamentals_loop() -> None:
+    def progress(out: dict) -> None:
+        STATE.fund = out
+        STATE.rebuild()
+
+    fails = 0
     while True:
-        due = FUND_INTERVAL - _age((STATE.fund or {}).get("asOf"))
-        if due > 0:
-            time.sleep(min(due, 60))
+        try:
+            todo = len(fundamentals.due(STATE.fund, FUND_INTERVAL))
+        except Exception:  # noqa: BLE001  (stock lists unavailable: try the update, it reports why)
+            todo = 1
+        if not todo:
+            time.sleep(60)
             continue
         t0 = time.time()
         try:
-            STATE.fund = fundamentals.update()
+            STATE.fund = fundamentals.update(max_age=FUND_INTERVAL, on_progress=progress)
             STATE.rebuild()
             STATE.record("fundamentals", True, time.time() - t0)
+            fails = 0
+            if STATE.fund.get("pending"):
+                time.sleep(300)   # some failed: try those again in a while
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             STATE.record("fundamentals", False, time.time() - t0, f"{type(e).__name__}: {e}")
-            time.sleep(120)  # back off before retrying
+            fails += 1
+            time.sleep(min(300 * 2 ** (fails - 1), 3600))   # 5, 10, 20 ... at most 60 min
 
 
 def prices_loop() -> None:
@@ -130,6 +145,8 @@ def prices_loop() -> None:
             continue
         if not (PRICES_ALWAYS or market_session() or STATE.prices is None):
             continue
+        if GATE.paused_for():
+            continue   # Yahoo asked us to slow down; skip this round
         t0 = time.time()
         try:
             STATE.prices = prices.update(STATE.fund.get("order"))

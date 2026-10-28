@@ -18,7 +18,7 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import build, common, fundamentals, notes_store, prices, screens_db, universe  # noqa: E402
+from backend import build, common, fundamentals, notes_store, prices, screens_db, universe, yahoo  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -243,6 +243,75 @@ class MarketHours(unittest.TestCase):
         self.assertFalse(common.market_session(self.at("2026-10-24 15:00")))   # Saturday
         self.assertTrue(common.market_session(self.at("2026-12-01 15:00")))    # 10:00 EST
 
+
+
+class RateLimit(unittest.TestCase):
+    def test_detects_yahoo_rate_limit(self):
+        class YFRateLimitError(Exception):
+            pass
+        self.assertTrue(yahoo.is_rate_limit(YFRateLimitError("Too Many Requests. Rate limited. Try after a while.")))
+        self.assertTrue(yahoo.is_rate_limit("YFRateLimitError('Too Many Requests')"))
+        self.assertFalse(yahoo.is_rate_limit(KeyError("currentPrice")))
+
+    def test_pause_grows_and_shrinks(self):
+        g = yahoo.Gate(rps=1000)
+        g.limited(); self.assertEqual(g.pause, 60); self.assertGreater(g.paused_for(), 59)
+        g.limited(); self.assertEqual(g.pause, 60)          # same pause, not stacked
+        g.until = 0; g.limited(); self.assertEqual(g.pause, 120)
+        for _ in range(9):
+            g.until = 0; g.limited()
+        self.assertEqual(g.pause, yahoo.MAX_PAUSE)
+        g.until = 0; g.ok(); self.assertEqual(g.pause, yahoo.MAX_PAUSE // 2)
+
+
+class IncrementalFundamentals(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.path = os.path.join(self.tmp, "fundamentals.json")
+        self.stocks = [("AAPL", "Apple", "Tech"), ("MSFT", "Microsoft", "Tech"), ("XOM", "Exxon", "Energy")]
+        self.orig = (universe.load, universe.union, fundamentals.fetch_one, yahoo.GATE)
+        universe.load = lambda *a, **k: {}
+        universe.union = lambda cache: list(self.stocks)
+        self.calls = []
+
+    def tearDown(self):
+        universe.load, universe.union, fundamentals.fetch_one, yahoo.GATE = self.orig
+
+    def fetch(self, fail=()):
+        def f(t, tries=3):
+            self.calls.append(t)
+            return None if t in fail else fundamentals.extract(AAPL_INFO)
+        fundamentals.fetch_one = f
+
+    def test_resumes_and_only_fetches_what_is_due(self):
+        self.fetch(fail={"XOM"})
+        out = fundamentals.update(self.path, max_age=3600)
+        self.assertEqual(sorted(out["stocks"]), ["AAPL", "MSFT"])
+        self.assertEqual(out["missing"], ["XOM"]); self.assertEqual(out["pending"], 1)
+        self.calls.clear(); self.fetch()
+        out = fundamentals.update(self.path, max_age=3600)     # only XOM is still due
+        self.assertEqual(self.calls, ["XOM"]); self.assertEqual(out["pending"], 0)
+        self.assertEqual(sorted(out["stocks"]), ["AAPL", "MSFT", "XOM"])
+        self.calls.clear()
+        self.assertEqual(fundamentals.due(common.read_json(self.path), 3600), [])
+        fundamentals.update(self.path, max_age=3600); self.assertEqual(self.calls, [])
+
+    def test_failed_stock_keeps_previous_values(self):
+        self.fetch(); fundamentals.update(self.path)
+        self.fetch(fail={"MSFT"}); out = fundamentals.update(self.path)
+        self.assertIn("MSFT", out["stocks"]); self.assertEqual(out["stale"], ["MSFT"])
+
+    def test_nothing_fetched_raises(self):
+        self.fetch(fail={"AAPL", "MSFT", "XOM"})
+        with self.assertRaises(RuntimeError):
+            fundamentals.update(self.path)
+
+    def test_old_files_without_fetched_at_use_file_time(self):
+        common.write_json(self.path, {"asOf": "2020-01-01T00:00:00Z", "stocks": {"AAPL": {"price": 1}}})
+        due = [t for t, _, _ in fundamentals.due(common.read_json(self.path), 3600)]
+        self.assertEqual(due, ["MSFT", "XOM", "AAPL"])   # never fetched first, then the oldest
+        common.write_json(self.path, {"asOf": common.iso(common.utc_now()), "stocks": {"AAPL": {"price": 1}}})
+        self.assertNotIn("AAPL", [t for t, _, _ in fundamentals.due(common.read_json(self.path), 3600)])
 
 if __name__ == "__main__":
     unittest.main()

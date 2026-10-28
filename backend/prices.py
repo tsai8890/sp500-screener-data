@@ -10,9 +10,10 @@ import yfinance as yf
 
 from .common import FUNDAMENTALS_PATH, PRICES_PATH, iso, num, read_json, utc_now, write_json
 from .universe import yahoo_symbol
+from .yahoo import GATE, is_rate_limit
 
 BATCH = 50     # tickers per download call
-WORKERS = 6    # batches downloaded at the same time
+WORKERS = 2    # batches downloaded at the same time (each ticker is its own Yahoo request)
 
 
 def _last_prices(frame: pd.DataFrame, symbols: list[str]) -> dict[str, float]:
@@ -34,16 +35,31 @@ def _last_prices(frame: pd.DataFrame, symbols: list[str]) -> dict[str, float]:
     return out
 
 
+def _rate_limited_in_last_download() -> bool:
+    errors = getattr(getattr(yf, "shared", None), "_ERRORS", None) or {}
+    return any(is_rate_limit(v) for v in list(errors.values()))
+
+
 def _download(symbols: list[str]) -> dict[str, float]:
     for attempt in range(3):
+        GATE.wait()
+        if GATE.paused_for():
+            continue
         try:
             df = yf.download(symbols, period="1d", interval="1m", group_by="column",
                              auto_adjust=False, prepost=False, threads=False, progress=False)
             got = _last_prices(df, symbols)
+            if _rate_limited_in_last_download():
+                GATE.limited()
+            elif got:
+                GATE.ok()
             if got:
                 return got
         except Exception as e:  # noqa: BLE001
-            print(f"  batch {symbols[0]}..: {type(e).__name__}: {e}", file=sys.stderr)
+            if is_rate_limit(e):
+                GATE.limited()
+            else:
+                print(f"  batch {symbols[0]}..: {type(e).__name__}: {e}", file=sys.stderr)
         time.sleep(1 + attempt)
     return {}
 
