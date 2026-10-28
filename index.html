@@ -288,6 +288,15 @@ td.num.since.down { color: var(--down); }
 .panel-head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .eyebrow { font-size: calc(12.5px * var(--ts)); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--muted); margin: 0; }
 .section { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.section.side-list { padding: 0 0 6px; gap: 0; border-top: 0; }
+@media (min-width: 821px) {
+  /* Screener and Watchlist: each block is its own card, with page background between them */
+  #sidePanel.as-cards { background: transparent; border: 0; }
+  #sidePanel.as-cards [role="tabpanel"] { display: flex; flex-direction: column; gap: 14px; }
+  #sidePanel.as-cards .section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; gap: 12px; }
+  #sidePanel.as-cards .section.side-list { padding: 4px 0 10px; gap: 0; }
+  #sidePanel.as-cards .section > .eyebrow:first-child, #sidePanel.as-cards .panel-head .eyebrow { color: var(--ink); font-size: calc(13px * var(--ts)); }
+}
 
 /* Saved screens list */
 .screens { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 10px; }
@@ -509,9 +518,11 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
     <aside class="panel" id="sidePanel" aria-label="Screener and watchlists">
       <div class="drawer-head m-only"><p class="eyebrow" id="drawerTitle">Screens</p><button class="btn sm" id="closeDrawer" type="button">Close</button></div>
       <div id="screenerSide" role="tabpanel" aria-labelledby="tab-screener">
-      <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
-      <div class="screens" id="screens"></div>
-      <div class="storage-note warn" id="storageNote" hidden></div>
+      <div class="section side-list">
+        <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
+        <div class="screens" id="screens"></div>
+        <div class="storage-note warn" id="storageNote" hidden></div>
+      </div>
 
       <div class="section">
         <label class="eyebrow" for="screenName">Screen name</label>
@@ -543,10 +554,12 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
       </div>
 
       <div id="watchSide" role="tabpanel" aria-labelledby="tab-watch" hidden>
-        <div class="panel-head"><p class="eyebrow">Your watchlists</p></div>
-        <div class="screens" id="watchlists"></div>
-        <div class="storage-note row"><button class="linkbtn" id="newWatch" type="button">+ New watchlist</button></div>
-        <div class="storage-note warn" id="watchNote" hidden></div>
+        <div class="section side-list">
+          <div class="panel-head"><p class="eyebrow">Your watchlists</p></div>
+          <div class="screens" id="watchlists"></div>
+          <div class="storage-note row"><button class="linkbtn" id="newWatch" type="button">+ New watchlist</button></div>
+          <div class="storage-note warn" id="watchNote" hidden></div>
+        </div>
         <div class="section">
           <label class="eyebrow" for="watchName">Watchlist name</label>
           <input class="name-in" id="watchName" autocomplete="off" maxlength="100">
@@ -1733,6 +1746,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings", analysis = S.tab === "analysis";
     if (!notes) nstore.flushAll();
     TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
+    $("sidePanel").classList.toggle("as-cards", S.tab === "screener" || S.tab === "watch");
     renderRail();
     $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
     $("resultsView").hidden = notes || settings || analysis; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("analysisView").hidden = !analysis; $("footNote").hidden = notes || settings || analysis;
