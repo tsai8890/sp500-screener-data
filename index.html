@@ -1867,9 +1867,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function latestPrice(o) {
     if (o.xPrice == null || o.price == null) return o;
     o.regPrice = o.price; o.regChg = o.chg; o.session = o.xSession;
-    const prevClose = o.chg != null ? o.price / (1 + o.chg / 100) : null;
+    if (o.session === "pre") {
+      o.chg = o.xChg;   // pre-market: against the last close (the regular price), before today's session
+    } else {             // after hours: against the previous session's close, so the day's move is included
+      const prevClose = o.chg != null ? o.price / (1 + o.chg / 100) : null;
+      o.chg = prevClose ? Math.round((o.xPrice / prevClose - 1) * 10000) / 100 : o.xChg;
+    }
     o.price = o.xPrice;
-    o.chg = prevClose ? Math.round((o.xPrice / prevClose - 1) * 10000) / 100 : o.xChg;
     return o;
   }
   function applyLive(d) {

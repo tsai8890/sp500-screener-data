@@ -7,3 +7,7 @@ __pycache__/
 data/*
 !data/screens.json
 logs/
+
+# secrets (API keys) stay on this computer
+.env
+*.env

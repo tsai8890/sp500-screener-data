@@ -34,7 +34,8 @@ def _is_regular(ts) -> bool:
 
 
 def _split(series: pd.Series):
-    """(last regular-session price, (extended-hours price, "pre"/"post", iso time) or None).
+    """(last regular-session price, (extended-hours price, "pre"/"post", iso time) or None,
+    previous session's close or None).
 
     The extended price is the last trade after the latest regular-session bar:
     after hours the same day, or pre-market the next day. While the market is
@@ -42,35 +43,37 @@ def _split(series: pd.Series):
     s = series.dropna()
     s = s[s > 0]
     if not len(s):
-        return None, None
+        return None, None, None
     if not isinstance(s.index, pd.DatetimeIndex):
-        return num(s.iloc[-1], nd=4), None          # no timestamps: treat everything as regular
+        return num(s.iloc[-1], nd=4), None, None    # no timestamps: treat everything as regular
     idx = s.index.tz_convert(NY) if s.index.tz is not None else s.index.tz_localize(NY)
     s = pd.Series(s.values, index=idx)
     reg_mask = [_is_regular(t) for t in idx]
     reg = s[reg_mask]
     if not len(reg):
-        return None, (num(s.iloc[-1], nd=4), "pre" if idx[-1].time() < MARKET_OPEN else "post", iso(idx[-1].astimezone(timezone.utc)))
+        return None, (num(s.iloc[-1], nd=4), "pre" if idx[-1].time() < MARKET_OPEN else "post", iso(idx[-1].astimezone(timezone.utc))), None
     last_reg_t = reg.index[-1]
+    earlier = reg[[t.date() < last_reg_t.date() for t in reg.index]]
+    prev = num(earlier.iloc[-1], nd=4) if len(earlier) else None   # the session before the latest one
     after = s[s.index > last_reg_t]
     ext = None
     if len(after):
         t = after.index[-1]
         session = "post" if t.date() == last_reg_t.date() and t.time() >= MARKET_CLOSE else "pre"
         ext = (num(after.iloc[-1], nd=4), session, iso(t.astimezone(timezone.utc)))
-    return num(reg.iloc[-1], nd=4), ext
+    return num(reg.iloc[-1], nd=4), ext, prev
 
 
 def _parse(frame: pd.DataFrame, symbols: list[str]) -> dict[str, tuple]:
-    """{symbol: (regular price or None, extended (price, session, time) or None)}"""
+    """{symbol: (regular price or None, extended (price, session, time) or None, previous close or None)}"""
     if frame is None or frame.empty:
         return {}
     close = _close_frame(frame, symbols)
     out = {}
     for sym in close.columns:
-        reg, ext = _split(close[sym])
+        reg, ext, prev = _split(close[sym])
         if reg is not None or ext is not None:
-            out[str(sym)] = (reg, ext)
+            out[str(sym)] = (reg, ext, prev)
     return out
 
 
@@ -86,9 +89,9 @@ def _rate_limited_in_last_download() -> bool:
 
 def _download(symbols: list[str], priority: bool = False) -> dict[str, tuple]:
     """{symbol: (regular price, extended-hours (price, session, time) or None)}"""
-    # with pre/post-market bars; outside regular hours ask for two days so the
-    # last regular close is always included (before the open, today has none yet)
-    period = "1d" if market_session(grace_minutes=0) else "2d"
+    # with pre/post-market bars, two days: the previous session's close is then in the data
+    # (for the day change), and before the open the last regular close is too
+    period = "2d"
     for attempt in range(3):
         GATE.wait(priority=priority)
         if GATE.paused_for():
@@ -143,24 +146,26 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         parts = list(pool.map(run, batches))
 
-    fresh, ext_fresh, got = {}, {}, set()
+    fresh, ext_fresh, prev_fresh, got = {}, {}, {}, set()
     for part in parts:
         for sym, val in part.items():
             if sym not in to_ticker:
                 continue
             t = to_ticker[sym]
-            reg, ext = val if isinstance(val, tuple) else (val, None)
+            reg, ext, prev_close = (tuple(val) + (None, None))[:3] if isinstance(val, tuple) else (val, None, None)
             got.add(t)
+            if prev_close is not None:
+                prev_fresh[t] = prev_close
             if reg is not None:
                 fresh[t] = reg
             if ext is not None:
                 ext_fresh[t] = list(ext)
 
     with _file_lock:
-        return _merge_and_write(path, tickers, fresh, ext_fresh, got, started)
+        return _merge_and_write(path, tickers, fresh, ext_fresh, got, started, prev_fresh)
 
 
-def _merge_and_write(path, tickers, fresh, ext_fresh, got, started) -> dict:
+def _merge_and_write(path, tickers, fresh, ext_fresh, got, started, prev_fresh=None) -> dict:
     prev_file = read_json(path) or {}
     prev, prev_ext = prev_file.get("prices", {}), prev_file.get("ext", {})
     prices = {t: fresh.get(t, prev.get(t)) for t in tickers if t in fresh or t in prev}
@@ -171,7 +176,9 @@ def _merge_and_write(path, tickers, fresh, ext_fresh, got, started) -> dict:
     if len(got) < 0.5 * len(tickers):
         raise RuntimeError(f"Only {len(got)}/{len(tickers)} prices fetched; keeping the previous file.")
 
-    out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext}
+    old_prev = prev_file.get("prev", {})
+    prev_close = {t: (prev_fresh or {}).get(t, old_prev.get(t)) for t in tickers if t in (prev_fresh or {}) or t in old_prev}
+    out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext, "prev": prev_close}
     write_json(path, out)
     print(f"Prices: done. {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
           f"in {time.time() - started:.1f}s -> {path}")
@@ -185,7 +192,7 @@ def update_one(ticker: str, path: str = PRICES_PATH) -> dict | None:
     got = _download([sym], priority=True).get(sym)
     if not got:
         return None
-    reg, ext = got
+    reg, ext, prev_close = (tuple(got) + (None, None))[:3]
     with _file_lock:
         data = read_json(path) or {"prices": {}, "ext": {}}
         if reg is not None:
@@ -195,5 +202,7 @@ def update_one(ticker: str, path: str = PRICES_PATH) -> dict | None:
             data["ext"][ticker] = list(ext)
         else:
             data["ext"].pop(ticker, None)
+        if prev_close is not None:
+            data.setdefault("prev", {})[ticker] = prev_close
         write_json(path, data)
     return data

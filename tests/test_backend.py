@@ -97,20 +97,30 @@ class Prices(unittest.TestCase):
         return pd.Series([p for _, p in times_prices], index=idx)
 
     def test_after_hours_price_kept_apart(self):
-        reg, ext = prices._split(self.bars([("2026-10-27 15:58", 100.0), ("2026-10-27 15:59", 101.0),
+        reg, ext, _ = prices._split(self.bars([("2026-10-27 15:58", 100.0), ("2026-10-27 15:59", 101.0),
                                             ("2026-10-27 16:30", 103.0), ("2026-10-27 19:59", 104.5)]))
         self.assertEqual(reg, 101.0)
         self.assertEqual(ext[:2], (104.5, "post"))
         self.assertEqual(ext[2], "2026-10-27T23:59:00Z")
 
     def test_pre_market_next_morning(self):
-        reg, ext = prices._split(self.bars([("2026-10-27 15:59", 101.0), ("2026-10-27 17:00", 102.0),
+        reg, ext, _ = prices._split(self.bars([("2026-10-27 15:59", 101.0), ("2026-10-27 17:00", 102.0),
                                             ("2026-10-28 07:15", 99.0)]))
         self.assertEqual((reg, ext[:2]), (101.0, (99.0, "pre")))
 
     def test_no_extended_price_while_market_is_open(self):
-        reg, ext = prices._split(self.bars([("2026-10-28 08:00", 99.0), ("2026-10-28 10:15", 100.5)]))
+        reg, ext, _ = prices._split(self.bars([("2026-10-28 08:00", 99.0), ("2026-10-28 10:15", 100.5)]))
         self.assertEqual((reg, ext), (100.5, None))
+
+    def test_previous_close_from_the_day_before(self):
+        reg, ext, prev = prices._split(self.bars([("2026-10-27 15:59", 98.0), ("2026-10-27 17:00", 97.0),
+                                                  ("2026-10-28 08:00", 99.0), ("2026-10-28 10:15", 100.5)]))
+        self.assertEqual((reg, ext, prev), (100.5, None, 98.0))
+        data = build.combine({"stocks": {"X": {"shares": 1e9, "eps": 5, "prevClose": 50}}, "order": ["X"]},
+                             {"prices": {"X": 100.5}, "prev": {"X": 98.0}, "ext": {"X": [101.5, "post", "t"]}})
+        row = dict(zip(data["cols"], data["rows"][0]))
+        self.assertEqual(row["chg"], round((100.5 / 98 - 1) * 100, 2))   # not the stale 50 from fundamentals
+        self.assertEqual(row["pe"], round(101.5 / 5, 1))                 # P/E on the latest (after-hours) price
 
     def test_update_stores_extended_and_build_adds_columns(self):
         with tempfile.TemporaryDirectory() as d:

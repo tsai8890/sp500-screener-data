@@ -7,11 +7,11 @@ It runs entirely on your own computer: one Python process downloads the market d
 | | |
 |---|---|
 | Prices | every 5 minutes, 4:00–20:00 New York time on weekdays (regular session plus pre-market and after-hours) |
-| Fundamentals | each stock every 6 hours |
+| Fundamentals | each stock every 12 hours |
 | Screens, watchlists | SQLite: `data/screener.db` |
 | Notes | Markdown files: `data/notes/<id>.md` |
 
-P/E, PEG, market cap and dividend yield depend on the share price, so they are recalculated from the latest price every time prices update. The slower fundamentals (EPS, implied growth, revenue growth, margins, dividends) refresh every 6 hours; they change at most once a quarter.
+P/E, PEG, market cap and dividend yield depend on the share price, so they are recalculated from the latest price every time prices update. The slower fundamentals (EPS, implied growth, revenue growth, margins, dividends) refresh every 12 hours; they change at most once a quarter.
 
 ## Run it
 
@@ -44,7 +44,7 @@ Environment variables, for `./run.sh` or the autostart (`PORT=8080 deploy/macos-
 | `PORT` | `8000` | |
 | `HOST` | `127.0.0.1` | only this computer can open the page. Set `0.0.0.0` to open it from your phone on the same Wi-Fi (`http://<your-mac's-ip>:8000`); then also set `SCREENS_TOKEN`. |
 | `PRICE_INTERVAL` | `300` | seconds between price updates while the market is open |
-| `FUNDAMENTALS_INTERVAL` | `21600` | how old (seconds) a stock's fundamentals may get before they are fetched again |
+| `FUNDAMENTALS_INTERVAL` | `43200` | how old (seconds) a stock's fundamentals may get before they are fetched again |
 | `YAHOO_RPS` | `1` | Yahoo requests per second, for prices and fundamentals together |
 | `PRICES_ALWAYS` | `0` | `1` keeps fetching prices when the market is closed |
 | `SCREENS_TOKEN` | | if set, saving and deleting need this token; in the browser console run `localStorage.setItem("screener.token", JSON.stringify("<token>"))` once |
@@ -100,7 +100,7 @@ If the page can't reach the server, it keeps your changes in the browser and sav
 
 ## Pre-market and after-hours prices
 
-The page shows one price per stock: the latest trade. Outside 9:30–16:00 ET that is the pre-market or after-hours price, tagged **PM** or **AH** (hover the tag for the regular-session close). The change next to it is always against the previous session's close, so after hours it includes both the day's move and the after-hours move. Screens, sorting and the watchlist's "since added" use this same price. P/E, market cap and dividend yield stay on the regular-session price.
+The page shows one price per stock: the latest trade. Outside 9:30–16:00 ET that is the pre-market or after-hours price, tagged **PM** or **AH** (hover the tag for the regular-session close). The change next to it is always against the previous session's close, so after hours it includes both the day's move and the after-hours move. Screens, sorting, the watchlist's "since added", and P/E, forward P/E, PEG, market cap and dividend yield all use this same latest price. The previous close for the day change comes from the price data (yesterday's last regular-session price), so it is always current.
 
 In `data/prices.json` extended-hours trades are under `"ext"`; in the data files, the columns `xPrice`, `xChg` (vs the regular close) and `xSession`.
 
