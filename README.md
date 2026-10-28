@@ -104,11 +104,12 @@ Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of windo
 
 ## Advanced Analysis tab
 
-The **Analysis** tab shows one company's financial statements over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.
+The **Analysis** tab shows one company's revenue, profits and margins over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.
 
 - **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating and net margins, with the change in percentage points (pp: 45.0% → 47.5% is +2.5 pp).
-- **Balance sheet**: cash and short-term investments, receivables, inventory, current and non-current assets, current and non-current liabilities, total debt, net debt, shareholders' equity; current ratio, quick ratio, debt/equity, liabilities/assets.
-- **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. Cards at the top: revenue (TTM), latest quarterly revenue growth, gross margin, net margin, debt/equity.
+- Above the table: revenue (TTM), latest quarterly revenue growth, gross margin, net margin and debt/equity.
+
+The server also computes balance-sheet and cash-flow metrics (current and non-current assets and liabilities, debt, equity, ratios; operating cash flow, capex, free cash flow, buybacks, dividends); they are hidden on the page. To show them, add `"balance"` and/or `"cash"` to `SHOWN_SECTIONS` in `index.html`.
 
 *Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier (matched by date). Fiscal years are named after the year they end in, as companies do (NVIDIA's FY2026 ended January 2026). Hover a dotted label for its definition.
 

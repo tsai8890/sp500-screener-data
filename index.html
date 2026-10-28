@@ -693,7 +693,7 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
         </div>
         <div class="an-empty" id="anEmpty">
           <p class="an-empty-t">Pick a stock to see its financial statements</p>
-          <p class="hint">Several years of profitability, balance sheet and cash flow figures, from Yahoo Finance.</p>
+          <p class="hint">Several years of revenue, profits and margins, from Yahoo Finance.</p>
           <div class="an-quick" id="anQuick"></div>
         </div>
         <div id="anBody" hidden>
@@ -1745,7 +1745,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("uniPick").style.visibility = watch || notes || settings || analysis ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
     $("pageTitle").textContent = analysis ? "Advanced Analysis" : settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
     document.querySelector(".lede").textContent = analysis
-      ? "One company's financial statements over several years: profitability, balance sheet and cash flow."
+      ? "One company's revenue, profits and margins over several years, from its financial statements."
       : settings
       ? "Choose where your screens, watchlists and notes are kept, and check when they were last saved."
       : notes
@@ -1955,6 +1955,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   S.anPeriod = lsGet("screener.anPeriod") === "quarterly" ? "quarterly" : "annual";
   const AN = { data: {}, loading: {}, error: {} };
   const anRecent = () => (lsGet("screener.anRecent") || []).filter((t) => typeof t === "string");
+  // Sections shown as tables. The server also computes "balance" and "cash" (the Debt / equity
+  // card uses them); add their ids here to show those tables again.
+  const SHOWN_SECTIONS = new Set(["profit"]);
   const NEUTRAL_GROWTH = new Set(["totalLiabilities", "totalAssets"]);
   const MARGIN_KEYS = new Set(["grossMargin", "operatingMargin", "netMargin", "ebitdaMargin", "fcfMargin"]);
   function fmtMoney(v) {
@@ -2089,7 +2092,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         hint.textContent = "Fetching the income statement, balance sheet and cash flow (a few seconds the first time).";
       } else {
         title.textContent = "Pick a stock to see its financial statements";
-        hint.textContent = "Several years of profitability, balance sheet and cash flow figures, from Yahoo Finance.";
+        hint.textContent = "Several years of revenue, profits and margins, from Yahoo Finance.";
         const picks = anRecent().concat(S.watchlists.flatMap((w) => w.items.map((i) => i.ticker)));
         const set = [...new Set(picks.length ? picks : ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"])].slice(0, 8);
         set.forEach((x) => quick.append(el("button", { class: "btn sm", type: "button", text: x, onclick: () => openAnalysis(x) })));
@@ -2130,7 +2133,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // sections
     const view = d[S.anPeriod], box = $("anSections"); box.textContent = "";
     view.sections.forEach((sec) => {
-      if (!sec.rows.length) return;
+      if (!sec.rows.length || !SHOWN_SECTIONS.has(sec.id)) return;
       const thead = el("tr", {}, el("th", { text: "" }));
       const order = view.periods.map((_, i) => i).reverse();   // newest on the left
       order.map((i) => view.periods[i]).forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
@@ -2161,7 +2164,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("h3", {}, sec.title, el("span", { class: "hint", text: note })),
         el("div", { class: "table-wrap" }, el("table", { class: "an-t" }, el("thead", {}, thead), tb))));
     });
-    const qNote = S.anPeriod === "quarterly" ? " Quarterly return on equity and assets are annualized (×4)." : " TTM = the last four reported quarters; balance-sheet TTM figures are from the latest quarter.";
+    const qNote = S.anPeriod === "quarterly" ? " Quarterly return on equity and assets are annualized (×4)." : " TTM = the last four reported quarters.";
     $("anFoot").textContent = `Source: Yahoo Finance, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
     applySide();
   }
