@@ -2165,7 +2165,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const card = (k, x, kind, note, noteCls, valCls, tip) => {
       if (!x) return;
       hi.append(el("div", { class: "an-card", title: tip || "" }, el("div", { class: "k", text: k }),
-        el("div", { class: "v" + (valCls ? " " + valCls : ""), text: fmtAn(x.v, kind) }),
+        el("div", { class: "v" + (valCls ? " " + valCls : ""), text: x.text || fmtAn(x.v, kind) }),
         el("div", { class: "n" + (noteCls ? " " + noteCls : ""), text: note || lastLabel(x) })));
     };
     const qg = lastGrowth(Q, "revenue");
@@ -2187,7 +2187,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     card("Gross Margin", lastVal(A, "grossMargin"), "pct");
     card("Net Margin", lastVal(A, "netMargin"), "pct");
     const nde = lastVal(A, "netDebtToEbitda");
-    if (nde) card("Net Debt / EBITDA", nde, "ratio", nde.v < 0 ? `Net cash · ${lastLabel(nde)}` : lastLabel(nde), nde.v < 0 ? "up" : nde.v > 4 ? "down" : "", "",
+    if (nde) card("Net Debt / EBITDA", nde.v <= 0 ? { ...nde, text: "Net cash" } : nde, "ratio",
+      nde.v <= 0 ? "More cash than debt" : lastLabel(nde), "", nde.v <= 0 ? "up" : nde.v > 4 ? "down" : "",
       "(Total debt − cash) ÷ EBITDA: about how many years of earnings it would take to repay the debt. Under 1× light, 1–3× normal, over 4× heavy; negative means more cash than debt.");
 
     // sections
