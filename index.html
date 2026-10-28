@@ -308,7 +308,9 @@ td.num.since.down { color: var(--down); }
     color: var(--ink); font-family: var(--font-display); font-size: calc(18px * var(--ts)); font-weight: 700;
     text-transform: none; letter-spacing: -0.005em; line-height: 1.25;
   }
-  #sidePanel.as-cards .panel-head { padding: 14px 18px 8px; }
+  /* title band: full-width divider under the title, space before the content */
+  #sidePanel.as-cards .panel-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  #sidePanel.as-cards .section > .eyebrow:first-child { margin: -2px -18px 6px; padding: 0 18px 14px; border-bottom: 1px solid var(--line); }
 }
 
 /* Saved screens list */
