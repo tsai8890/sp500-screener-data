@@ -196,7 +196,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-meta a { color: var(--accent); text-decoration: none; } .an-meta a:hover { text-decoration: underline; }
 .an-hi { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 10px 18px 18px; }
 .an-card { background: var(--sunk); border-radius: 9px; padding: 10px 12px; min-width: 0; }
-.an-card .k { font-size: calc(12.5px * var(--ts)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.an-card .k { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); line-height: 1.25; min-height: 2.5em; }
+@media (min-width: 1700px) { .an-card .k { min-height: 0; } }
 .an-card .v { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(20.5px * var(--ts)); font-weight: 600; margin-top: 2px; white-space: nowrap; }
 .an-card .n { font-size: calc(13px * var(--ts)); color: var(--muted); line-height: 1.35; }
 .an-card .v.up, .an-card .n.up { color: var(--up); } .an-card .v.down, .an-card .n.down { color: var(--down); }
@@ -2161,15 +2162,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // highlights: latest annual figures (TTM when available)
     const A = d.annual, Q = d.quarterly, hi = $("anHi"); hi.textContent = "";
     const lastLabel = (x) => (x ? A.periods[x.i].label : "");
-    const card = (k, x, kind, note, noteCls, valCls) => {
+    const card = (k, x, kind, note, noteCls, valCls, tip) => {
       if (!x) return;
-      hi.append(el("div", { class: "an-card" }, el("div", { class: "k", text: k }),
+      hi.append(el("div", { class: "an-card", title: tip || "" }, el("div", { class: "k", text: k }),
         el("div", { class: "v" + (valCls ? " " + valCls : ""), text: fmtAn(x.v, kind) }),
         el("div", { class: "n" + (noteCls ? " " + noteCls : ""), text: note || lastLabel(x) })));
     };
     const qg = lastGrowth(Q, "revenue");
     const cls = (g) => (g > 0 ? "up" : g < 0 ? "down" : "");
-    if (qg) card("Revenue growth YoY", { v: qg.g }, "pct", `${qg.label} vs ${qg.vs || "a year earlier"}`, "", cls(qg.g));
+    if (qg) card("Revenue Growth (YoY)", { v: qg.g }, "pct", `vs ${qg.vs || "a year earlier"}`, "", cls(qg.g), `Latest quarter (${qg.label}) vs the same quarter a year earlier (${qg.vs || "?"})`);
     // QoQ: the latest quarter against the one right before it (about three months earlier)
     const qr = (Q.sections.find((x) => x.id === "profit") || { rows: [] }).rows.find((r) => r.key === "revenue");
     if (qr) {
@@ -2179,13 +2180,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         const days = (new Date(Q.periods[a].end) - new Date(Q.periods[b].end)) / 864e5;
         if (days > 60 && days < 120 && qr.values[b]) {
           const g = (qr.values[a] - qr.values[b]) / Math.abs(qr.values[b]) * 100;
-          card("Revenue growth QoQ", { v: g }, "pct", `${Q.periods[a].label} vs ${Q.periods[b].label}`, "", cls(g));
+          card("Revenue Growth (QoQ)", { v: g }, "pct", `vs ${Q.periods[b].label}`, "", cls(g), `Latest quarter (${Q.periods[a].label}) vs the quarter before (${Q.periods[b].label})`);
         }
       }
     }
-    card("Gross margin", lastVal(A, "grossMargin"), "pct");
-    card("Net margin", lastVal(A, "netMargin"), "pct");
-    card("Debt / equity", lastVal(A, "debtToEquity"), "ratio");
+    card("Gross Margin", lastVal(A, "grossMargin"), "pct");
+    card("Net Margin", lastVal(A, "netMargin"), "pct");
+    card("Debt / Equity", lastVal(A, "debtToEquity"), "ratio");
 
     // sections
     const view = d[S.anPeriod], box = $("anSections"); box.textContent = "";
