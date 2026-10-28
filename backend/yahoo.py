@@ -35,13 +35,16 @@ class Gate:
         self.until = 0.0     # paused until this time
         self.pause = 0       # length of the current/last pause, seconds
 
-    def wait(self) -> None:
-        """Block until this thread may make one request."""
+    def wait(self, priority: bool = False) -> None:
+        """Block until this thread may make one request. Priority requests (someone is
+        waiting on the page) skip the queue but still respect a rate-limit pause."""
         while True:
             with self.lock:
                 now = time.monotonic()
                 if now < self.until:
                     delay = self.until - now
+                elif priority:
+                    return
                 elif now < self.next:
                     delay = self.next - now
                 else:

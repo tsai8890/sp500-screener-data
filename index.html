@@ -154,6 +154,70 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter
 .note-status.ok::before { content: "✓ "; color: var(--pass); }
 .pin-btn { display: inline-flex; align-items: center; gap: 6px; }
 .pin-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+/* Advanced analysis */
+.an-group .panel-head { padding-top: 6px; }
+.an-list { display: flex; flex-direction: column; gap: 2px; padding: 0 10px 12px; }
+.an-item { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; text-align: left; width: 100%; }
+.an-item:hover { background: var(--sunk); }
+.an-item[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.an-item .tk { font-family: var(--font-data); font-weight: 500; color: var(--accent); }
+.an-item .nm { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-item .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 5px; border-radius: 4px; opacity: .5; font-size: 15px; line-height: 1; }
+.an-item:hover .x, .an-item .x:focus-visible { opacity: 1; }
+.an-none { font-size: 12.5px; color: var(--muted); padding: 0 8px; }
+.an-empty { padding: 56px 24px 64px; text-align: center; }
+.an-empty-t { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin: 0 0 6px; }
+.an-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+.an-quick button { font-family: var(--font-data); }
+.an-empty.err .an-empty-t { color: var(--fail); }
+.an-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 18px; padding: 16px 18px 6px; }
+.an-id { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.an-tk { font-family: var(--font-data); font-size: 22px; font-weight: 500; color: var(--accent); }
+.an-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.an-meta .px { font-family: var(--font-data); color: var(--ink); }
+.an-meta .up { color: var(--up); } .an-meta .down { color: var(--down); }
+.an-meta a { color: var(--accent); text-decoration: none; } .an-meta a:hover { text-decoration: underline; }
+.an-hi { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; padding: 10px 18px 18px; }
+.an-card { background: var(--sunk); border-radius: 9px; padding: 10px 12px; min-width: 0; }
+.an-card .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-card .v { font-family: var(--font-data); font-size: 18px; margin-top: 2px; white-space: nowrap; }
+.an-card .n { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-card .v.up, .an-card .n.up { color: var(--up); } .an-card .v.down, .an-card .n.down { color: var(--down); }
+.an-sec { border-top: 1px solid var(--line); }
+.an-sec h3 { font-family: var(--font-display); font-size: 16px; margin: 0; padding: 14px 18px 8px; display: flex; align-items: baseline; gap: 10px; }
+.an-sec h3 .hint { font-family: var(--font-body); font-weight: 400; }
+.an-sec .table-wrap { border-top: 0; }
+table.an-t th, table.an-t td { text-align: right; vertical-align: top; }
+table.an-t th:first-child, table.an-t td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; padding-left: 18px; min-width: 210px; }
+table.an-t th:first-child { z-index: 2; }
+table.an-t th { position: static; }
+table.an-t td.lbl { font-size: 13.5px; }
+table.an-t td.lbl abbr { text-decoration: underline dotted var(--muted); text-underline-offset: 3px; cursor: help; }
+table.an-t td.v { font-family: var(--font-data); font-size: 13px; min-width: 92px; }
+table.an-t td.v.neg { color: var(--muted); }
+table.an-t td .sub { color: var(--muted); }
+table.an-t .ttm { background: var(--accent-soft); }
+table.an-t th.ttm { color: var(--accent); }
+table.an-t tr.grp td { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding-top: 14px; border-bottom-color: transparent; }
+table.an-t td.spark { width: 96px; padding-right: 18px; vertical-align: middle; }
+.spark svg { display: block; width: 84px; height: 24px; margin-left: auto; }
+.spark rect { fill: var(--accent); opacity: .55; } .spark rect.last { opacity: 1; } .spark rect.neg { fill: var(--fail); }
+.spark line { stroke: var(--line); stroke-width: 1; }
+.an-foot { font-size: 12px; color: var(--muted); padding: 12px 18px 16px; margin: 0; border-top: 1px solid var(--line); }
+.an-skel { height: 14px; border-radius: 4px; background: var(--sunk); margin: 10px 18px; }
+@media (max-width: 820px) {
+  .an-sec .table-wrap { overflow-x: auto; }
+  .rail [role="tab"] { min-width: 0; }
+  .rail [role="tab"] .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toggleSide3 { flex: 1 1 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .an-bar .note-status { margin-left: 0; }
+  .an-head { padding: 14px 14px 4px; }
+  .an-hi { padding: 8px 14px 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .an-sec h3 { padding: 12px 14px 6px; }
+  table.an-t th:first-child, table.an-t td:first-child { padding-left: 14px; min-width: 150px; max-width: 150px; white-space: normal; }
+  table.an-t td.spark { display: none; } table.an-t th.spark { display: none; }
+}
 .seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--sunk); border-radius: 8px; }
 .seg button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
 .seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
@@ -198,7 +262,7 @@ td.num.since.down { color: var(--down); }
 
 .layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 821px) {
-  #toggleSide, #toggleSide2 { width: 136px; text-align: center; }   /* same width whatever the label */
+  #toggleSide, #toggleSide2, #toggleSide3 { width: 136px; text-align: center; }   /* same width whatever the label */
   .layout.collapsed { grid-template-columns: minmax(0, 1fr); }
   .layout.collapsed > aside { display: none; }
   .m-only { display: none !important; }
@@ -506,6 +570,24 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
           <div class="row"><button class="btn danger" id="deleteWatch" type="button">Delete watchlist</button></div>
         </div>
       </div>
+      <div id="analysisSide" role="tabpanel" aria-labelledby="tab-analysis" hidden>
+        <div class="panel-head"><p class="eyebrow">Analyze a stock</p></div>
+        <div class="section">
+          <form class="add-row" id="anForm">
+            <input id="anTicker" list="tickerList" placeholder="Ticker, e.g. NVDA" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Ticker">
+            <button class="btn primary" type="submit">Analyze</button>
+          </form>
+          <p class="hint">Or hover a stock's name in the Screener or Watchlist and choose “Advanced analysis”.</p>
+        </div>
+        <div class="an-group" id="anRecentBox">
+          <div class="panel-head"><p class="eyebrow">Recent</p><button class="linkbtn" id="anClear" type="button">Clear</button></div>
+          <div class="an-list" id="anRecent"></div>
+        </div>
+        <div class="an-group" id="anWatchBox">
+          <div class="panel-head"><p class="eyebrow">In your watchlists</p></div>
+          <div class="an-list" id="anWatch"></div>
+        </div>
+      </div>
       <div id="notesSide" role="tabpanel" aria-labelledby="tab-notes" hidden>
         <div class="panel-head"><p class="eyebrow">Notes</p><button class="btn sm primary" id="newNote" type="button">+ New note</button></div>
         <div class="section note-search"><input class="search" id="noteSearch" type="search" placeholder="Search notes" aria-label="Search notes" autocomplete="off"></div>
@@ -576,6 +658,34 @@ footer.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
         <div class="set-foot" id="setExport">
           <button class="btn" id="exportAll" type="button">Download everything (.json)</button>
           <span class="hint">A full copy of your screens, watchlists and notes, for your own backup.</span>
+        </div>
+      </div>
+      <div id="analysisView" hidden>
+        <div class="note-bar an-bar">
+          <button class="btn sm" id="toggleSide3" type="button" aria-controls="sidePanel">Hide stocks</button>
+          <div class="seg" id="anPeriod" role="radiogroup" aria-label="Periods">
+            <button type="button" role="radio" data-p="annual">Annual</button>
+            <button type="button" role="radio" data-p="quarterly">Quarterly</button>
+          </div>
+          <span class="note-status" id="anState" role="status" aria-live="polite"></span>
+          <button class="btn sm" id="anRefresh" type="button" hidden>Refresh</button>
+        </div>
+        <div class="an-empty" id="anEmpty">
+          <p class="an-empty-t">Pick a stock to see its financial statements</p>
+          <p class="hint">Several years of profitability, balance sheet and cash flow figures, from Yahoo Finance.</p>
+          <div class="an-quick" id="anQuick"></div>
+        </div>
+        <div id="anBody" hidden>
+          <div class="an-head">
+            <div class="an-id">
+              <span class="an-tk" id="anTk"></span>
+              <span class="an-name" id="anName"></span>
+            </div>
+            <div class="an-meta" id="anMeta"></div>
+          </div>
+          <div class="an-hi" id="anHi"></div>
+          <div id="anSections"></div>
+          <p class="an-foot" id="anFoot"></p>
         </div>
       </div>
       <div id="notesView" hidden>
@@ -954,7 +1064,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const pct = (v) => (v == null ? "–" : FIELDS.chg.fmt(v));
   const mean = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
   function renderResults() {
-    if (S.tab === "notes" || S.tab === "settings") return;
+    if (S.tab === "notes" || S.tab === "settings" || S.tab === "analysis") return;
     const watch = S.tab === "watch";
     const d = S.draft;
     const cols = visibleCols().concat(watch ? [{ key: "since" }] : []);
@@ -1553,12 +1663,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     screener: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    analysis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="M14.5 7.5l3-3 3 3" opacity=".55"/></svg>',
     notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>',
   };
   const TABS = [
     { id: "screener", label: "Screener", hash: "screener", panel: "screenerSide", panelTitle: "Screens" },
     { id: "watch", label: "Watchlist", hash: "watchlist", panel: "watchSide", panelTitle: "Watchlists",
       badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
+    { id: "analysis", label: "Analysis", hash: "analysis", panel: "analysisSide", panelTitle: "Stocks" },
     { id: "notes", label: "Notes", hash: "notes", panel: "notesSide", panelTitle: "Notes",
       badge: () => (S.notes.length ? String(S.notes.length) : "") },
     { id: "settings", label: "Settings", hash: "settings", panel: "settingsSide", panelTitle: "Settings", gapBefore: true },
@@ -1581,16 +1693,18 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function setTab(tab) {
     S.tab = TABS.some((t) => t.id === tab) ? tab : "screener";
     lsSet("screener.tab", S.tab);
-    const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings";
+    const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings", analysis = S.tab === "analysis";
     if (!notes) nstore.flushAll();
     TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
     renderRail();
     $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
-    $("resultsView").hidden = notes || settings; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("footNote").hidden = notes || settings;
+    $("resultsView").hidden = notes || settings || analysis; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("analysisView").hidden = !analysis; $("footNote").hidden = notes || settings || analysis;
     // keep these in place (just invisible) so nothing below moves when switching tabs
-    $("uniPick").style.visibility = watch || notes || settings ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
-    $("pageTitle").textContent = settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
-    document.querySelector(".lede").textContent = settings
+    $("uniPick").style.visibility = watch || notes || settings || analysis ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
+    $("pageTitle").textContent = analysis ? "Advanced Analysis" : settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
+    document.querySelector(".lede").textContent = analysis
+      ? "One company's financial statements over several years: profitability, balance sheet and cash flow."
+      : settings
       ? "Choose where your screens, watchlists and notes are kept, and check when they were last saved."
       : notes
       ? "Your research notes, written in Markdown. Pin the ones you want to keep on top."
@@ -1599,6 +1713,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (watch) renderWatchSide();
     if (notes) { renderNoteList(); openNote(S.activeNote, false); $("showResults").textContent = "Open note"; }
     if (settings) { renderSettings(); $("showResults").textContent = "Show status"; }
+    if (analysis) {
+      renderAnalysisSide(); renderAnalysis(); $("showResults").textContent = "Show analysis";
+      if (S.anTicker && !AN.data[S.anTicker] && !AN.loading[S.anTicker] && !AN.error[S.anTicker]) loadAnalysis(S.anTicker, false);
+    }
+    if (!analysis && location.hash.startsWith("#analysis")) history.replaceState(null, "", location.pathname + location.search);
     renderResults(); applySide();
   }
 
@@ -1613,7 +1732,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
-    $("pageTitle").textContent = S.tab === "settings" ? "Settings" : S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
+    $("pageTitle").textContent = S.tab === "analysis" ? "Advanced Analysis" : S.tab === "settings" ? "Settings" : S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
     if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
@@ -1753,14 +1872,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("layout").classList.toggle("drawer-open", open);
     document.body.style.overflow = open ? "hidden" : "";
     $("toggleSide").setAttribute("aria-expanded", String(open));
-    if (open) $("closeDrawer").focus(); else if (isPhone()) $(S.tab === "notes" ? "toggleSide2" : "toggleSide").focus();
+    if (open) $("closeDrawer").focus(); else if (isPhone()) $(S.tab === "notes" ? "toggleSide2" : S.tab === "analysis" ? "toggleSide3" : "toggleSide").focus();
   }
   function applySide() {
-    const btns = [$("toggleSide"), $("toggleSide2")];
+    const btns = [$("toggleSide"), $("toggleSide2"), $("toggleSide3")];
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
       const cur = S.tab === "notes" ? S.notes.find((n) => n.id === S.activeNote) : null;
-      const nm = S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
+      const nm = S.tab === "analysis" ? (S.anTicker || "Stocks") : S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
       btns.forEach((b) => { b.textContent = "☰ " + nm; b.title = TABS.find((t) => t.id === S.tab).panelTitle; b.setAttribute("aria-expanded", String(!!S.drawer)); });
     } else {
       if (S.drawer) setDrawer(false);
@@ -1775,6 +1894,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   $("toggleSide").addEventListener("click", toggleSidePanel);
   $("toggleSide2").addEventListener("click", toggleSidePanel);
+  $("toggleSide3").addEventListener("click", toggleSidePanel);
   ["closeDrawer", "showResults", "scrim"].forEach((id) => $(id).addEventListener("click", () => setDrawer(false)));
   $("showResults").addEventListener("click", () => { if (S.tab === "notes") $("noteText").focus(); });
   phoneMq.addEventListener("change", applySide);
@@ -1786,6 +1906,223 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   document.addEventListener("click", (e) => { if (S.pop && !$("wlPop").contains(e.target)) closeWatchPop(false); });
   window.addEventListener("resize", () => closeWatchPop(false));
+
+  // ---------- Advanced analysis: one stock's statements over the years ----------
+  // Data: GET /api/analysis/<ticker> (backend/analysis.py), cached a day on the server.
+  S.anTicker = S.anTicker || lsGet("screener.anTicker") || null;
+  S.anPeriod = lsGet("screener.anPeriod") === "quarterly" ? "quarterly" : "annual";
+  const AN = { data: {}, loading: {}, error: {} };
+  const anRecent = () => (lsGet("screener.anRecent") || []).filter((t) => typeof t === "string");
+  const NEUTRAL_GROWTH = new Set(["totalLiabilities", "totalAssets"]);
+  const MARGIN_KEYS = new Set(["grossMargin", "operatingMargin", "netMargin", "ebitdaMargin", "fcfMargin"]);
+  function fmtMoney(v) {
+    if (v == null) return "–";
+    const a = Math.abs(v), sign = v < 0 ? "−" : "";
+    const [d, u] = a >= 1e12 ? [1e12, "T"] : a >= 1e9 ? [1e9, "B"] : a >= 1e6 ? [1e6, "M"] : a >= 1e3 ? [1e3, "K"] : [1, ""];
+    const x = a / d;
+    return sign + "$" + x.toFixed(x >= 100 ? 0 : x >= 10 ? 1 : 2) + u;
+  }
+  function fmtAn(v, kind) {
+    if (v == null) return "–";
+    if (kind === "money") return fmtMoney(v);
+    if (kind === "pct") return (v < 0 ? "−" : "") + Math.abs(v).toFixed(1) + "%";
+    if (kind === "ratio") return v.toFixed(2) + "×";
+    if (kind === "eps") return (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
+    return String(v);
+  }
+  const fmtGrowth = (g) => (g == null ? "" : (g > 0 ? "+" : g < 0 ? "−" : "") + Math.abs(g).toFixed(1) + "%");
+  function spark(values) {
+    const vs = values.map((v) => (v == null ? null : v)), real = vs.filter((v) => v != null);
+    if (real.length < 2) return null;
+    const max = Math.max(0, ...real), min = Math.min(0, ...real), span = max - min || 1;
+    const W = 84, H = 24, n = vs.length, bw = Math.min(12, (W - (n - 1) * 3) / n), gap = n > 1 ? (W - n * bw) / (n - 1) : 0;
+    const y0 = H * (max / span);
+    let out = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><line x1="0" x2="${W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}"/>`;
+    vs.forEach((v, i) => {
+      if (v == null) return;
+      const h = Math.max(1, Math.abs(v) / span * H), y = v >= 0 ? y0 - h : y0;
+      out += `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" class="${[i === n - 1 ? "last" : "", v < 0 ? "neg" : ""].join(" ").trim()}"/>`;
+    });
+    const span2 = el("span", { class: "spark" }); span2.innerHTML = out + "</svg>"; return span2;
+  }
+  function anItem(t, removable) {
+    const r = tickerMap().get(t);
+    const b = el("button", { type: "button", class: "an-item", "aria-current": String(t === S.anTicker), onclick: () => openAnalysis(t) },
+      el("span", { class: "tk", text: t }), el("span", { class: "nm", text: r ? r.name : "" }));
+    if (removable) {
+      const x = el("span", { class: "x", role: "button", tabindex: "0", title: "Remove from recent", "aria-label": "Remove " + t + " from recent", text: "×" });
+      const rm = (e) => { e.stopPropagation(); lsSet("screener.anRecent", anRecent().filter((y) => y !== t)); renderAnalysisSide(); };
+      x.addEventListener("click", rm); x.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rm(e); } });
+      b.append(x);
+    } else b.append(el("span"));
+    return b;
+  }
+  function renderAnalysisSide() {
+    const rec = anRecent(), box = $("anRecent"); box.textContent = "";
+    rec.forEach((t) => box.append(anItem(t, true)));
+    if (!rec.length) box.append(el("p", { class: "an-none", text: "Stocks you analyze show up here." }));
+    $("anClear").hidden = !rec.length;
+    const seen = new Set(rec), wl = [];
+    S.watchlists.forEach((w) => w.items.forEach((i) => { if (!seen.has(i.ticker)) { seen.add(i.ticker); wl.push(i.ticker); } }));
+    const wbox = $("anWatch"); wbox.textContent = "";
+    wl.slice(0, 40).forEach((t) => wbox.append(anItem(t, false)));
+    $("anWatchBox").hidden = !wl.length;
+  }
+  function openAnalysis(t) {
+    t = String(t || "").trim().toUpperCase().replace(/^\$/, "");
+    if (!t) return;
+    S.anTicker = t; lsSet("screener.anTicker", t);
+    lsSet("screener.anRecent", [t].concat(anRecent().filter((x) => x !== t)).slice(0, 12));
+    if (S.tab !== "analysis") setTab("analysis"); else { renderAnalysisSide(); renderAnalysis(); applySide(); }
+    if (S.drawer) setDrawer(false);
+    const h = "#analysis/" + encodeURIComponent(t);
+    if (location.hash !== h) history.replaceState(null, "", h);
+    if (!AN.data[t] && !AN.loading[t]) loadAnalysis(t, false);
+  }
+  async function loadAnalysis(t, refresh) {
+    AN.loading[t] = true; delete AN.error[t];
+    if (S.anTicker === t) renderAnalysis();
+    try {
+      const r = await fetch(API_ROOT + "analysis/" + encodeURIComponent(t) + (refresh ? "?refresh=1" : ""), { cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || (r.status === 404 ? "Not found" : "Server error " + r.status));
+      AN.data[t] = j;
+    } catch (e) {
+      AN.error[t] = e.message === "Failed to fetch" ? "Can't reach the screener server. Is it running (./run.sh)?" : e.message;
+    } finally {
+      delete AN.loading[t];
+      if (S.anTicker === t && S.tab === "analysis") renderAnalysis();
+    }
+  }
+  function lastVal(view, key) {
+    for (const sec of view.sections) for (const r of sec.rows) if (r.key === key) {
+      for (let i = r.values.length - 1; i >= 0; i--) if (r.values[i] != null) return { v: r.values[i], i, row: r };
+    }
+    return null;
+  }
+  function lastGrowth(view, key) {
+    for (const sec of view.sections) for (const r of sec.rows) if (r.key === key && r.growth) {
+      for (let i = r.growth.length - 1; i >= 0; i--) if (r.growth[i] != null) return { g: r.growth[i], label: view.periods[i].label };
+    }
+    return null;
+  }
+  function renderAnalysis() {
+    const t = S.anTicker, d = t && AN.data[t], loading = t && AN.loading[t], err = t && AN.error[t];
+    document.querySelectorAll("#anPeriod button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.p === S.anPeriod)));
+    $("anRefresh").hidden = !d; $("anRefresh").disabled = !!loading;
+    const st = $("anState"); st.className = "note-status";
+    st.textContent = loading ? (d ? "Refreshing…" : "Loading " + t + " from Yahoo Finance…") : "";
+    if (d && !loading) {
+      const when = new Date(d.fetchedAt);
+      st.textContent = d.warning ? d.warning.replace(/\d{4}-\d\d-\d\dT[\d:.]+Z?/, when.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) : "Updated " + when.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      if (d.warning) st.className = "note-status warn";
+    }
+    const empty = $("anEmpty"), body = $("anBody");
+    if (!d) {
+      body.hidden = true; empty.hidden = false; empty.classList.toggle("err", !!err);
+      const title = empty.querySelector(".an-empty-t"), hint = empty.querySelector(".hint"), quick = $("anQuick");
+      quick.textContent = "";
+      if (err) {
+        title.textContent = `Couldn't load ${t}`; hint.textContent = err;
+        quick.append(el("button", { class: "btn", type: "button", text: "Try again", onclick: () => loadAnalysis(t, false) }));
+      } else if (loading) {
+        title.textContent = t + " · " + ((tickerMap().get(t) || {}).name || "");
+        hint.textContent = "Fetching the income statement, balance sheet and cash flow (a few seconds the first time).";
+      } else {
+        title.textContent = "Pick a stock to see its financial statements";
+        hint.textContent = "Several years of profitability, balance sheet and cash flow figures, from Yahoo Finance.";
+        const picks = anRecent().concat(S.watchlists.flatMap((w) => w.items.map((i) => i.ticker)));
+        const set = [...new Set(picks.length ? picks : ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"])].slice(0, 8);
+        set.forEach((x) => quick.append(el("button", { class: "btn sm", type: "button", text: x, onclick: () => openAnalysis(x) })));
+      }
+      applySide();
+      return;
+    }
+    empty.hidden = true; body.hidden = false;
+    const r = tickerMap().get(t) || {};
+    $("anTk").textContent = t; $("anName").textContent = r.name || "";
+    const meta = $("anMeta"); meta.textContent = "";
+    if (r.sector) meta.append(el("span", { text: r.sector }));
+    if (r.price != null) {
+      const px = el("span", { class: "px", text: FIELDS.price.fmt(r.price) + " " });
+      if (r.chg != null) px.append(el("span", { class: r.chg > 0 ? "up" : r.chg < 0 ? "down" : "", text: FIELDS.chg.fmt(r.chg) }));
+      meta.append(px);
+    }
+    if (r.mktCap != null) meta.append(el("span", { text: "Mkt cap " + fmtMoney(r.mktCap * 1e9) }));
+    const u = linkUrls(t);
+    meta.append(el("a", { href: u.yahoo, target: "_blank", rel: "noopener noreferrer", text: "Yahoo ↗" }),
+      el("a", { href: u.sa, target: "_blank", rel: "noopener noreferrer", text: "Stock Analysis ↗" }));
+
+    // highlights: latest annual figures (TTM when available)
+    const A = d.annual, Q = d.quarterly, hi = $("anHi"); hi.textContent = "";
+    const lastLabel = (x) => (x ? A.periods[x.i].label : "");
+    const card = (k, x, kind, note, noteCls, valCls) => {
+      if (!x) return;
+      hi.append(el("div", { class: "an-card" }, el("div", { class: "k", text: k }),
+        el("div", { class: "v" + (valCls ? " " + valCls : ""), text: fmtAn(x.v, kind) }),
+        el("div", { class: "n" + (noteCls ? " " + noteCls : ""), text: note || lastLabel(x) })));
+    };
+    const rev = lastVal(A, "revenue"), fy = lastGrowth(A, "revenue"), qg = lastGrowth(Q, "revenue");
+    card("Revenue", rev, "money", rev ? lastLabel(rev) + (fy ? ` · ${fy.label} ${fmtGrowth(fy.g)}` : "") : null);
+    if (qg) card("Revenue growth", { v: qg.g }, "pct", `Quarter to ${qg.label}, YoY`, "", qg.g > 0 ? "up" : qg.g < 0 ? "down" : "");
+    card("Gross margin", lastVal(A, "grossMargin"), "pct");
+    card("Operating margin", lastVal(A, "operatingMargin"), "pct");
+    card("Net margin", lastVal(A, "netMargin"), "pct");
+    const fcf = lastVal(A, "fcf"), fm = lastVal(A, "fcfMargin");
+    card("Free cash flow", fcf, "money", fm ? `${fmtAn(fm.v, "pct")} of revenue · ${lastLabel(fcf)}` : null);
+    if (fcf && r.mktCap) card("FCF yield", { v: fcf.v / (r.mktCap * 1e9) * 100 }, "pct", `${lastLabel(fcf)} FCF ÷ market cap`);
+    card("Current ratio", lastVal(A, "currentRatio"), "ratio");
+    card("Debt / equity", lastVal(A, "debtToEquity"), "ratio");
+    const nd = lastVal(A, "netDebt");
+    if (nd) card(nd.v < 0 ? "Net cash" : "Net debt", { v: Math.abs(nd.v), i: nd.i }, "money");
+
+    // sections
+    const view = d[S.anPeriod], lag = S.anPeriod === "quarterly" ? 4 : 1, box = $("anSections"); box.textContent = "";
+    view.sections.forEach((sec) => {
+      if (!sec.rows.length) return;
+      const thead = el("tr", {}, el("th", { text: "" }));
+      view.periods.forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
+      thead.append(el("th", { class: "spark", text: "Trend" }));
+      const tb = el("tbody");
+      sec.rows.forEach((row) => {
+        const lbl = el("td", { class: "lbl" });
+        if (row.hint) lbl.append(el("abbr", { title: row.hint, text: row.label })); else lbl.textContent = row.label;
+        const tr = el("tr", {}, lbl);
+        row.values.forEach((v, i) => {
+          const p = view.periods[i], td = el("td", { class: "v" + (p.ttm ? " ttm" : "") + (v != null && v < 0 && row.kind === "money" ? " neg" : ""), text: fmtAn(v, row.kind) });
+          const g = row.growth && row.growth[i];
+          if (g != null) td.append(el("span", { class: "sub" + (NEUTRAL_GROWTH.has(row.key) ? "" : g > 0 ? " up" : g < 0 ? " down" : ""), text: fmtGrowth(g), title: "vs " + (view.periods[i - lag] || {}).label }));
+          else if (MARGIN_KEYS.has(row.key) && !p.ttm && i >= lag && v != null && row.values[i - lag] != null) {
+            const dpp = v - row.values[i - lag];
+            td.append(el("span", { class: "sub" + (dpp > 0.05 ? " up" : dpp < -0.05 ? " down" : ""), text: (dpp > 0 ? "+" : dpp < 0 ? "−" : "") + Math.abs(dpp).toFixed(1) + " pp", title: "Change vs " + view.periods[i - lag].label + ", in percentage points" }));
+          }
+          tr.append(td);
+        });
+        const sp = el("td", { class: "spark" }), svg = spark(row.values.filter((_, i) => !view.periods[i].ttm));
+        if (svg) sp.append(svg);
+        tr.append(sp);
+        tb.append(tr);
+      });
+      const note = { profit: "Growth under each figure is year over year.", balance: "At the end of each period.", cash: "Negative figures are cash going out." }[sec.id];
+      box.append(el("section", { class: "an-sec", "aria-label": sec.title },
+        el("h3", {}, sec.title, el("span", { class: "hint", text: note })),
+        el("div", { class: "table-wrap" }, el("table", { class: "an-t" }, el("thead", {}, thead), tb))));
+    });
+    const qNote = S.anPeriod === "quarterly" ? " Quarterly return on equity and assets are annualized (×4)." : " TTM = the last four reported quarters; balance-sheet TTM figures are from the latest quarter.";
+    $("anFoot").textContent = `Source: Yahoo Finance, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
+    applySide();
+  }
+  $("anForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const t = $("anTicker").value.trim().toUpperCase().split(/[\s—–]+/)[0].replace(/^\$/, "");
+    if (!t) return;
+    $("anTicker").value = ""; openAnalysis(t);
+  });
+  $("anClear").addEventListener("click", () => { lsSet("screener.anRecent", []); renderAnalysisSide(); });
+  $("anRefresh").addEventListener("click", () => { if (S.anTicker) loadAnalysis(S.anTicker, true); });
+  document.querySelectorAll("#anPeriod button").forEach((b) => b.addEventListener("click", () => {
+    S.anPeriod = b.dataset.p; lsSet("screener.anPeriod", S.anPeriod); renderAnalysis();
+  }));
 
   // ---------- Link card: hover (or tap) a ticker or company name ----------
   const canHover = window.matchMedia("(hover: hover)");
@@ -1809,7 +2146,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     card.replaceChildren(
       el("div", { class: "hc-head" }, el("span", { class: "hc-tk", text: t }), r.name ? el("span", { class: "hc-name", text: r.name }) : null, meta),
       go(u.yahoo, "Quote & chart", "Yahoo Finance", "Price, chart, news, key statistics"),
-      go(u.sa, "Financial statements", "Stock Analysis", "Income statement, balance sheet, cash flow"));
+      go(u.sa, "Financial statements", "Stock Analysis", "Income statement, balance sheet, cash flow"),
+      el("a", { href: "#analysis/" + encodeURIComponent(t), onclick: (e) => { e.preventDefault(); hideCard(0); openAnalysis(t); } },
+        el("span", { class: "what", text: "Advanced analysis" }), el("span", { class: "site", text: "In this app" }),
+        el("span", { class: "desc", text: "Margins, balance sheet, free cash flow over the years" })));
     card.hidden = false; cardFor = t;
     const box = a.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
     let left = box.left + window.scrollX, top = box.bottom + window.scrollY + 6;
@@ -1895,7 +2235,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const next = e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : (i + keys[e.key] + TABS.length) % TABS.length;
     setTab(TABS[next].id); $("tab-" + S.tab).focus();
   });
-  window.addEventListener("hashchange", () => { const t = TABS.find((x) => "#" + x.hash === location.hash); if (t) setTab(t.id); });
+  window.addEventListener("hashchange", () => {
+    const m = location.hash.match(/^#analysis\/([^/?#]+)/);
+    if (m) return openAnalysis(decodeURIComponent(m[1]));
+    const t = TABS.find((x) => "#" + x.hash === location.hash); if (t) setTab(t.id);
+  });
   $("addForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const t = $("addTicker").value.trim().toUpperCase().split(/[\s—–]+/)[0].replace(/^\$/, "");
@@ -2020,7 +2364,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   applySide();
   renderStorageNote(); refreshAll();
-  const fromHash = TABS.find((t) => "#" + t.hash === location.hash);
+  const fromHash = TABS.find((t) => "#" + t.hash === location.hash.split("/")[0]);
+  const anHash = location.hash.match(/^#analysis\/([^/?#]+)/);
+  if (anHash) S.anTicker = decodeURIComponent(anHash[1]).toUpperCase();
   setTab(fromHash ? fromHash.id : lsGet("screener.tab") || "screener");
   loadBuiltins();
   store.init().finally(() => { wstore.init(); nstore.init(); renderSettings(); });

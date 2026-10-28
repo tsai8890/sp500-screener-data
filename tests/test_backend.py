@@ -18,7 +18,7 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import build, common, fundamentals, notes_store, prices, screens_db, universe, yahoo  # noqa: E402
+from backend import analysis, build, common, fundamentals, notes_store, prices, screens_db, universe, yahoo  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -312,6 +312,138 @@ class IncrementalFundamentals(unittest.TestCase):
         self.assertEqual(due, ["MSFT", "XOM", "AAPL"])   # never fetched first, then the oldest
         common.write_json(self.path, {"asOf": common.iso(common.utc_now()), "stocks": {"AAPL": {"price": 1}}})
         self.assertNotIn("AAPL", [t for t, _, _ in fundamentals.due(common.read_json(self.path), 3600)])
+
+
+def statement(rows: dict, ends: list[str]) -> pd.DataFrame:
+    """A yfinance-style statement: line items as rows, newest period first."""
+    cols = [pd.Timestamp(e) for e in ends]
+    return pd.DataFrame({c: {k: v[i] for k, v in rows.items()} for i, c in enumerate(cols)})
+
+
+class FakeStatements:
+    A = ["2025-09-30", "2024-09-30", "2023-09-30"]
+    Q = ["2026-06-30", "2026-03-31", "2025-12-31", "2025-09-30", "2025-06-30"]
+
+    def __init__(self, sym):
+        self.sym = sym
+        self.calls = []
+
+    def _rec(self, name):
+        self.calls.append(name)
+
+    @property
+    def income_stmt(self):
+        self._rec("income_stmt")
+        return statement({"Total Revenue": [400, 380, 360], "Cost Of Revenue": [220, 215, 210],
+                          "Operating Income": [120, 110, 100], "Net Income Common Stockholders": [100, 95, 90],
+                          "EBITDA": [140, 130, 120], "Diluted EPS": [6.6, 6.1, 5.7], "Diluted Average Shares": [15, 15.5, 16],
+                          "Research And Development": [30, 28, 26]}, self.A)
+
+    @property
+    def quarterly_income_stmt(self):
+        self._rec("quarterly_income_stmt")
+        return statement({"Total Revenue": [110, 100, 120, 102, 95], "Gross Profit": [50, 45, 55, 46, 42],
+                          "Operating Income": [33, 30, 36, 31, 28], "Net Income Common Stockholders": [28, 25, 30, 26, 24],
+                          "Diluted EPS": [1.9, 1.7, 2.0, 1.7, 1.6], "Diluted Average Shares": [14.8, 14.9, 15, 15, 15.1]}, self.Q)
+
+    @property
+    def balance_sheet(self):
+        self._rec("balance_sheet")
+        return statement({"Current Assets": [150, 140, 130], "Total Assets": [360, 350, 340], "Inventory": [10, 9, 8],
+                          "Current Liabilities": [160, 150, 140], "Total Liabilities Net Minority Interest": [290, 280, 270],
+                          "Total Debt": [100, 110, 120], "Cash Cash Equivalents And Short Term Investments": [60, 55, 50],
+                          "Stockholders Equity": [70, 70, 70]}, self.A)
+
+    @property
+    def quarterly_balance_sheet(self):
+        self._rec("quarterly_balance_sheet")
+        return statement({"Current Assets": [155, 150, 148, 150, 145], "Total Assets": [365, 362, 361, 360, 355],
+                          "Current Liabilities": [150, 155, 158, 160, 150], "Stockholders Equity": [75, 72, 71, 70, 69],
+                          "Total Debt": [95, 97, 99, 100, 101], "Cash Cash Equivalents And Short Term Investments": [65, 62, 61, 60, 58]}, self.Q)
+
+    @property
+    def cashflow(self):
+        self._rec("cashflow")
+        return statement({"Operating Cash Flow": [120, 110, 105], "Capital Expenditure": [-12, -11, -10],
+                          "Stock Based Compensation": [10, 9, 8], "Repurchase Of Capital Stock": [-90, -80, -70]}, self.A)
+
+    @property
+    def quarterly_cashflow(self):
+        self._rec("quarterly_cashflow")
+        return statement({"Operating Cash Flow": [32, 28, 35, 30, 27], "Free Cash Flow": [29, 25, 31, 27, 24]}, self.Q)
+
+
+class Analysis(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.orig = (analysis.CACHE_DIR, getattr(analysis.yf, "Ticker", None), analysis.GATE)
+        analysis.CACHE_DIR = self.tmp
+        self.made = []
+        def ticker(sym):
+            t = FakeStatements(sym); self.made.append(t); return t
+        analysis.yf.Ticker = ticker
+        analysis.GATE = yahoo.Gate(rps=1000)
+
+    def tearDown(self):
+        analysis.CACHE_DIR, analysis.yf.Ticker, analysis.GATE = self.orig
+
+    def row(self, view, key):
+        for sec in view["sections"]:
+            for r in sec["rows"]:
+                if r["key"] == key:
+                    return r
+        return None
+
+    def test_annual_metrics_growth_and_ttm(self):
+        out = analysis.get("aapl")
+        a = out["annual"]
+        self.assertEqual([p["label"] for p in a["periods"]], ["FY2023", "FY2024", "FY2025", "TTM"])
+        rev = self.row(a, "revenue")
+        self.assertEqual(rev["values"], [360, 380, 400, 432])            # TTM = last four quarters
+        self.assertAlmostEqual(rev["growth"][2], 5.26, places=2)
+        self.assertIsNone(rev["growth"][3])
+        self.assertEqual(self.row(a, "grossProfit")["values"][:3], [150, 165, 180])   # derived from cost of revenue
+        self.assertAlmostEqual(self.row(a, "grossMargin")["values"][2], 45.0)
+        self.assertAlmostEqual(self.row(a, "currentRatio")["values"][2], 0.9375)
+        self.assertEqual(self.row(a, "fcf")["values"][:3], [95, 99, 108])          # OCF + capex
+        self.assertEqual(self.row(a, "netDebt")["values"][2], 40)
+        self.assertEqual(self.row(a, "nonCurrentAssets")["values"][2], 210)
+        self.assertEqual([s["id"] for s in a["sections"]], ["profit", "balance", "cash"])
+
+    def test_quarterly_growth_is_year_over_year(self):
+        q = analysis.get("AAPL")["quarterly"]
+        self.assertEqual(q["periods"][-1]["label"], "Jun 2026")
+        g = self.row(q, "revenue")["growth"]
+        self.assertEqual(g[:4], [None, None, None, None])
+        self.assertAlmostEqual(g[4], (110 - 95) / 95 * 100, places=2)
+        self.assertAlmostEqual(self.row(q, "roe")["values"][-1], 28 * 4 / 75 * 100, places=2)   # annualized
+
+    def test_cached_for_a_day(self):
+        analysis.get("MSFT")
+        analysis.get("MSFT")
+        analysis.get("MSFT", refresh=True)       # younger than MIN_REFRESH: still cached
+        self.assertEqual(len(self.made), 1)
+        self.assertEqual(len(self.made[0].calls), 6)
+
+    def test_rate_limited_uses_old_copy(self):
+        analysis.get("NVDA")
+        path = analysis._cache_path("NVDA"); raw = common.read_json(path)
+        raw["fetchedAt"] = "2020-01-01T00:00:00Z"; common.write_json(path, raw)
+        analysis.GATE.limited()
+        out = analysis.get("NVDA")
+        self.assertIn("limiting", out["warning"])
+        analysis.GATE.until = 0
+        with self.assertRaises(analysis.RateLimited):
+            analysis.GATE.limited(); analysis.get("AMD")
+
+    def test_rejects_bad_ticker_and_empty_statements(self):
+        with self.assertRaises(ValueError):
+            analysis.get("../etc")
+        class Empty:
+            def __getattr__(self, name): return pd.DataFrame()
+        analysis.yf.Ticker = lambda sym: Empty()
+        with self.assertRaises(LookupError):
+            analysis.get("ZZZZ")
 
 if __name__ == "__main__":
     unittest.main()

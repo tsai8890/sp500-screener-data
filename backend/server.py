@@ -29,6 +29,8 @@ What it does:
         PUT    /api/notes/<id>       save one note: {body, pinned, created, updated}
         DELETE /api/notes/<id>       delete one note
         GET /api/storage           where screens, watchlists and notes are kept
+        GET /api/analysis/<ticker> financial statements and metrics for one stock
+                                   (cached a day in data/analysis/; ?refresh=1 to refetch)
 
 Settings (environment variables):
   HOST (127.0.0.1: this computer only; 0.0.0.0 to allow other devices)  PORT (8000)
@@ -48,7 +50,7 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import build, fundamentals, notes_store, prices, screens_db
+from . import analysis, build, fundamentals, notes_store, prices, screens_db
 from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
                      parse_iso, read_json, universe_path, utc_now)
 from .universe import UNIVERSES
@@ -192,6 +194,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
+    def _analysis(self, ticker: str, refresh: bool) -> None:
+        from urllib.parse import unquote
+        try:
+            return self._json(200, analysis.get(unquote(ticker), refresh=refresh))
+        except ValueError as e:
+            return self._json(400, {"error": str(e)})
+        except LookupError as e:
+            return self._json(404, {"error": str(e)})
+        except analysis.RateLimited:
+            wait = max(1, round(GATE.paused_for() / 60))
+            return self._json(503, {"error": f"Yahoo is limiting requests right now. Try again in about {wait} min."})
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            return self._json(502, {"error": f"Couldn't get the statements from Yahoo Finance ({type(e).__name__})."})
+
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
         uid = None
@@ -217,6 +234,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"notes": notes_store.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/storage":
             return self._json(200, storage_info())
+        if path.startswith("/api/analysis/"):
+            return self._analysis(path[len("/api/analysis/"):], "refresh=1" in self.path.partition("?")[2])
         if path == "/api/watchlists":
             return self._json(200, {"watchlists": screens_db.list_watchlists(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/screens":
