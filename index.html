@@ -189,6 +189,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-id { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .an-tk { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(24px * var(--ts)); font-weight: 700; color: var(--accent); }
 .an-name { font-family: var(--font-display); font-size: calc(21.5px * var(--ts)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-watch { align-self: center; margin-left: 6px; white-space: nowrap; }
+.an-watch .st { color: var(--muted); margin-right: 5px; }
+.an-watch.on .st { color: var(--star); }
 .an-sector { font-size: calc(15px * var(--ts)); color: var(--muted); white-space: nowrap; }
 .an-meta { font-size: calc(15px * var(--ts)); color: var(--muted); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .an-meta .px { font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--ink); }
@@ -733,6 +736,7 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
               <span class="an-tk" id="anTk"></span>
               <span class="an-name" id="anName"></span>
               <span class="an-sector" id="anSector"></span>
+              <button class="btn sm an-watch" id="anWatchBtn" type="button" aria-haspopup="dialog"></button>
             </div>
             <div class="an-meta" id="anMeta"></div>
           </div>
@@ -1324,7 +1328,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     });
   }
   function wtoast(msg) { $("watchToast").textContent = msg; if (S.tab !== "watch") toast(msg); }
-  async function saveWL(wl) { await wstore.put(clone(wl)); renderWatchSide(); renderResults(); renderRail(); }
+  async function saveWL(wl) { await wstore.put(clone(wl)); renderWatchSide(); renderResults(); renderRail(); if (S.tab === "analysis") { renderAnWatchBtn(); renderAnalysisSide(); } }
   async function toggleWatch(ticker, price) {
     const wl = activeWL(), i = wl.items.findIndex((x) => x.ticker === ticker);
     if (i >= 0) { wl.items.splice(i, 1); wtoast(`Removed ${ticker} from ${wl.name}`); }
@@ -1354,7 +1358,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function closeWatchPop(refocus) {
     if (!S.pop) return;
     const t = S.pop.ticker; S.pop = null; $("wlPop").hidden = true;
-    if (refocus) { const b = document.querySelector(`.star[data-t="${CSS.escape(t)}"]`); if (b) b.focus(); }
+    if (refocus) { const b = S.tab === "analysis" ? $("anWatchBtn") : document.querySelector(`.star[data-t="${CSS.escape(t)}"]`); if (b) b.focus(); }
   }
   function renderWatchPop() {
     const pop = $("wlPop"), { ticker, price } = S.pop;
@@ -2149,6 +2153,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     empty.hidden = true; body.hidden = false;
     const r = tickerMap().get(t) || {};
     $("anTk").textContent = t; $("anName").textContent = r.name || ""; $("anSector").textContent = r.sector || "";
+    renderAnWatchBtn();
     const meta = $("anMeta"); meta.textContent = "";
     if (r.price != null) {
       const px = el("span", { class: "px", text: FIELDS.price.fmt(r.price) + " " });
@@ -2237,6 +2242,20 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("anFoot").textContent = `Source: Yahoo Finance, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
     applySide();
   }
+  // Add to watchlist: the same picker as the ☆ in the Screener
+  function renderAnWatchBtn() {
+    const b = $("anWatchBtn"), t = S.anTicker; if (!b || !t) return;
+    const lists = watchIndex().get(t) || [];
+    b.classList.toggle("on", lists.length > 0);
+    b.replaceChildren(el("span", { class: "st", text: lists.length ? "★" : "☆" }),
+      lists.length === 0 ? "Add to watchlist" : lists.length === 1 ? "In " + lists[0] : `In ${lists.length} watchlists`);
+    b.title = lists.length ? "Watchlists: " + lists.join(", ") + ". Click to change." : "Add " + t + " to a watchlist";
+  }
+  $("anWatchBtn").addEventListener("click", (e) => {
+    e.stopPropagation();   // the page closes the picker on outside clicks
+    if (S.pop && S.pop.ticker === S.anTicker) return closeWatchPop(false);
+    openWatchPop(e.currentTarget, S.anTicker, (tickerMap().get(S.anTicker) || {}).price);
+  });
   $("anForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const t = $("anTicker").value.trim().toUpperCase().split(/[\s—–]+/)[0].replace(/^\$/, "");
