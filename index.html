@@ -2079,14 +2079,16 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     view.sections.forEach((sec) => {
       if (!sec.rows.length) return;
       const thead = el("tr", {}, el("th", { text: "" }));
-      view.periods.forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
-      thead.append(el("th", { class: "spark", text: "Trend" }));
+      const order = view.periods.map((_, i) => i).reverse();   // newest on the left
+      order.map((i) => view.periods[i]).forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
+      thead.append(el("th", { class: "spark", text: "Trend", title: "Oldest to newest, left to right; the dark bar is the latest" }));
       const tb = el("tbody");
       sec.rows.forEach((row) => {
         const lbl = el("td", { class: "lbl" });
         if (row.hint) lbl.append(el("abbr", { title: row.hint, text: row.label })); else lbl.textContent = row.label;
         const tr = el("tr", {}, lbl);
-        row.values.forEach((v, i) => {
+        order.forEach((i) => {
+          const v = row.values[i];
           const p = view.periods[i], td = el("td", { class: "v" + (p.ttm ? " ttm" : "") + (v != null && v < 0 && row.kind === "money" ? " neg" : ""), text: fmtAn(v, row.kind) });
           const g = row.growth && row.growth[i];
           if (g != null) td.append(el("span", { class: "sub" + (NEUTRAL_GROWTH.has(row.key) ? "" : g > 0 ? " up" : g < 0 ? " down" : ""), text: fmtGrowth(g), title: "vs " + (view.periods[i - lag] || {}).label }));
