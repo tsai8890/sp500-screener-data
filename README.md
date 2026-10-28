@@ -98,6 +98,18 @@ Nothing is deleted, and running it again is harmless. Reload the page afterwards
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
 
+## Advanced Analysis tab
+
+The **Analysis** tab shows one company's financial statements over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.
+
+- **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating, net and EBITDA margins (with the change in percentage points); R&D as a share of revenue; return on equity and on assets.
+- **Balance sheet**: cash and short-term investments, receivables, inventory, current and non-current assets, current and non-current liabilities, total debt, net debt, shareholders' equity; current ratio, quick ratio, debt/equity, liabilities/assets.
+- **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. The summary cards add FCF yield (FCF ÷ market cap).
+
+*Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier. Hover a dotted label for its definition.
+
+Statements are fetched from Yahoo Finance when you open a stock (`GET /api/analysis/<ticker>`, `backend/analysis.py`): 6 requests, which skip ahead of the background updates but respect a rate-limit pause. They are cached for a day in `data/analysis/<TICKER>.json`; *Refresh* fetches them again. If Yahoo can't be reached, the last cached copy is shown with a note. Banks and insurers don't report some items (gross profit, current assets); those rows are left out.
+
 ## Notes tab
 
 The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` task lists, tables, code blocks, links, and `$NVDA` to link a ticker. Pin a note to keep it at the top. Notes save automatically (about a second after you stop typing, and when you switch notes or leave the page). Every edit is also kept in the browser, so if a save fails it is retried and nothing is lost; the status next to the editor says where the note was saved and when.
@@ -112,6 +124,7 @@ The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` tas
 | `backend/server.py` | The server: update schedule plus HTTP (standard library only). |
 | `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
 | `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
+| `backend/analysis.py` | Financial statements and metrics for the Advanced Analysis tab, fetched on demand and cached in `data/analysis/`. |
 | `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
 | `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
 | `backend/screens_db.py` | Saved screens and watchlists in SQLite. |
