@@ -123,7 +123,7 @@ The server also computes balance-sheet and cash-flow metrics (current and non-cu
 
 *Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier (matched by date). Fiscal years are named after the year they end in, as companies do (NVIDIA's FY2026 ended January 2026). Hover a dotted label for its definition.
 
-Statements are fetched from Yahoo Finance when you open a stock (`GET /api/analysis/<ticker>`, `backend/analysis.py`): 6 requests, which skip ahead of the background updates but respect a rate-limit pause. They are cached for a day in `data/analysis/<TICKER>.json`; *Refresh* fetches them again. If Yahoo can't be reached, the last cached copy is shown with a note. Banks and insurers don't report some items (gross profit, current assets); those rows are left out.
+Statements are fetched from Yahoo Finance when you open a stock (`GET /api/analysis/<ticker>`, `backend/analysis.py`): 6 requests, which skip ahead of the background updates but respect a rate-limit pause. They are cached for a day in `data/analysis/<TICKER>.json` (3 hours while a new quarter is overdue, i.e. the newest quarter is more than 95 days old: Yahoo adds a reported quarter 1–3 days after the earnings release, and the page says so); *Refresh* fetches them again. If Yahoo can't be reached, the last cached copy is shown with a note. Banks and insurers don't report some items (gross profit, current assets); those rows are left out.
 
 ## Notes tab
 

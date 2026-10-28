@@ -30,7 +30,9 @@ from .yahoo import GATE, is_rate_limit
 
 CACHE_DIR = os.environ.get("SCREENER_ANALYSIS_DIR", os.path.join(ROOT, "data", "analysis"))
 MAX_AGE = 24 * 3600        # cached statements are fetched again after a day
-MIN_REFRESH = 10 * 60      # "Refresh" does nothing if the data is younger than this
+MAX_AGE_DUE = 3 * 3600     # ... or after 3 hours while a new quarter is overdue (earnings season)
+MIN_REFRESH = 60           # "Refresh" refetches unless the copy is less than a minute old
+QUARTER_DUE_DAYS = 95      # a quarter ends every ~91 days; past this, a new one should be out soon
 TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
 
 # Yahoo line items to keep (first name found wins).
@@ -137,6 +139,18 @@ def fetch_raw(ticker: str) -> dict:
     return raw
 
 
+def _latest_quarter_end(raw: dict) -> datetime | None:
+    ends = [e for kind in ("income",) for e in (raw.get("quarterly", {}).get(kind) or {})]
+    dates = [d for d in (_date(e) for e in ends) if d]
+    return max(dates) if dates else None
+
+
+def _quarter_overdue(raw: dict) -> bool:
+    """True when the newest quarter is old enough that the next report is (about to be) out."""
+    end = _latest_quarter_end(raw)
+    return bool(end) and (datetime.utcnow() - end).days > QUARTER_DUE_DAYS
+
+
 def _cache_path(ticker: str) -> str:
     return os.path.join(CACHE_DIR, ticker.replace("/", "_") + ".json")
 
@@ -157,7 +171,8 @@ def get(ticker: str, refresh: bool = False) -> dict:
     with lock:   # two tabs asking for the same stock fetch it once
         cached = read_json(_cache_path(ticker))
         age = _age(cached)
-        if cached and (age < MIN_REFRESH or (age < MAX_AGE and not refresh)):
+        max_age = MAX_AGE_DUE if cached and _quarter_overdue(cached) else MAX_AGE
+        if cached and (age < MIN_REFRESH or (age < max_age and not refresh)):
             return compute(cached)
         try:
             raw = fetch_raw(ticker)
@@ -389,9 +404,12 @@ def compute(raw: dict) -> dict:
     ttm = _ttm(quarterly)
     if ttm and annual and quarterly and quarterly[-1][0] <= annual[-1][0]:
         ttm = None   # the latest quarter is already the fiscal year end: TTM = last FY
+    latest_q = _latest_quarter_end(raw)
     return {
         "ticker": raw.get("ticker"),
         "fetchedAt": raw.get("fetchedAt"),
+        "latestQuarter": latest_q.strftime("%Y-%m-%d") if latest_q else None,
+        "quarterOverdue": _quarter_overdue(raw),
         "currency": raw.get("currency", "USD"),
         "annual": _view(annual, False, ttm),
         "quarterly": _view(quarterly, True, None),
