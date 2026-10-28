@@ -194,18 +194,19 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 32.5px; lett
 .an-sec h3 .hint { font-family: var(--font-body); font-weight: 400; }
 .an-sec .table-wrap { border-top: 0; }
 table.an-t th, table.an-t td { text-align: right; vertical-align: top; }
-table.an-t th:first-child, table.an-t td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; padding-left: 18px; min-width: 210px; }
+table.an-t th:first-child, table.an-t td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; padding-left: 18px; min-width: 170px; }
 table.an-t th:first-child { z-index: 2; }
 table.an-t th { position: static; }
-table.an-t td.lbl { font-size: 15.5px; }
+table.an-t td.lbl { font-size: 15.5px; white-space: normal; max-width: 190px; }
 table.an-t td.lbl abbr { text-decoration: underline dotted var(--muted); text-underline-offset: 3px; cursor: help; }
-table.an-t td.v { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 16px; min-width: 104px; }
+table.an-t td.v { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 16px; min-width: 94px; }
 table.an-t td.v.neg { color: var(--muted); }
 table.an-t td .sub { color: var(--muted); }
 table.an-t .ttm { background: var(--accent-soft); }
 table.an-t th.ttm { color: var(--accent); }
 table.an-t tr.grp td { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding-top: 14px; border-bottom-color: transparent; }
-table.an-t td.spark { width: 130px; padding-right: 18px; vertical-align: middle; }
+table.an-t td.spark, table.an-t th.spark { width: 150px; padding-left: 26px; padding-right: 18px; vertical-align: middle; }
+table.an-t th.spark { vertical-align: bottom; }
 .spark svg { display: block; width: 112px; height: 34px; margin-left: auto; }
 .spark rect { fill: var(--accent); opacity: .4; } .spark rect.last { opacity: 1; } .spark rect.neg { fill: var(--fail); }
 .spark line { stroke: var(--line); stroke-width: 1; }
