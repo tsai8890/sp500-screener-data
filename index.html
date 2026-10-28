@@ -2167,9 +2167,22 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("div", { class: "v" + (valCls ? " " + valCls : ""), text: fmtAn(x.v, kind) }),
         el("div", { class: "n" + (noteCls ? " " + noteCls : ""), text: note || lastLabel(x) })));
     };
-    const rev = lastVal(A, "revenue"), fy = lastGrowth(A, "revenue"), qg = lastGrowth(Q, "revenue");
-    card("Revenue", rev, "money", rev ? lastLabel(rev) + (fy ? ` · ${fy.label} growth ${fmtGrowth(fy.g)}` : "") : null);
-    if (qg) card("Rev. growth, latest qtr", { v: qg.g }, "pct", `${qg.label} vs ${qg.vs || "a year earlier"}`, "", qg.g > 0 ? "up" : qg.g < 0 ? "down" : "");
+    const qg = lastGrowth(Q, "revenue");
+    const cls = (g) => (g > 0 ? "up" : g < 0 ? "down" : "");
+    if (qg) card("Revenue growth YoY", { v: qg.g }, "pct", `${qg.label} vs ${qg.vs || "a year earlier"}`, "", cls(qg.g));
+    // QoQ: the latest quarter against the one right before it (about three months earlier)
+    const qr = (Q.sections.find((x) => x.id === "profit") || { rows: [] }).rows.find((r) => r.key === "revenue");
+    if (qr) {
+      const idx = qr.values.map((v, i) => (v != null && !Q.periods[i].ttm ? i : -1)).filter((i) => i >= 0);
+      const a = idx[idx.length - 1], b = idx[idx.length - 2];
+      if (a != null && b != null) {
+        const days = (new Date(Q.periods[a].end) - new Date(Q.periods[b].end)) / 864e5;
+        if (days > 60 && days < 120 && qr.values[b]) {
+          const g = (qr.values[a] - qr.values[b]) / Math.abs(qr.values[b]) * 100;
+          card("Revenue growth QoQ", { v: g }, "pct", `${Q.periods[a].label} vs ${Q.periods[b].label}`, "", cls(g));
+        }
+      }
+    }
     card("Gross margin", lastVal(A, "grossMargin"), "pct");
     card("Net margin", lastVal(A, "netMargin"), "pct");
     card("Debt / equity", lastVal(A, "debtToEquity"), "ratio");
