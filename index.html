@@ -2026,7 +2026,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function lastGrowth(view, key) {
     for (const sec of view.sections) for (const r of sec.rows) if (r.key === key && r.growth) {
-      for (let i = r.growth.length - 1; i >= 0; i--) if (r.growth[i] != null) return { g: r.growth[i], label: view.periods[i].label };
+      for (let i = r.growth.length - 1; i >= 0; i--) if (r.growth[i] != null) return { g: r.growth[i], label: view.periods[i].label, vs: (view.periods[view.periods[i].prev] || {}).label };
     }
     return null;
   }
@@ -2086,14 +2086,14 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("div", { class: "n" + (noteCls ? " " + noteCls : ""), text: note || lastLabel(x) })));
     };
     const rev = lastVal(A, "revenue"), fy = lastGrowth(A, "revenue"), qg = lastGrowth(Q, "revenue");
-    card("Revenue", rev, "money", rev ? lastLabel(rev) + (fy ? ` · ${fy.label} ${fmtGrowth(fy.g)}` : "") : null);
-    if (qg) card("Revenue growth", { v: qg.g }, "pct", `${qg.label} quarter, YoY`, "", qg.g > 0 ? "up" : qg.g < 0 ? "down" : "");
+    card("Revenue", rev, "money", rev ? lastLabel(rev) + (fy ? ` · ${fy.label} growth ${fmtGrowth(fy.g)}` : "") : null);
+    if (qg) card("Rev. growth, latest qtr", { v: qg.g }, "pct", `${qg.label} vs ${qg.vs || "a year earlier"}`, "", qg.g > 0 ? "up" : qg.g < 0 ? "down" : "");
     card("Gross margin", lastVal(A, "grossMargin"), "pct");
     card("Net margin", lastVal(A, "netMargin"), "pct");
     card("Debt / equity", lastVal(A, "debtToEquity"), "ratio");
 
     // sections
-    const view = d[S.anPeriod], lag = S.anPeriod === "quarterly" ? 4 : 1, box = $("anSections"); box.textContent = "";
+    const view = d[S.anPeriod], box = $("anSections"); box.textContent = "";
     view.sections.forEach((sec) => {
       if (!sec.rows.length) return;
       const thead = el("tr", {}, el("th", { text: "" }));
@@ -2109,10 +2109,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           const v = row.values[i];
           const p = view.periods[i], td = el("td", { class: "v" + (p.ttm ? " ttm" : "") + (v != null && v < 0 && row.kind === "money" ? " neg" : ""), text: fmtAn(v, row.kind) });
           const g = row.growth && row.growth[i];
-          if (g != null) td.append(el("span", { class: "sub" + (NEUTRAL_GROWTH.has(row.key) ? "" : g > 0 ? " up" : g < 0 ? " down" : ""), text: fmtGrowth(g), title: "vs " + (view.periods[i - lag] || {}).label }));
-          else if (MARGIN_KEYS.has(row.key) && !p.ttm && i >= lag && v != null && row.values[i - lag] != null) {
-            const dpp = v - row.values[i - lag];
-            td.append(el("span", { class: "sub" + (dpp > 0.05 ? " up" : dpp < -0.05 ? " down" : ""), text: (dpp > 0 ? "+" : dpp < 0 ? "−" : "") + Math.abs(dpp).toFixed(1) + " pp", title: "Change vs " + view.periods[i - lag].label + ", in percentage points" }));
+          if (g != null) td.append(el("span", { class: "sub" + (NEUTRAL_GROWTH.has(row.key) ? "" : g > 0 ? " up" : g < 0 ? " down" : ""), text: fmtGrowth(g), title: "vs " + (view.periods[p.prev] || {}).label }));
+          else if (MARGIN_KEYS.has(row.key) && p.prev != null && v != null && row.values[p.prev] != null) {
+            const dpp = v - row.values[p.prev];
+            td.append(el("span", { class: "sub" + (dpp > 0.05 ? " up" : dpp < -0.05 ? " down" : ""), text: (dpp > 0 ? "+" : dpp < 0 ? "−" : "") + Math.abs(dpp).toFixed(1) + " pp", title: "Change vs " + view.periods[p.prev].label + ", in percentage points" }));
           }
           tr.append(td);
         });

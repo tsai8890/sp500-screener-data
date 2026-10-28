@@ -106,7 +106,7 @@ The **Analysis** tab shows one company's financial statements over the years. Ty
 - **Balance sheet**: cash and short-term investments, receivables, inventory, current and non-current assets, current and non-current liabilities, total debt, net debt, shareholders' equity; current ratio, quick ratio, debt/equity, liabilities/assets.
 - **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. Cards at the top: revenue (TTM), latest quarterly revenue growth, gross margin, net margin, debt/equity.
 
-*Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier. Hover a dotted label for its definition.
+*Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier (matched by date). Fiscal years are named after the year they end in, as companies do (NVIDIA's FY2026 ended January 2026). Hover a dotted label for its definition.
 
 Statements are fetched from Yahoo Finance when you open a stock (`GET /api/analysis/<ticker>`, `backend/analysis.py`): 6 requests, which skip ahead of the background updates but respect a rate-limit pause. They are cached for a day in `data/analysis/<TICKER>.json`; *Refresh* fetches them again. If Yahoo can't be reached, the last cached copy is shown with a note. Banks and insurers don't report some items (gross profit, current assets); those rows are left out.
 

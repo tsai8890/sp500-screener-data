@@ -391,6 +391,20 @@ class FakeStatements:
         return statement({"Operating Cash Flow": [32, 28, 35, 30, 27], "Free Cash Flow": [29, 25, 31, 27, 24]}, self.Q)
 
 
+class AnalysisDates(unittest.TestCase):
+    def test_fiscal_year_named_after_its_end(self):
+        self.assertEqual(analysis._label("2026-01-25", False), "FY2026")
+        self.assertEqual(analysis._label("2025-09-30", False), "FY2025")
+
+    def test_growth_skips_a_missing_quarter(self):
+        q = {"income": {e: {"revenue": v} for e, v in
+                        [("2026-06-30", 200), ("2026-03-31", 150), ("2025-09-30", 120), ("2025-06-30", 100), ("2025-03-31", 90)]}}
+        out = analysis.compute({"ticker": "X", "annual": {}, "quarterly": q})["quarterly"]
+        rev = out["sections"][0]["rows"][0]
+        self.assertEqual(rev["growth"][-1], 100.0)   # Jun 2026 vs Jun 2025, not vs Mar 2025
+        self.assertAlmostEqual(rev["growth"][-2], 66.67, places=2)   # Mar 2026 vs Mar 2025
+
+
 class Analysis(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()

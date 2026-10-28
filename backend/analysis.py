@@ -10,7 +10,8 @@ metrics: profitability, balance sheet, cash flow.
 Annual view: the last 4-5 fiscal years plus a TTM column (sum of the last four
 quarters; the latest quarter for balance-sheet items). Quarterly view: the
 quarters Yahoo provides (usually 5-6). Growth is year over year: previous fiscal
-year, or the same quarter a year earlier.
+year, or the same quarter a year earlier, matched by date. Fiscal years are named
+after the calendar year they end in.
 """
 from __future__ import annotations
 
@@ -312,7 +313,21 @@ def _view(periods: list[tuple[str, dict]], quarterly: bool, ttm: dict | None) ->
     if ttm:
         cols.append({"end": periods[-1][0] if periods else None, "label": "TTM", "ttm": True})
         vals.append(_ratios(ttm, 1.0))
-    lag = 4 if quarterly else 1
+    # the period about a year before each one, matched by date so a quarter missing
+    # from Yahoo's data can't make growth compare against the wrong period
+    ends = [_date(c["end"]) for c in cols]
+    for i, c in enumerate(cols):
+        if c.get("ttm") or ends[i] is None:
+            continue
+        best = None
+        for j in range(i):
+            if ends[j] is None or cols[j].get("ttm"):
+                continue
+            days = (ends[i] - ends[j]).days
+            if 330 <= days <= 400 and (best is None or abs(days - 365) < abs((ends[i] - ends[best]).days - 365)):
+                best = j
+        if best is not None:
+            c["prev"] = best
     sections = []
     for sid, title in SECTIONS:
         rows = []
@@ -331,8 +346,8 @@ def _view(periods: list[tuple[str, dict]], quarterly: bool, ttm: dict | None) ->
                     if cols[i].get("ttm"):
                         g.append(None)   # TTM has no matching period a year earlier here
                     else:
-                        j = i - lag
-                        g.append(_round(_growth(vals[i].get(key), vals[j].get(key)), "pct") if j >= 0 else None)
+                        j = cols[i].get("prev")
+                        g.append(_round(_growth(vals[i].get(key), vals[j].get(key)), "pct") if j is not None else None)
                 row["growth"] = g
             rows.append(row)
         sections.append({"id": sid, "title": title, "rows": rows})
@@ -345,6 +360,13 @@ def _round(v, kind):
     return round(v, 4 if kind in ("ratio", "eps") else 2 if kind == "pct" else 0)
 
 
+def _date(end: str | None):
+    try:
+        return datetime.strptime(end, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return None
+
+
 def _label(end: str, quarterly: bool) -> str:
     try:
         d = datetime.strptime(end, "%Y-%m-%d")
@@ -352,8 +374,8 @@ def _label(end: str, quarterly: bool) -> str:
         return end
     if quarterly:
         return f"{d.strftime('%b')} {d.year}"
-    # fiscal years ending in January belong to the previous year (retailers)
-    return f"FY{d.year - 1 if d.month == 1 else d.year}"
+    # named after the year it ends in, as companies do (NVIDIA's FY2026 ends January 2026)
+    return f"FY{d.year}"
 
 
 def compute(raw: dict) -> dict:
