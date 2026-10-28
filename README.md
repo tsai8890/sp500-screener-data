@@ -98,11 +98,15 @@ Nothing is deleted, and running it again is harmless. Reload the page afterwards
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
 
+## Text size
+
+Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of window width, 115% up to 2400 px and 130% above that, for large monitors; or choose 100–175% yourself. Every font size and the widths tied to text scale together (CSS variable `--ts`).
+
 ## Advanced Analysis tab
 
 The **Analysis** tab shows one company's financial statements over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.
 
-- **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating, net and EBITDA margins (with the change in percentage points); R&D as a share of revenue; return on equity and on assets.
+- **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating and net margins, with the change in percentage points (pp: 45.0% → 47.5% is +2.5 pp).
 - **Balance sheet**: cash and short-term investments, receivables, inventory, current and non-current assets, current and non-current liabilities, total debt, net debt, shareholders' equity; current ratio, quick ratio, debt/equity, liabilities/assets.
 - **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. Cards at the top: revenue (TTM), latest quarterly revenue growth, gross margin, net margin, debt/equity.
 

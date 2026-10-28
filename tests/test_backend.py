@@ -448,7 +448,7 @@ class Analysis(unittest.TestCase):
         g = self.row(q, "revenue")["growth"]
         self.assertEqual(g[:4], [None, None, None, None])
         self.assertAlmostEqual(g[4], (110 - 95) / 95 * 100, places=2)
-        self.assertAlmostEqual(self.row(q, "roe")["values"][-1], 28 * 4 / 75 * 100, places=2)   # annualized
+        self.assertIsNone(self.row(q, "roe"))   # removed from the page
 
     def test_cached_for_a_day(self):
         analysis.get("MSFT")
