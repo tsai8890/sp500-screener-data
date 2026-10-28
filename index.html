@@ -294,17 +294,21 @@ td.num.since.down { color: var(--down); }
 .screen-btn { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; background: none; border: 1px solid transparent; border-radius: 7px; padding: 8px 10px; cursor: pointer; }
 .screen-btn:hover { background: var(--sunk); }
 .screen-btn[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.screen-btn .nm { font-weight: 600; overflow-wrap: anywhere; }
+.screen-btn .nm { font-weight: 500; overflow-wrap: anywhere; }
+.screen-btn[aria-current="true"] .nm { font-weight: 600; }
 .screen-btn .ct { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(14px * var(--ts)); color: var(--muted); align-self: center; font-variant-numeric: tabular-nums; }
 .screen-btn .rl { grid-column: 1 / -1; font-size: calc(14px * var(--ts)); color: var(--muted); font-family: var(--font-data); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .screen-btn .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: middle; }
+.list-sep { height: 1px; background: var(--line); margin: 6px 10px; }
+.set-own { flex-direction: column; align-items: stretch; }
+.set-own details.import { width: 100%; }
 .group-label { font-size: calc(12.5px * var(--ts)); color: var(--muted); padding: 8px 10px 2px; text-transform: uppercase; letter-spacing: 0.06em; }
 .storage-note { font-size: calc(14px * var(--ts)); color: var(--muted); padding: 0 18px 12px; }
 
 /* Rule editor */
 .name-in { width: 100%; font-family: var(--font-display); font-weight: 500; font-size: calc(19.5px * var(--ts)); border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; }
 .rules { display: flex; flex-direction: column; gap: 8px; }
-.rule { display: grid; grid-template-columns: minmax(0, 2fr) calc(58px * var(--ts)) minmax(0, 1fr) 26px; gap: 6px; align-items: center; }
+.rule { display: grid; grid-template-columns: minmax(0, 1.8fr) calc(50px * var(--ts)) minmax(0, 1fr) 22px; gap: 6px; align-items: center; }
 .rule select, .rule input { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 8px; min-width: 0; width: 100%; }
 .rule input { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(15px * var(--ts)); font-variant-numeric: tabular-nums; }
 .vals { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -507,21 +511,16 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
       <div id="screenerSide" role="tabpanel" aria-labelledby="tab-screener">
       <div class="panel-head"><p class="eyebrow">Saved screens</p></div>
       <div class="screens" id="screens"></div>
-      <div class="storage-note" id="storageNote">Saved in this browser.</div>
-      <div class="storage-note row" id="screenFile">
-        <button class="linkbtn" id="exportScreens" type="button">Export screens (JSON)</button>
-        <button class="linkbtn" id="importScreensBtn" type="button">Import screens</button>
-        <input type="file" id="importScreens" accept=".json,application/json" hidden>
-      </div>
+      <div class="storage-note warn" id="storageNote" hidden></div>
 
       <div class="section">
         <label class="eyebrow" for="screenName">Screen name</label>
         <input class="name-in" id="screenName" autocomplete="off">
-        <p class="hint" id="builtinHint" hidden>Built-in screen. Saving creates your own copy.</p>
+        <p class="hint" id="builtinHint" hidden></p>
       </div>
 
       <div class="section">
-        <p class="eyebrow">Rules · all must pass</p>
+        <p class="eyebrow">Rules</p>
         <div class="rules" id="rules"></div>
         <div class="row"><button class="btn ghost" id="addRule" type="button">+ Add rule</button></div>
       </div>
@@ -529,7 +528,6 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
       <div class="section">
         <p class="eyebrow">Sectors</p>
         <div class="chips" id="sectorChips"></div>
-        <p class="hint">None selected means every sector.</p>
       </div>
 
       <div class="section">
@@ -542,32 +540,13 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
         <div class="toast" id="toast" role="status"></div>
       </div>
 
-      <div class="section">
-        <details class="import" id="importBox">
-          <summary>Use your own data</summary>
-          <div class="inner">
-            <p class="hint">Paste a CSV or choose a file. Recognised columns (any order, extra columns ignored):</p>
-            <code class="hdr">ticker,name,sector,mktCap,pe,peg,revGrowth,netMargin,divYield</code>
-            <p class="hint">Percent columns take 12.5 or 12.5%. Market cap in billions or raw dollars.</p>
-            <textarea id="csvIn" placeholder="ticker,name,sector,pe,peg,revGrowth&#10;MSFT,Microsoft,Information Technology,35,2.2,15"></textarea>
-            <div class="row">
-              <input type="file" id="csvFile" accept=".csv,text/csv,text/plain">
-            </div>
-            <div class="row">
-              <button class="btn primary" id="loadCsv" type="button">Load data</button>
-              <button class="btn" id="useSample" type="button">Back to example data</button>
-            </div>
-            <div class="toast" id="importMsg" role="status"></div>
-          </div>
-        </details>
-      </div>
       </div>
 
       <div id="watchSide" role="tabpanel" aria-labelledby="tab-watch" hidden>
         <div class="panel-head"><p class="eyebrow">Your watchlists</p></div>
         <div class="screens" id="watchlists"></div>
         <div class="storage-note row"><button class="linkbtn" id="newWatch" type="button">+ New watchlist</button></div>
-        <div class="storage-note" id="watchNote"></div>
+        <div class="storage-note warn" id="watchNote" hidden></div>
         <div class="section">
           <label class="eyebrow" for="watchName">Watchlist name</label>
           <input class="name-in" id="watchName" autocomplete="off" maxlength="100">
@@ -579,7 +558,6 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
             <button class="btn primary" type="submit">Add</button>
           </form>
           <datalist id="tickerList"></datalist>
-          <p class="hint">Or tap ☆ next to any stock in the Screener tab.</p>
           <div class="toast" id="watchToast" role="status"></div>
         </div>
         <div class="section">
@@ -678,7 +656,28 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
         <div class="set-list" id="setList"></div>
         <div class="set-foot" id="setExport">
           <button class="btn" id="exportAll" type="button">Download everything (.json)</button>
-          <span class="hint">A full copy of your screens, watchlists and notes, for your own backup.</span>
+          <button class="btn" id="exportScreens" type="button">Export screens</button>
+          <button class="btn" id="importScreensBtn" type="button">Import screens</button>
+          <input type="file" id="importScreens" accept=".json,application/json" hidden>
+        </div>
+        <div class="set-foot set-own">
+        <details class="import" id="importBox">
+          <summary>Use your own data</summary>
+          <div class="inner">
+            <p class="hint">Paste a CSV or choose a file. Recognised columns (any order, extra columns ignored):</p>
+            <code class="hdr">ticker,name,sector,mktCap,pe,peg,revGrowth,netMargin,divYield</code>
+            <p class="hint">Percent columns take 12.5 or 12.5%. Market cap in billions or raw dollars.</p>
+            <textarea id="csvIn" placeholder="ticker,name,sector,pe,peg,revGrowth&#10;MSFT,Microsoft,Information Technology,35,2.2,15"></textarea>
+            <div class="row">
+              <input type="file" id="csvFile" accept=".csv,text/csv,text/plain">
+            </div>
+            <div class="row">
+              <button class="btn primary" id="loadCsv" type="button">Load data</button>
+              <button class="btn" id="useSample" type="button">Back to example data</button>
+            </div>
+            <div class="toast" id="importMsg" role="status"></div>
+          </div>
+        </details>
         </div>
       </div>
       <div id="analysisView" hidden>
@@ -801,16 +800,16 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
 
   const FIELDS = {
-    pe:        { label: "P/E (trailing)",  head: "P/E",      unit: "×",  fmt: (v) => v.toFixed(1) },
-    fpe:       { label: "Forward P/E",     head: "Fwd P/E",  unit: "×",  fmt: (v) => v.toFixed(1) },
-    peg:       { label: "PEG ratio",       head: "PEG",      unit: "",   fmt: (v) => v.toFixed(2) },
-    revGrowth: { label: "Revenue growth",  head: "Rev gr.",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%" },
-    netMargin: { label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
-    divYield:  { label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
-    price:     { label: "Share price",     head: "Price",    unit: "USD", fmt: (v) => "$" + v.toFixed(2) },
+    pe:        { short: "P/E", label: "P/E (trailing)",  head: "P/E",      unit: "×",  fmt: (v) => v.toFixed(1) },
+    fpe:       { short: "Fwd P/E", label: "Forward P/E",     head: "Fwd P/E",  unit: "×",  fmt: (v) => v.toFixed(1) },
+    peg:       { short: "PEG", label: "PEG ratio",       head: "PEG",      unit: "",   fmt: (v) => v.toFixed(2) },
+    revGrowth: { short: "Rev growth", label: "Revenue growth",  head: "Rev gr.",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(1) + "%" },
+    netMargin: { short: "Net margin", label: "Net margin",      head: "Net mgn",  unit: "%",  fmt: (v) => v.toFixed(1) + "%" },
+    divYield:  { short: "Div yield", label: "Dividend yield",  head: "Div yld",  unit: "%",  fmt: (v) => v.toFixed(2) + "%" },
+    price:     { short: "Price", label: "Share price",     head: "Price",    unit: "USD", fmt: (v) => "$" + v.toFixed(2) },
     since:     { label: "Since added",     head: "Since add", unit: "%", noRule: true, fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
-    chg:       { label: "Day change",      head: "Day chg",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
-    mktCap:    { label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
+    chg:       { short: "Day change", label: "Day change",      head: "Day chg",  unit: "%",  fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%" },
+    mktCap:    { short: "Mkt cap", label: "Market cap",      head: "Mkt cap",  unit: "$B", fmt: (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "T" : "$" + Math.round(v) + "B" },
   };
   const OPS = { ">": ">", ">=": "≥", "<": "<", "<=": "≤", "between": "between" };
 
@@ -918,10 +917,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     },
   };
   function renderStorageNote() {
-    $("storageNote").className = "storage-note" + (store.mode === "server" ? "" : " warn");
-    $("storageNote").textContent = store.mode === "server"
-      ? "Your screens are saved on this computer (SQLite, data/screener.db)."
-      : "The local server can't be reached, so screens are saved in this browser for now. Start the server (./run.sh) and reload.";
+    // only shown when something is wrong; Settings says where everything is saved
+    $("storageNote").hidden = store.mode === "server";
+    $("storageNote").textContent = "The local server can't be reached, so screens are saved in this browser for now. Start the server (./run.sh) and reload.";
   }
 
   // Built-in screens come from data/screens.json when the page can read it.
@@ -1009,11 +1007,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const nm = el("span", { class: "nm", text: shown.name || "Untitled screen" });
       if (isActive && S.dirty) nm.append(el("span", { class: "dot", title: "Unsaved changes" }));
       return el("button", { class: "screen-btn", type: "button", "aria-current": String(isActive), onclick: () => { selectScreen(sc.id); if (isPhone()) setDrawer(false); } },
-        nm, el("span", { class: "ct", text: n + " pass" }),
-        el("span", { class: "rl", text: validRules(shown).map(ruleText).join(" · ") + (shown.sectors.length ? " · " + shown.sectors.length + " sector" + (shown.sectors.length > 1 ? "s" : "") : "") }));
+        nm, el("span", { class: "ct", text: String(n) }));
     };
-    if (S.userScreens.length) { box.append(el("div", { class: "group-label", text: "Your screens" })); S.userScreens.forEach((s) => box.append(mk(s))); }
-    box.append(el("div", { class: "group-label", text: "Built-in" }));
+    if (S.userScreens.length) { S.userScreens.forEach((s) => box.append(mk(s))); box.append(el("div", { class: "list-sep", "aria-hidden": "true" })); }
     BUILTINS.forEach((s) => box.append(mk(s)));
   }
 
@@ -1024,7 +1020,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const rules = $("rules"); rules.textContent = "";
     if (!d.rules.length) rules.append(el("p", { class: "hint", text: "No rules yet. Every stock passes until you add one." }));
     d.rules.forEach((r, i) => {
-      const fieldSel = el("select", { id: "rf" + i, "aria-label": "Metric" }, Object.keys(FIELDS).filter((k) => !FIELDS[k].noRule).map((k) => { const o = el("option", { value: k, text: FIELDS[k].label }); if (k === r.field) o.selected = true; return o; }));
+      const fieldSel = el("select", { id: "rf" + i, "aria-label": "Metric" }, Object.keys(FIELDS).filter((k) => !FIELDS[k].noRule).map((k) => { const o = el("option", { value: k, text: FIELDS[k].short || FIELDS[k].label, title: FIELDS[k].label }); if (k === r.field) o.selected = true; return o; }));
       fieldSel.addEventListener("change", () => { r.field = fieldSel.value; changed(true); });
       const opSel = el("select", { id: "ro" + i, "aria-label": "Comparison" }, Object.keys(OPS).map((k) => { const o = el("option", { value: k, text: OPS[k] }); if (k === r.op) o.selected = true; return o; }));
       opSel.addEventListener("change", () => { r.op = opSel.value; if (r.op === "between" && (r.value2 == null || r.value2 === "")) r.value2 = Number(r.value) * 2 || 10; changed(true); });
@@ -1360,14 +1356,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const chg = mean(w.items.map((it) => (m.get(it.ticker) || {}).chg));
       box.append(el("button", { class: "screen-btn", type: "button", "aria-current": String(on),
         onclick: () => { S.activeWatch = w.id; lsSet("screener.activeWatch", w.id); S.wDeleteArmed = false; renderWatchSide(); renderResults(); applySide(); if (isPhone()) setDrawer(false); } },
-        el("span", { class: "nm", text: w.name || "Watchlist" }), el("span", { class: "ct", text: w.items.length + (w.items.length === 1 ? " stock" : " stocks") }),
-        el("span", { class: "rl", text: w.items.length ? w.items.slice(0, 6).map((i) => i.ticker).join(" · ") + (w.items.length > 6 ? " …" : "") + (chg != null ? "  ·  today " + pct(chg) : "") : "Empty" })));
+        el("span", { class: "nm", text: w.name || "Watchlist" }), el("span", { class: "ct", text: String(w.items.length) })));
     });
     if (document.activeElement !== $("watchName")) $("watchName").value = cur.name;
     $("deleteWatch").textContent = S.wDeleteArmed ? "Confirm delete" : "Delete watchlist";
     $("deleteWatch").classList.toggle("confirm", !!S.wDeleteArmed);
-    $("watchNote").textContent = wstore.mode === "server" ? "Saved on this computer (SQLite, data/screener.db)."
-      : "The local server can't be reached: saved in this browser for now.";
+    $("watchNote").hidden = wstore.mode === "server";
+    $("watchNote").textContent = "The local server can't be reached: saved in this browser for now.";
     const key = m.size + ":" + Object.values(S.liveBy).map((l) => l.stamp).join(",");
     if (key !== tickerListKey) {   // rebuild the ticker suggestions only when the data changed
       tickerListKey = key;
