@@ -98,6 +98,14 @@ Nothing is deleted, and running it again is harmless. Reload the page afterwards
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
 
+## Fast quotes for the stocks you're looking at (Finnhub, optional)
+
+Prices for all ~1,000 stocks come from Yahoo Finance every 5 minutes. With a free [Finnhub](https://finnhub.io) API key, the stock open in **Advanced Analysis** and the **first 10 stocks of the current watchlist** (in the table's order) are updated every **15 seconds** while the page is open and visible: 11 stocks × 4 a minute = 44 requests a minute, under the free plan's 60. P/E, market cap and the rest follow the new price.
+
+Setup: copy `.env.example` to `.env` in the repository folder and put your key after `FINNHUB_API_KEY=`, then restart `./run.sh` (the log says "Finnhub: fast quotes on"). `.env` is git-ignored; the key is only read by the local server and never sent to the page. Without a key everything works as before.
+
+Outside regular hours, a Finnhub quote is used only if it is a trade after the close (or before the open); otherwise Yahoo's after-hours price stays. Settings: `FINNHUB_INTERVAL` (15 s), `FINNHUB_MAX_STOCKS` (11).
+
 ## Pre-market and after-hours prices
 
 The page shows one price per stock: the latest trade. Outside 9:30–16:00 ET that is the pre-market or after-hours price, tagged **PM** or **AH** (hover the tag for the regular-session close). The change next to it is always against the previous session's close, so after hours it includes both the day's move and the after-hours move. Screens, sorting, the watchlist's "since added", and P/E, forward P/E, PEG, market cap and dividend yield all use this same latest price. The previous close for the day change comes from the price data (yesterday's last regular-session price), so it is always current.

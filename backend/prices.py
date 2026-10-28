@@ -206,3 +206,21 @@ def update_one(ticker: str, path: str = PRICES_PATH) -> dict | None:
             data.setdefault("prev", {})[ticker] = prev_close
         write_json(path, data)
     return data
+
+
+def apply_quotes(quotes: dict, path: str = PRICES_PATH) -> dict:
+    """Merge fast quotes {ticker: (regular, extended or None, previous close)} into prices.json.
+    A regular price ends any pre/after-hours price; an extended one replaces an older one."""
+    with _file_lock:
+        data = read_json(path) or {}
+        p, x, pv = data.setdefault("prices", {}), data.setdefault("ext", {}), data.setdefault("prev", {})
+        for t, (reg, ext, prev_close) in quotes.items():
+            if reg is not None:
+                p[t] = reg
+                x.pop(t, None)
+            if prev_close:
+                pv[t] = prev_close
+            if ext is not None and (t not in x or str(ext[2]) >= str(x[t][2])):
+                x[t] = list(ext)
+        write_json(path, data)
+    return data

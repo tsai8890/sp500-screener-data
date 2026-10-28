@@ -978,7 +978,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   };
   function renderStorageNote() {
     // only shown when something is wrong; Settings says where everything is saved
-    $("storageNote").hidden = store.mode === "server";
+    $("storageNote").hidden = !store.checked || store.mode === "server";   // not while the page is still asking the server
     $("storageNote").textContent = "The local server can't be reached, so screens are saved in this browser for now. Start the server (./run.sh) and reload.";
   }
 
@@ -1422,7 +1422,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (document.activeElement !== $("watchName")) $("watchName").value = cur.name;
     $("deleteWatch").textContent = S.wDeleteArmed ? "Confirm delete" : "Delete watchlist";
     $("deleteWatch").classList.toggle("confirm", !!S.wDeleteArmed);
-    $("watchNote").hidden = wstore.mode === "server";
+    $("watchNote").hidden = !wstore.checked || wstore.mode === "server";
     $("watchNote").textContent = "The local server can't be reached: saved in this browser for now.";
     const key = m.size + ":" + Object.values(S.liveBy).map((l) => l.stamp).join(",");
     if (key !== tickerListKey) {   // rebuild the ticker suggestions only when the data changed
@@ -1677,7 +1677,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (!list.length) box.append(el("p", { class: "hint", style: "padding: 4px 10px", text: S.notes.length ? "No notes match your search." : "No notes yet." }));
     const nn = $("notesNote");
     nn.className = "storage-note";
-    if (nstore.mode === "server") nn.textContent = "Notes are saved on this computer as Markdown files (data/notes/), with a backup copy in this browser.";
+    if (nstore.mode === "server" || !nstore.checked) nn.textContent = "Notes are saved on this computer as Markdown files (data/notes/), with a backup copy in this browser.";
     else { nn.textContent = "The local server can't be reached: notes are kept in this browser for now and saved to disk once it is back. Export them to be safe."; nn.className = "storage-note warn"; }
   }
   let previewT = 0;
@@ -1749,7 +1749,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         : el("span", { class: "when" + (r.st.lastSaved ? " ok" : ""), text: r.st.lastSaved ? "Saved " + savedWhen(r.st.lastSaved) : "" });
       box.append(el("div", { class: "set-row" }, ic, el("span", { class: "what", text: `${r.what} · ${r.n} ${r.unit}${r.n === 1 ? "" : "s"}` }), when, where));
     });
-    $("setSummary").textContent = rows.some((r) => local(r.mode))
+    $("setSummary").textContent = store.checked && wstore.checked && nstore.checked && rows.some((r) => local(r.mode))
       ? "The local server can't be reached, so some data is only in this browser. Start it with ./run.sh and reload the page."
       : "Everything is saved on this computer by the local server.";
   }
@@ -1906,7 +1906,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const failed = () => { if (!S.live) { S.loadFailed = true; renderData(); } };
     getJson(apiUrl(S.universe))
       .then((d) => {
-        S.feed = "api"; applyLive(d); fetchAll(apiUrl);
+        S.feed = "api"; applyLive(d); fetchAll(apiUrl); fastTick();
         clearInterval(pollTimer); pollTimer = setInterval(() => fetchAll(apiUrl), 60 * 1000);
       })
       .catch(() => {
@@ -1918,7 +1918,56 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         }), 60 * 1000);
       });
   }
-  function initLive() { startFetching(); }
+  function initLive() { startFetching(); startFastQuotes(); }
+
+  // ---------- Fast quotes (Finnhub) for the stocks on screen ----------
+  // The stock open in Analysis + the first 10 of the current watchlist (in the table's order)
+  // are reported to the server, which fetches them from Finnhub every ~15 s; their rows are
+  // updated here in place. Without a Finnhub key on the server this switches itself off.
+  function focusTickers() {
+    const out = [];
+    if (S.anTicker) out.push(S.anTicker);
+    const { key, dir } = S.sort, sgn = dir === "asc" ? 1 : -1;
+    const rows = watchRows().sort((a, b) => {
+      const x = a.s[key], y = b.s[key];
+      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return (typeof x === "string" ? x.localeCompare(y) : x - y) * sgn;
+    });
+    rows.slice(0, 10).forEach((r) => { if (!out.includes(r.s.ticker)) out.push(r.s.ticker); });
+    return out;
+  }
+  let fastTimer = 0;
+  async function fastTick() {
+    clearTimeout(fastTimer);
+    let next = 15;
+    try {
+      const tickers = document.visibilityState === "visible" && S.feed === "api" ? focusTickers() : [];
+      if (tickers.length) {
+        const j = await getJson(API_ROOT + "live?t=" + tickers.map(encodeURIComponent).join(","));
+        if (!j.on) next = 300;   // no Finnhub key on the server: check again much later
+        else { next = j.interval || 15; applyFastRows(j.rows || {}); }
+      }
+    } catch (e) { next = 60; }
+    fastTimer = setTimeout(fastTick, next * 1000);
+  }
+  function applyFastRows(rows) {
+    let changed = false;
+    Object.values(S.liveBy).forEach((l) => l.rows.forEach((o) => {
+      const r = rows[o.ticker]; if (!r) return;
+      const fresh = latestPrice({ ...r });
+      ["price", "chg", "session", "regPrice", "regChg", "mktCap", "pe", "fpe", "peg", "divYield", "xPrice", "xChg", "xSession"].forEach((k) => {
+        const v = fresh[k] ?? null;
+        if (o[k] !== v) { o[k] = v; changed = true; }
+      });
+    }));
+    if (!changed) return;
+    if (S.tab === "analysis") renderAnalysis();
+    else if (S.tab === "watch" || S.tab === "screener") renderResults();
+  }
+  function startFastQuotes() {
+    fastTick();
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") fastTick(); });
+  }
 
   function changed(structural) {
     S.dirty = true; S.deleteArmed = false;
@@ -2115,6 +2164,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const h = "#analysis/" + encodeURIComponent(t);
     if (location.hash !== h) history.replaceState(null, "", h);
     if (!AN.data[t] && !AN.loading[t]) loadAnalysis(t, false);
+    if (typeof fastTick === "function") setTimeout(fastTick, 300);
   }
   async function loadAnalysis(t, refresh) {
     AN.loading[t] = true; delete AN.error[t];
@@ -2565,7 +2615,13 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   if (anHash) S.anTicker = decodeURIComponent(anHash[1]).toUpperCase();
   setTab(fromHash ? fromHash.id : lsGet("screener.tab") || "screener");
   loadBuiltins();
-  store.init().finally(() => { wstore.init(); nstore.init(); renderSettings(); });
+  // each store's "server can't be reached" warning appears only after it has actually tried
+  store.init().finally(() => {
+    store.checked = true; renderStorageNote();
+    Promise.resolve(wstore.init()).finally(() => { wstore.checked = true; renderWatchSide(); renderSettings(); });
+    Promise.resolve(nstore.init()).finally(() => { nstore.checked = true; renderNoteList(); renderSettings(); });
+    renderSettings();
+  });
   initLive();
   loadIndex();
 })();

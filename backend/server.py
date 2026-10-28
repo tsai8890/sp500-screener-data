@@ -52,11 +52,13 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import analysis, build, fundamentals, notes_store, prices, screens_db
+from . import analysis, build, finnhub, fundamentals, notes_store, prices, screens_db
 from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
                      parse_iso, read_json, universe_path, utc_now)
 from .universe import UNIVERSES
 from .yahoo import GATE
+
+finnhub.load_dotenv(os.path.join(ROOT, ".env"))   # API keys live in .env (git-ignored), never in the code
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
@@ -144,6 +146,11 @@ def fundamentals_loop() -> None:
             time.sleep(min(300 * 2 ** (fails - 1), 3600))   # 5, 10, 20 ... at most 60 min
 
 
+def apply_fast_quotes(quotes: dict) -> None:
+    STATE.prices = prices.apply_quotes(quotes)
+    STATE.rebuild()
+
+
 def prices_loop() -> None:
     at_start = True   # fetch right away when the server starts, then on the interval
     while True:
@@ -207,6 +214,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
+    def _live(self) -> None:
+        """The page reports the stocks on screen (?t=A,B,...); they get Finnhub quotes every
+        few seconds. Returns their current rows so the page can update them in place."""
+        from urllib.parse import parse_qs, unquote
+        q = parse_qs(self.path.partition("?")[2])
+        tickers = [unquote(t).strip().upper() for t in ",".join(q.get("t", [])).split(",") if t.strip()]
+        tickers = [t for t in tickers if analysis.TICKER_RE.match(t)][:finnhub.MAX_STOCKS]
+        finnhub.set_focus(tickers)
+        fund, pr = STATE.fund or {}, STATE.prices or {}
+        stocks = fund.get("stocks", {})
+        rows = {t: dict(zip(build.COLS, build.row(t, stocks[t], pr.get("prices", {}).get(t), pr.get("ext", {}).get(t),
+                                                   pr.get("prev", {}).get(t))))
+                for t in tickers if t in stocks}
+        return self._json(200, {"on": bool(finnhub.api_key()), "interval": finnhub.INTERVAL, "asOf": pr.get("asOf"), "rows": rows})
+
     def _quote(self, ticker: str) -> None:
         """Fetch one stock's latest price now and rebuild the data the page reads."""
         from urllib.parse import unquote
@@ -265,6 +287,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"notes": notes_store.list_notes(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/storage":
             return self._json(200, storage_info())
+        if path == "/api/live":
+            return self._live()
         if path.startswith("/api/quote/"):
             return self._quote(path[len("/api/quote/"):])
         if path.startswith("/api/analysis/"):
@@ -349,6 +373,7 @@ def main() -> None:
         print(f"Moved {moved} notes from the SQLite database into {notes_store.NOTES_DIR}", flush=True)
     threading.Thread(target=fundamentals_loop, name="fundamentals", daemon=True).start()
     threading.Thread(target=prices_loop, name="prices", daemon=True).start()
+    threading.Thread(target=finnhub.loop, args=(apply_fast_quotes,), name="finnhub", daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
     print(f"Screener server on http://{shown}:{PORT}\n"
