@@ -104,7 +104,7 @@ The **Analysis** tab shows one company's financial statements over the years. Ty
 
 - **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating, net and EBITDA margins (with the change in percentage points); R&D as a share of revenue; return on equity and on assets.
 - **Balance sheet**: cash and short-term investments, receivables, inventory, current and non-current assets, current and non-current liabilities, total debt, net debt, shareholders' equity; current ratio, quick ratio, debt/equity, liabilities/assets.
-- **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. The summary cards add FCF yield (FCF ÷ market cap).
+- **Cash flow**: operating cash flow, capital expenditure, free cash flow (FCF), FCF margin, FCF / net income, stock-based compensation, FCF after SBC, FCF per share, buybacks, dividends. Cards at the top: revenue (TTM), latest quarterly revenue growth, gross margin, net margin, debt/equity.
 
 *Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier. Hover a dotted label for its definition.
 
