@@ -439,6 +439,7 @@ class Analysis(unittest.TestCase):
         self.assertAlmostEqual(self.row(a, "currentRatio")["values"][2], 0.9375)
         self.assertEqual(self.row(a, "fcf")["values"][:3], [95, 99, 108])          # OCF + capex
         self.assertEqual(self.row(a, "netDebt")["values"][2], 40)
+        self.assertAlmostEqual(self.row(a, "netDebtToEbitda")["values"][2], 40 / 140, places=4)
         self.assertEqual(self.row(a, "nonCurrentAssets")["values"][2], 210)
         self.assertEqual([s["id"] for s in a["sections"]], ["profit", "balance", "cash"])
 

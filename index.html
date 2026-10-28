@@ -2186,7 +2186,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     }
     card("Gross Margin", lastVal(A, "grossMargin"), "pct");
     card("Net Margin", lastVal(A, "netMargin"), "pct");
-    card("Debt / Equity", lastVal(A, "debtToEquity"), "ratio");
+    const nde = lastVal(A, "netDebtToEbitda");
+    if (nde) card("Net Debt / EBITDA", nde, "ratio", nde.v < 0 ? `Net cash · ${lastLabel(nde)}` : lastLabel(nde), nde.v < 0 ? "up" : nde.v > 4 ? "down" : "", "",
+      "(Total debt − cash) ÷ EBITDA: about how many years of earnings it would take to repay the debt. Under 1× light, 1–3× normal, over 4× heavy; negative means more cash than debt.");
 
     // sections
     const view = d[S.anPeriod], box = $("anSections"); box.textContent = "";

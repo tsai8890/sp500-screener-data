@@ -64,6 +64,7 @@ ITEMS = {
         "capex": ["Capital Expenditure"],
         "fcf": ["Free Cash Flow"],
         "sbc": ["Stock Based Compensation"],
+        "da": ["Depreciation And Amortization", "Depreciation Amortization Depletion"],
         "buybacks": ["Repurchase Of Capital Stock", "Common Stock Payments"],
         "dividends": ["Cash Dividends Paid", "Common Stock Dividend Paid"],
     },
@@ -205,6 +206,8 @@ def _derive(p: dict) -> dict:
         p["grossProfit"] = p["revenue"] - p["costOfRevenue"]
     if p.get("fcf") is None and p.get("operatingCF") is not None and p.get("capex") is not None:
         p["fcf"] = p["operatingCF"] + p["capex"]          # capex is negative in Yahoo's data
+    if p.get("ebitda") is None and p.get("operatingIncome") is not None and p.get("da") is not None:
+        p["ebitda"] = p["operatingIncome"] + p["da"]
     if p.get("nonCurrentAssets") is None and p.get("totalAssets") is not None and p.get("currentAssets") is not None:
         p["nonCurrentAssets"] = p["totalAssets"] - p["currentAssets"]
     if p.get("nonCurrentLiabilities") is None and p.get("totalLiabilities") is not None and p.get("currentLiabilities") is not None:
@@ -258,6 +261,7 @@ ROWS = [
     ("balance", "currentRatio", "Current ratio", "ratio", False, "Current assets ÷ current liabilities; above 1 covers next year's bills"),
     ("balance", "quickRatio", "Quick ratio", "ratio", False, "(Current assets − inventory) ÷ current liabilities"),
     ("balance", "debtToEquity", "Debt / equity", "ratio", False, "Total debt ÷ shareholders' equity"),
+    ("balance", "netDebtToEbitda", "Net debt / EBITDA", "ratio", False, "(Total debt − cash) ÷ EBITDA: years of earnings to repay net debt; negative = net cash"),
     ("balance", "liabToAssets", "Liabilities / assets", "pct", False, None),
     ("cash", "operatingCF", "Operating cash flow", "money", True, None),
     ("cash", "capex", "Capital expenditure", "money", False, "Cash spent on property and equipment"),
@@ -291,6 +295,9 @@ def _ratios(p: dict, annualize: float) -> dict:
     if p.get("currentAssets") is not None:
         p["quickRatio"] = _div(p["currentAssets"] - (p.get("inventory") or 0), p.get("currentLiabilities"))
     p["debtToEquity"] = _div(p.get("totalDebt"), eq) if eq and eq > 0 else None
+    # years of EBITDA to pay off net debt; negative = more cash than debt. Quarters annualized.
+    ebitda = p.get("ebitda")
+    p["netDebtToEbitda"] = _div(p.get("netDebt"), ebitda * annualize) if p.get("netDebt") is not None and ebitda and ebitda > 0 else None
     p["liabToAssets"] = _pct(p.get("totalLiabilities"), p.get("totalAssets"))
     fcf = p.get("fcf")
     p["fcfMargin"] = _pct(fcf, rev)
