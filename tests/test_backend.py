@@ -287,9 +287,10 @@ class IncrementalFundamentals(unittest.TestCase):
         self.fetch(fail={"XOM"})
         out = fundamentals.update(self.path, max_age=3600)
         self.assertEqual(sorted(out["stocks"]), ["AAPL", "MSFT"])
-        self.assertEqual(out["missing"], ["XOM"]); self.assertEqual(out["pending"], 1)
+        self.assertEqual(out["missing"], ["XOM"]); self.assertEqual(out["pending"], 0)
+        raw = common.read_json(self.path); raw["failedAt"]["XOM"] = "2020-01-01T00:00:00Z"; common.write_json(self.path, raw)
         self.calls.clear(); self.fetch()
-        out = fundamentals.update(self.path, max_age=3600)     # only XOM is still due
+        out = fundamentals.update(self.path, max_age=3600)     # a while later only XOM is due
         self.assertEqual(self.calls, ["XOM"]); self.assertEqual(out["pending"], 0)
         self.assertEqual(sorted(out["stocks"]), ["AAPL", "MSFT", "XOM"])
         self.calls.clear()
@@ -301,10 +302,27 @@ class IncrementalFundamentals(unittest.TestCase):
         self.fetch(fail={"MSFT"}); out = fundamentals.update(self.path)
         self.assertIn("MSFT", out["stocks"]); self.assertEqual(out["stale"], ["MSFT"])
 
-    def test_nothing_fetched_raises(self):
+    def test_dead_tickers_are_not_an_error_and_wait_before_retry(self):
+        self.fetch(fail={"XOM"}); fundamentals.update(self.path, max_age=3600)
+        self.calls.clear()
+        out = fundamentals.update(self.path, max_age=3600)      # XOM failed just now: not due again yet
+        self.assertEqual(self.calls, []); self.assertIn("XOM", out["failedAt"])
         self.fetch(fail={"AAPL", "MSFT", "XOM"})
-        with self.assertRaises(RuntimeError):
-            fundamentals.update(self.path)
+        fundamentals.update(self.path, max_age=0)              # a few failures: no exception
+
+    def test_everything_failing_means_blocked(self):
+        orig = fundamentals.BLOCKED_MIN; fundamentals.BLOCKED_MIN = 3
+        try:
+            self.fetch(fail={"AAPL", "MSFT", "XOM"})
+            with self.assertRaises(RuntimeError):
+                fundamentals.update(self.path)
+        finally:
+            fundamentals.BLOCKED_MIN = orig
+
+    def test_success_clears_failure(self):
+        self.fetch(fail={"XOM"}); fundamentals.update(self.path, max_age=3600)
+        self.fetch(); out = fundamentals.update(self.path, max_age=0)
+        self.assertNotIn("XOM", out["failedAt"]); self.assertIn("XOM", out["stocks"])
 
     def test_old_files_without_fetched_at_use_file_time(self):
         common.write_json(self.path, {"asOf": "2020-01-01T00:00:00Z", "stocks": {"AAPL": {"price": 1}}})

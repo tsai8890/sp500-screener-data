@@ -133,7 +133,10 @@ def fundamentals_loop() -> None:
             if STATE.fund.get("pending"):
                 time.sleep(300)   # some failed: try those again in a while
         except Exception as e:  # noqa: BLE001
-            traceback.print_exc()
+            if isinstance(e, RuntimeError):
+                print(f"Fundamentals update skipped: {e}", flush=True)   # expected situation, no traceback
+            else:
+                traceback.print_exc()
             STATE.record("fundamentals", False, time.time() - t0, f"{type(e).__name__}: {e}")
             fails += 1
             time.sleep(min(300 * 2 ** (fails - 1), 3600))   # 5, 10, 20 ... at most 60 min
@@ -155,7 +158,10 @@ def prices_loop() -> None:
             STATE.rebuild()
             STATE.record("prices", True, time.time() - t0)
         except Exception as e:  # noqa: BLE001
-            traceback.print_exc()
+            if isinstance(e, RuntimeError):
+                print(f"Price update skipped: {e}", flush=True)
+            else:
+                traceback.print_exc()
             STATE.record("prices", False, time.time() - t0, f"{type(e).__name__}: {e}")
 
 

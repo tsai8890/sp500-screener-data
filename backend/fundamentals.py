@@ -21,6 +21,7 @@ from .yahoo import GATE, is_rate_limit
 
 WORKERS = 3   # threads; the request rate itself is set by the shared Yahoo gate (YAHOO_RPS)
 CHUNK = 100   # stocks fetched between saves
+BLOCKED_MIN = 20   # this many stocks all failing at once means Yahoo is blocking us, not bad tickers
 
 
 def extract(info: dict) -> dict | None:
@@ -86,14 +87,19 @@ def _fetched_at(rec: dict | None, file_asof: str | None) -> datetime | None:
 
 def due(prev: dict | None, max_age: float | None = None, stocks_in: list | None = None) -> list:
     """Stocks (ticker, name, sector) whose fundamentals are missing or older than max_age
-    seconds, oldest first. max_age None: all of them."""
+    seconds, oldest first. max_age None: all of them. A stock Yahoo had no data for
+    is tried again only after max_age too, so a few dead tickers aren't retried all day."""
     stocks_in = stocks_in if stocks_in is not None else universe.union(universe.load())
     if max_age is None:
         return list(stocks_in)
     prev = prev or {}
     have, asof, now = prev.get("stocks", {}), prev.get("asOf"), utc_now()
+    failed_at = prev.get("failedAt") or {}
     out = []
     for row in stocks_in:
+        f = parse_iso(failed_at.get(row[0]))
+        if f and (now - f).total_seconds() < max_age:
+            continue
         t = _fetched_at(have.get(row[0]), asof)
         age = (now - t).total_seconds() if t else float("inf")
         if age >= max_age:
@@ -115,6 +121,7 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
     started = time.time()
     prev = read_json(path) or {}
     prev_stocks, prev_asof = prev.get("stocks", {}), prev.get("asOf")
+    failed_at: dict[str, str] = dict(prev.get("failedAt") or {})
     stocks_in = universe.union(universe.load())
     todo = due(prev, max_age, stocks_in)
     fresh: dict[str, dict] = {}
@@ -139,7 +146,8 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
             "order": [t for t, _, _ in stocks_in if t in stocks],
             "stale": stale,
             "missing": missing,
-            "pending": len(todo) - len(fresh),
+            "pending": len(todo) - len(fresh) - len(failed),
+            "failedAt": {t: v for t, v in failed_at.items() if t not in fresh},
             "stocks": stocks,
         }
 
@@ -151,6 +159,7 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
         for (ticker, _, _), got in zip(chunk, results):
             if got is None:
                 failed.add(ticker)
+                failed_at[ticker] = stamp
             else:
                 fresh[ticker] = {**got, "fetchedAt": stamp}
         out = merged()
@@ -161,8 +170,13 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
         print(f"Fundamentals: {len(fresh)}/{len(todo)} fetched ({len(failed)} failed) "
               f"after {time.time() - started:.0f}s", flush=True)
 
-    if todo and not fresh:
-        raise RuntimeError(f"None of {len(todo)} stocks could be fetched from Yahoo; keeping the previous data.")
+    if len(todo) >= BLOCKED_MIN and not fresh:
+        raise RuntimeError(f"None of {len(todo)} stocks could be fetched from Yahoo (it may be blocking this "
+                           f"computer for a while); keeping the previous data and trying again later.")
+    if failed:
+        names = ", ".join(sorted(failed)[:12]) + (" …" if len(failed) > 12 else "")
+        print(f"Fundamentals: no data from Yahoo for {len(failed)} stock(s): {names}. "
+              f"They keep their previous values and are tried again in a few hours.", flush=True)
     if not todo:
         out = merged()
     return out
