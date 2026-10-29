@@ -701,5 +701,24 @@ class SecSyncFeed(unittest.TestCase):
         self.assertEqual(updates, [1])
         self.assertEqual(self.sync_mod.overrides()["GOOG"]["revGrowth"], round((140 - 110) / 110 * 100, 1))
 
+
+class LongHistory(unittest.TestCase):
+    def test_eight_years_and_eight_quarters_all_with_growth(self):
+        years = {f"{y}-12-31": {"revenue": 100.0 * 1.1 ** (y - 2014)} for y in range(2014, 2026)}   # 12 years
+        quarters = {}
+        for i in range(17):                                            # 2022 Q1 ... 2026 Q1
+            y, q = 2022 + i // 4, i % 4
+            end = ["03-31", "06-30", "09-30", "12-31"][q]
+            quarters[f"{y}-{end}"] = {"revenue": 30.0 + i}
+        out = analysis.compute({"annual": {"income": years}, "quarterly": {"income": quarters}})
+        a, q = out["annual"], out["quarterly"]
+        self.assertEqual([p["label"] for p in a["periods"]][:2], ["FY2018", "FY2019"])
+        self.assertEqual(len(a["periods"]), 9)                       # 8 years + TTM
+        self.assertEqual(a["periods"][-1]["label"], "TTM")
+        rev = a["sections"][0]["rows"][0]
+        self.assertAlmostEqual(rev["growth"][0], 10.0, places=4)      # the oldest year shown has growth
+        self.assertEqual(len(q["periods"]), 8)
+        self.assertTrue(all(g is not None for g in q["sections"][0]["rows"][0]["growth"]))
+
 if __name__ == "__main__":
     unittest.main()

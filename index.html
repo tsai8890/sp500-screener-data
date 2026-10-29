@@ -217,7 +217,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-sec .table-wrap { border-top: 0; }
 @media (min-width: 821px) {
   /* same column widths in every section, so TTM / FY columns line up down the page */
-  table.an-t { table-layout: fixed; width: 100%; min-width: calc(820px * var(--ts)); }
+  table.an-t { table-layout: fixed; width: 100%; }   /* min-width set per table from its number of columns */
   table.an-t th:first-child, table.an-t td:first-child { width: calc(230px * var(--ts)); }
 }
 table.an-t th, table.an-t td { text-align: right; vertical-align: top; }
@@ -2321,9 +2321,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
           const p = view.periods[i], td = el("td", { class: "v" + (p.ttm ? " ttm" : "") + (v != null && v < 0 && row.kind === "money" ? " neg" : ""), text: fmtAn(v, row.kind) });
           const g = row.growth && row.growth[i];
           if (g != null) td.append(el("span", { class: "sub" + (NEUTRAL_GROWTH.has(row.key) ? "" : g > 0 ? " up" : g < 0 ? " down" : ""), text: fmtGrowth(g), title: "vs " + (view.periods[p.prev] || {}).label }));
-          else if (MARGIN_KEYS.has(row.key) && p.prev != null && v != null && row.values[p.prev] != null) {
-            const dpp = v - row.values[p.prev];
-            td.append(el("span", { class: "sub" + (dpp > 0.05 ? " up" : dpp < -0.05 ? " down" : ""), text: (dpp > 0 ? "+" : dpp < 0 ? "−" : "") + Math.abs(dpp).toFixed(1) + " pp", title: "Change vs " + view.periods[p.prev].label + ", in percentage points" }));
+          else if (MARGIN_KEYS.has(row.key) && row.change && row.change[i] != null) {
+            const dpp = row.change[i];   // percentage points vs a year earlier, from the server
+            td.append(el("span", { class: "sub" + (dpp > 0.05 ? " up" : dpp < -0.05 ? " down" : ""), text: (dpp > 0 ? "+" : dpp < 0 ? "−" : "") + Math.abs(dpp).toFixed(1) + " pp", title: "Change vs a year earlier, in percentage points" }));
           }
           tr.append(td);
         });
@@ -2337,7 +2337,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       if (!box.querySelector(".an-period")) h3.append(AN_PERIOD);   // the Year / Quarter switch sits in the first section's title bar
       box.append(el("section", { class: "an-sec", "aria-label": sec.title },
         h3,
-        el("div", { class: "table-wrap" }, el("table", { class: "an-t" }, el("thead", {}, thead), tb))));
+        el("div", { class: "table-wrap" }, el("table", { class: "an-t", style: `min-width: calc(${230 + 150 + view.periods.length * 100}px * var(--ts))` }, el("thead", {}, thead), tb))));
     });
     const qNote = S.anPeriod === "quarterly" ? " Growth compares each quarter with the same quarter a year earlier." : " TTM = the last four reported quarters.";
     const src = (d.sources || []).map((x) => x.source);

@@ -233,6 +233,15 @@ def _view(periods: list[tuple[str, dict]], quarterly: bool, ttm: dict | None) ->
                         j = cols[i].get("prev")
                         g.append(_round(_growth(vals[i].get(key), vals[j].get(key)), "pct") if j is not None else None)
                 row["growth"] = g
+            elif kind == "pct":
+                # percentages (margins, ROIC): the change in percentage points vs a year earlier
+                ch = []
+                for i in range(len(vals)):
+                    j = None if cols[i].get("ttm") else cols[i].get("prev")
+                    a = vals[i].get(key)
+                    b = vals[j].get(key) if j is not None else None
+                    ch.append(_round(a - b, "pct") if a is not None and b is not None else None)
+                row["change"] = ch
             rows.append(row)
         sections.append({"id": sid, "title": title, "rows": rows})
     return {"periods": cols, "sections": sections}
@@ -262,11 +271,46 @@ def _label(end: str, quarterly: bool) -> str:
     return f"FY{d.year}"
 
 
+SHOW_YEARS = 8      # fiscal years on the page (plus TTM)
+SHOW_QUARTERS = 8
+
+
+def _tail(view: dict, n: int) -> dict:
+    """Keep the last n regular periods (and a trailing TTM column). Earlier periods are
+    only used for the growth of the oldest ones shown."""
+    keep = [i for i, p in enumerate(view["periods"]) if p.get("ttm")]
+    regular = [i for i, p in enumerate(view["periods"]) if not p.get("ttm")][-n:]
+    idx = sorted(regular + keep)
+    remap = {old: new for new, old in enumerate(idx)}
+    periods = []
+    for i in idx:
+        p = dict(view["periods"][i])
+        if "prev" in p:
+            if p["prev"] in remap:
+                p["prev"] = remap[p["prev"]]
+            else:
+                del p["prev"]   # compared with a period no longer shown (growth stays, pp change goes)
+        periods.append(p)
+    sections = []
+    for sec in view["sections"]:
+        rows = []
+        for r in sec["rows"]:
+            r = dict(r, values=[r["values"][i] for i in idx])
+            for k in ("growth", "change"):
+                if k in r:
+                    r[k] = [r[k][i] for i in idx]
+            if any(v is not None for v in r["values"]):
+                rows.append(r)
+        sections.append({**sec, "rows": rows})
+    return {"periods": periods, "sections": sections}
+
+
 def compute(raw: dict) -> dict:
     annual = sorted(_merge(raw.get("annual", {})).items())
     quarterly = sorted(_merge(raw.get("quarterly", {})).items())
-    annual = [(e, _derive(p)) for e, p in annual][-5:]
-    quarterly = [(e, _derive(p)) for e, p in quarterly][-8:]
+    # one extra year and four extra quarters, so even the oldest period shown has a growth figure
+    annual = [(e, _derive(p)) for e, p in annual][-(SHOW_YEARS + 1):]
+    quarterly = [(e, _derive(p)) for e, p in quarterly][-(SHOW_QUARTERS + 4):]
     ttm = _ttm(quarterly)
     if ttm and annual and quarterly and quarterly[-1][0] <= annual[-1][0]:
         ttm = None   # the latest quarter is already the fiscal year end: TTM = last FY
@@ -277,6 +321,6 @@ def compute(raw: dict) -> dict:
         "latestQuarter": latest_q.isoformat() if latest_q else None,
         "quarterOverdue": statements.quarter_overdue(raw),
         "currency": raw.get("currency", "USD"),
-        "annual": _view(annual, False, ttm),
-        "quarterly": _view(quarterly, True, None),
+        "annual": _tail(_view(annual, False, ttm), SHOW_YEARS),
+        "quarterly": _tail(_view(quarterly, True, None), SHOW_QUARTERS),
     }
