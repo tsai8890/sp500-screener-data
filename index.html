@@ -2081,7 +2081,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const anRecent = () => (lsGet("screener.anRecent") || []).filter((t) => typeof t === "string");
   // Sections shown as tables. The server also computes "balance" and "cash" (the Debt / equity
   // card uses them); add their ids here to show those tables again.
-  const SHOWN_SECTIONS = new Set(["profit"]);
+  const SHOWN_SECTIONS = new Set(["profit", "cash"]);
+  const SHOWN_ROWS = { cash: new Set(["fcf"]) };   // sections listed here show only these rows
   const NEUTRAL_GROWTH = new Set(["totalLiabilities", "totalAssets"]);
   const MARGIN_KEYS = new Set(["grossMargin", "operatingMargin", "netMargin", "ebitdaMargin", "fcfMargin", "roic"]);
   function fmtMoney(v) {
@@ -2301,6 +2302,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const view = d[S.anPeriod], box = $("anSections"); box.textContent = "";
     view.sections.forEach((sec) => {
       if (!sec.rows.length || !SHOWN_SECTIONS.has(sec.id)) return;
+      const keep = SHOWN_ROWS[sec.id];
+      if (keep) sec = { ...sec, rows: sec.rows.filter((r) => keep.has(r.key)) };
+      if (!sec.rows.length) return;
       const thead = el("tr", {}, el("th", { text: "" }));
       const order = view.periods.map((_, i) => i).reverse();   // newest on the left
       order.map((i) => view.periods[i]).forEach((p) => thead.append(el("th", { class: p.ttm ? "ttm" : "", text: p.label, title: p.ttm ? "Trailing twelve months: the last four quarters" : "Period ending " + p.end })));
@@ -2326,7 +2330,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         tr.append(sp);
         tb.append(tr);
       });
-      const note = { profit: "Growth under each figure is year over year.", balance: "At the end of each period.", cash: "Negative figures are cash going out." }[sec.id];
+      const note = { profit: "Growth under each figure is year over year.", balance: "At the end of each period.", cash: "Operating cash flow − capital expenditure; growth is year over year." }[sec.id];
       const h3 = el("h3", {}, sec.title, el("span", { class: "hint", text: note }));
       if (!box.querySelector(".an-period")) h3.append(AN_PERIOD);   // the Year / Quarter switch sits in the first section's title bar
       box.append(el("section", { class: "an-sec", "aria-label": sec.title },

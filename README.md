@@ -127,7 +127,9 @@ The **Analysis** tab shows one company's revenue, profits and margins over the y
 - **Profitability**: revenue, gross profit, operating income, net income and diluted EPS, each with year-over-year growth; gross, operating and net margins and ROIC (operating income after tax ÷ (debt + equity); quarters annualized), with the change in percentage points (pp: 45.0% → 47.5% is +2.5 pp).
 - Above the table: revenue growth of the latest quarter, year over year (YoY) and against the quarter before (QoQ); gross margin, net margin, P/E (the same live figure as the Screener, with forward P/E), PEG, free cash flow (TTM, with FCF margin) and net debt / EBITDA ((total debt − cash) ÷ EBITDA; negative means net cash).
 
-The server also computes balance-sheet and cash-flow metrics (current and non-current assets and liabilities, debt, equity, ratios; operating cash flow, capex, free cash flow, buybacks, dividends); they are hidden on the page. To show them, add `"balance"` and/or `"cash"` to `SHOWN_SECTIONS` in `index.html`.
+- **Cash flow**: free cash flow (operating cash flow − capital expenditure), with year-over-year growth.
+
+The server also computes balance-sheet and other cash-flow metrics (current and non-current assets and liabilities, debt, equity, ratios; operating cash flow, capex, free cash flow, buybacks, dividends); they are hidden on the page. To show them, add `"balance"` to `SHOWN_SECTIONS` in `index.html`, or more cash-flow rows to `SHOWN_ROWS.cash`.
 
 *Annual* shows the last 4-5 fiscal years plus TTM (the last four quarters); *Quarterly* shows the quarters Yahoo provides (usually 5-6), with growth against the same quarter a year earlier (matched by date). Fiscal years are named after the year they end in, as companies do (NVIDIA's FY2026 ended January 2026). Hover a dotted label for its definition.
 
