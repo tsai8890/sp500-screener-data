@@ -1,194 +1,41 @@
-"""Per-stock financial statements for the Advanced Analysis tab.
+"""Metrics for the Advanced Analysis tab, from one company's financial statements.
 
     GET /api/analysis/<ticker>[?refresh=1]
 
-Fetched from Yahoo Finance on demand (6 requests: income statement, balance sheet
-and cash flow, annual and quarterly), cached in data/analysis/<TICKER>.json for a
-day (statements only change once a quarter), and turned into three sections of
-metrics: profitability, balance sheet, cash flow.
+The statements come from backend/statements.py (SEC filings first, Yahoo Finance
+filling the gaps); this module only computes: growth, margins, ROIC, free cash
+flow and the rest, grouped into sections (profitability, balance sheet, cash flow).
 
-Annual view: the last 4-5 fiscal years plus a TTM column (sum of the last four
-quarters; the latest quarter for balance-sheet items). Quarterly view: the
-quarters Yahoo provides (usually 5-6). Growth is year over year: previous fiscal
-year, or the same quarter a year earlier, matched by date. Fiscal years are named
-after the calendar year they end in.
+Annual view: the last 5 fiscal years plus a TTM column (sum of the last four
+quarters; the latest quarter for balance-sheet items). Quarterly view: the last 8
+quarters. Growth is year over year: previous fiscal year, or the same quarter a
+year earlier, matched by date. Fiscal years are named after the calendar year they
+end in.
 """
 from __future__ import annotations
 
-import math
-import os
 import re
-import threading
-import time
 from datetime import datetime
 
-import yfinance as yf
+from . import statements
+from .sources.yahoo import RateLimited  # noqa: F401  (the server reports it as "Yahoo is limiting requests")
+from .statements import FLOWS, KEYS
 
-from .common import ROOT, iso, parse_iso, read_json, utc_now, write_json
-from .universe import yahoo_symbol
-from .yahoo import GATE, is_rate_limit
-
-CACHE_DIR = os.environ.get("SCREENER_ANALYSIS_DIR", os.path.join(ROOT, "data", "analysis"))
-MAX_AGE = 24 * 3600        # cached statements are fetched again after a day
-MAX_AGE_DUE = 3 * 3600     # ... or after 3 hours while a new quarter is overdue (earnings season)
-MIN_REFRESH = 60           # "Refresh" refetches unless the copy is less than a minute old
-QUARTER_DUE_DAYS = 95      # a quarter ends every ~91 days; past this, a new one should be out soon
 TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
-
-# Yahoo line items to keep (first name found wins).
-ITEMS = {
-    "income": {
-        "revenue": ["Total Revenue", "Operating Revenue"],
-        "costOfRevenue": ["Cost Of Revenue", "Reconciled Cost Of Revenue"],
-        "grossProfit": ["Gross Profit"],
-        "rnd": ["Research And Development"],
-        "operatingIncome": ["Operating Income", "Total Operating Income As Reported"],
-        "ebitda": ["EBITDA", "Normalized EBITDA"],
-        "netIncome": ["Net Income Common Stockholders", "Net Income", "Net Income Including Noncontrolling Interests"],
-        "eps": ["Diluted EPS"],
-        "shares": ["Diluted Average Shares"],
-        "pretaxIncome": ["Pretax Income"],
-        "taxProvision": ["Tax Provision"],
-    },
-    "balance": {
-        "cash": ["Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents"],
-        "receivables": ["Accounts Receivable", "Receivables"],
-        "inventory": ["Inventory"],
-        "currentAssets": ["Current Assets"],
-        "nonCurrentAssets": ["Total Non Current Assets"],
-        "totalAssets": ["Total Assets"],
-        "currentLiabilities": ["Current Liabilities"],
-        "nonCurrentLiabilities": ["Total Non Current Liabilities Net Minority Interest"],
-        "totalLiabilities": ["Total Liabilities Net Minority Interest"],
-        "totalDebt": ["Total Debt"],
-        "equity": ["Stockholders Equity", "Common Stock Equity"],
-        "investedCapital": ["Invested Capital"],
-    },
-    "cashflow": {
-        "operatingCF": ["Operating Cash Flow", "Cash Flow From Continuing Operating Activities"],
-        "capex": ["Capital Expenditure"],
-        "fcf": ["Free Cash Flow"],
-        "sbc": ["Stock Based Compensation"],
-        "da": ["Depreciation And Amortization", "Depreciation Amortization Depletion"],
-        "buybacks": ["Repurchase Of Capital Stock", "Common Stock Payments"],
-        "dividends": ["Cash Dividends Paid", "Common Stock Dividend Paid"],
-    },
-}
-FLOWS = ("income", "cashflow")   # summed for TTM; balance-sheet items are point-in-time
-
-_locks: dict[str, threading.Lock] = {}
-_locks_guard = threading.Lock()
-
-
-class RateLimited(Exception):
-    pass
-
-
-# ---------- fetching ----------
-
-def _clean(v):
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return None
-    return None if math.isnan(f) or math.isinf(f) else f
-
-
-def _frame_to_periods(df, items: dict) -> dict:
-    """yfinance statement DataFrame (rows: line items, columns: period end dates)
-    -> {"YYYY-MM-DD": {key: value}}"""
-    out: dict[str, dict] = {}
-    if df is None or getattr(df, "empty", True):
-        return out
-    index = set(df.index)
-    for col in df.columns:
-        end = col.strftime("%Y-%m-%d") if hasattr(col, "strftime") else str(col)[:10]
-        rec = {}
-        for key, names in items.items():
-            for name in names:
-                if name in index:
-                    v = _clean(df.at[name, col])
-                    if v is not None:
-                        rec[key] = v
-                        break
-        if rec:
-            out[end] = rec
-    return out
-
-
-def _get(t, attr: str):
-    if GATE.paused_for():
-        raise RateLimited("paused")   # answer the page now instead of making it wait out the pause
-    GATE.wait(priority=True)
-    try:
-        df = getattr(t, attr)
-        GATE.ok()
-        return df
-    except Exception as e:  # noqa: BLE001
-        if is_rate_limit(e):
-            GATE.limited()
-            raise RateLimited(str(e)) from e
-        raise
-
-
-def fetch_raw(ticker: str) -> dict:
-    t = yf.Ticker(yahoo_symbol(ticker))
-    raw = {"ticker": ticker, "fetchedAt": iso(utc_now()), "annual": {}, "quarterly": {}}
-    for kind, attr in (("income", "income_stmt"), ("balance", "balance_sheet"), ("cashflow", "cashflow")):
-        raw["annual"][kind] = _frame_to_periods(_get(t, attr), ITEMS[kind])
-        raw["quarterly"][kind] = _frame_to_periods(_get(t, "quarterly_" + attr), ITEMS[kind])
-    if not any(raw["annual"][k] or raw["quarterly"][k] for k in ITEMS):
-        raise LookupError(f"Yahoo Finance has no financial statements for {ticker}.")
-    return raw
-
-
-def _latest_quarter_end(raw: dict) -> datetime | None:
-    ends = [e for kind in ("income",) for e in (raw.get("quarterly", {}).get(kind) or {})]
-    dates = [d for d in (_date(e) for e in ends) if d]
-    return max(dates) if dates else None
-
-
-def _quarter_overdue(raw: dict) -> bool:
-    """True when the newest quarter is old enough that the next report is (about to be) out."""
-    end = _latest_quarter_end(raw)
-    return bool(end) and (datetime.utcnow() - end).days > QUARTER_DUE_DAYS
-
-
-def _cache_path(ticker: str) -> str:
-    return os.path.join(CACHE_DIR, ticker.replace("/", "_") + ".json")
-
-
-def _age(raw: dict | None) -> float:
-    dt = parse_iso((raw or {}).get("fetchedAt"))
-    return (utc_now() - dt).total_seconds() if dt else float("inf")
 
 
 def get(ticker: str, refresh: bool = False) -> dict:
-    """Analysis for one ticker: from the cache when fresh enough, otherwise from Yahoo.
-    If Yahoo fails but an older copy exists, that copy is returned with "warning"."""
+    """Analysis for one ticker. Raises ValueError for a malformed ticker, LookupError when no
+    source has statements, or the source's error (e.g. RateLimited) when nothing is cached."""
     ticker = ticker.strip().upper().replace("-", ".")
     if not TICKER_RE.match(ticker):
         raise ValueError(f"{ticker!r} doesn't look like a ticker.")
-    with _locks_guard:
-        lock = _locks.setdefault(ticker, threading.Lock())
-    with lock:   # two tabs asking for the same stock fetch it once
-        cached = read_json(_cache_path(ticker))
-        age = _age(cached)
-        max_age = MAX_AGE_DUE if cached and _quarter_overdue(cached) else MAX_AGE
-        if cached and (age < MIN_REFRESH or (age < max_age and not refresh)):
-            return compute(cached)
-        try:
-            raw = fetch_raw(ticker)
-        except (RateLimited, Exception) as e:  # noqa: BLE001
-            if cached and not isinstance(e, (LookupError, ValueError)):
-                out = compute(cached)
-                out["warning"] = ("Yahoo is limiting requests right now, so this is the copy from "
-                                  if isinstance(e, RateLimited) else "Couldn't reach Yahoo Finance, so this is the copy from ") + cached["fetchedAt"]
-                return out
-            raise
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        write_json(_cache_path(ticker), raw)
-        return compute(raw)
+    raw = statements.get(ticker, refresh=refresh)
+    out = compute(raw)
+    out["sources"] = raw.get("sources", [])
+    if raw.get("warnings"):
+        out["warning"] = " · ".join(raw["warnings"])
+    return out
 
 
 # ---------- metrics ----------
@@ -211,7 +58,7 @@ def _growth(cur, prev):
 def _merge(view: dict) -> dict[str, dict]:
     """{end date: {all keys}} across the three statements of one view."""
     out: dict[str, dict] = {}
-    for kind in ITEMS:
+    for kind in KEYS:
         for end, rec in (view.get(kind) or {}).items():
             out.setdefault(end, {}).update(rec)
     return out
@@ -237,16 +84,19 @@ def _ttm(quarters: list[tuple[str, dict]]) -> dict | None:
     """Last four quarters summed for flow items, latest quarter for balance items."""
     if len(quarters) < 4:
         return None
+    first, last = _date(quarters[-4][0]), _date(quarters[-1][0])
+    if not first or not last or not 250 <= (last - first).days <= 300:
+        return None   # not four consecutive quarters (one is missing): no TTM
     last4 = [q for _, q in quarters[-4:]]
     out = {}
-    flow_keys = {k for kind in FLOWS for k in ITEMS[kind]} | {"fcf"}
+    flow_keys = {k for kind in FLOWS for k in KEYS[kind]}
     for k in flow_keys:
         if k == "shares":
             continue
         vals = [q.get(k) for q in last4]
         if all(v is not None for v in vals):
             out[k] = sum(vals)
-    for k in ITEMS["balance"]:
+    for k in KEYS["balance"]:
         if last4[-1].get(k) is not None:
             out[k] = last4[-1][k]
     if last4[-1].get("shares") is not None:
@@ -420,12 +270,12 @@ def compute(raw: dict) -> dict:
     ttm = _ttm(quarterly)
     if ttm and annual and quarterly and quarterly[-1][0] <= annual[-1][0]:
         ttm = None   # the latest quarter is already the fiscal year end: TTM = last FY
-    latest_q = _latest_quarter_end(raw)
+    latest_q = statements.latest_quarter_end(raw)
     return {
         "ticker": raw.get("ticker"),
         "fetchedAt": raw.get("fetchedAt"),
-        "latestQuarter": latest_q.strftime("%Y-%m-%d") if latest_q else None,
-        "quarterOverdue": _quarter_overdue(raw),
+        "latestQuarter": latest_q.isoformat() if latest_q else None,
+        "quarterOverdue": statements.quarter_overdue(raw),
         "currency": raw.get("currency", "USD"),
         "annual": _view(annual, False, ttm),
         "quarterly": _view(quarterly, True, None),

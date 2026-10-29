@@ -19,7 +19,7 @@ from datetime import datetime, time as dtime, timezone
 
 import requests
 
-from .common import MARKET_CLOSE, MARKET_OPEN, NY, iso, market_session
+from ..common import MARKET_CLOSE, MARKET_OPEN, NY, iso, market_session
 
 API = "https://finnhub.io/api/v1/quote"
 INTERVAL = int(os.environ.get("FINNHUB_INTERVAL", "15"))
@@ -116,19 +116,3 @@ def loop(on_quotes) -> None:
                 on_quotes(got)
             except Exception as e:  # noqa: BLE001
                 print(f"Finnhub: couldn't apply quotes: {e}", file=sys.stderr, flush=True)
-
-
-def load_dotenv(path: str) -> None:
-    """KEY=value lines from .env into the environment (existing variables win)."""
-    try:
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                k, v = k.strip(), v.strip().strip('"').strip("'")
-                if k and k not in os.environ:
-                    os.environ[k] = v
-    except OSError:
-        pass

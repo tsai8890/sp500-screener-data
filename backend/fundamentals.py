@@ -17,7 +17,7 @@ import yfinance as yf
 from .common import FUNDAMENTALS_PATH, iso, num, parse_iso, read_json, utc_now, write_json
 from . import universe
 from .universe import yahoo_symbol
-from .yahoo import GATE, is_rate_limit
+from .sources.yahoo import GATE, is_rate_limit
 
 WORKERS = 3   # threads; the request rate itself is set by the shared Yahoo gate (YAHOO_RPS)
 CHUNK = 100   # stocks fetched between saves
@@ -152,7 +152,7 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
         }
 
     if todo:
-        from .yahoo import RPS
+        from .sources.yahoo import RPS
         mins = max(1, round(len(todo) / max(RPS, 0.01) / 60))
         print(f"Fundamentals: fetching {len(todo)} stocks from Yahoo Finance (about {mins} min; "
               f"progress every {CHUNK})...", flush=True)

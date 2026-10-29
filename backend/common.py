@@ -17,6 +17,9 @@ UNIVERSES_PATH = os.path.join(DATA_DIR, "universes.json")   # cached index const
 INDEX_PATH = os.path.join(DATA_DIR, "index.json")           # list of universes for the page
 
 
+SEC_FUNDAMENTALS_PATH = os.path.join(DATA_DIR, "sec_fundamentals.json")   # written by sec_sync.py
+
+
 def universe_path(uid: str) -> str:
     """Combined data file the page reads for one universe, e.g. data/russell1000.json."""
     return os.path.join(DATA_DIR, f"{uid}.json")
@@ -86,3 +89,20 @@ def write_json(path: str, obj) -> None:
     with os.fdopen(fd, "w") as f:
         json.dump(obj, f, separators=(",", ":"))
     os.replace(tmp, path)
+
+
+def load_dotenv(path: str) -> None:
+    """KEY=value lines from a .env file into the environment (existing variables win).
+    API keys and contact details live there, git-ignored, never in the code."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k, v = k.strip(), v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except OSError:
+        pass

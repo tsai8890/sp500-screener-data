@@ -11,10 +11,12 @@ import argparse
 import sys
 
 from . import build, fundamentals, prices
-from .common import market_session
+from .common import ROOT, load_dotenv, market_session
 
 
 def main(argv: list[str] | None = None) -> int:
+    import os
+    load_dotenv(os.path.join(ROOT, ".env"))
     ap = argparse.ArgumentParser(prog="python -m backend.update")
     ap.add_argument("what", choices=["fundamentals", "prices", "all"])
     ap.add_argument("--force", action="store_true", help="fetch prices even outside market hours")

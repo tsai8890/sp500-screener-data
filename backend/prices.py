@@ -14,7 +14,7 @@ from datetime import timezone
 from .common import (FUNDAMENTALS_PATH, MARKET_CLOSE, MARKET_OPEN, NY, PRICES_PATH, iso, market_session, num,
                      read_json, utc_now, write_json)
 from .universe import yahoo_symbol
-from .yahoo import GATE, is_rate_limit
+from .sources.yahoo import GATE, is_rate_limit
 
 _file_lock = threading.Lock()   # prices.json is written by the schedule and by single-stock refreshes
 BATCH = 50     # tickers per download call

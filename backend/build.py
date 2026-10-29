@@ -5,8 +5,12 @@ which the page reads, plus data/index.json listing the universes.
 """
 from __future__ import annotations
 
-from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, UNIVERSES_PATH, iso, num, read_json,
-                     universe_path, utc_now, write_json)
+from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, SEC_FUNDAMENTALS_PATH, UNIVERSES_PATH, iso, num,
+                     read_json, universe_path, utc_now, write_json)
+
+# Figures taken from SEC filings when we have them (sec_sync.py): they are current
+# minutes after a 10-Q / 10-K, while Yahoo's lag for days after an earnings report.
+SEC_FIELDS = ("eps", "revGrowth", "netMargin")
 from .universe import DEFAULT, UNIVERSES
 
 COLS = ["ticker", "name", "sector", "price", "chg", "mktCap", "pe", "fpe", "peg", "revGrowth", "netMargin", "divYield",
@@ -37,14 +41,21 @@ def _ext(ext: list | None, price: float | None) -> list:
     return [num(ext[0], nd=2), num((ext[0] / price - 1) * 100, nd=2), ext[1]]
 
 
+def with_sec(f: dict, sec: dict | None) -> dict:
+    if not sec:
+        return f
+    return {**f, **{k: sec[k] for k in SEC_FIELDS if sec.get(k) is not None}}
+
+
 def combine(fund: dict, prices: dict | None, tickers: list[str] | None = None,
-            uid: str = DEFAULT, name: str = "S&P 500") -> dict:
+            uid: str = DEFAULT, name: str = "S&P 500", sec: dict | None = None) -> dict:
     stocks = fund.get("stocks", {})
+    sec = sec or {}
     order = tickers if tickers is not None else (fund.get("order") or list(stocks))
     live = (prices or {}).get("prices", {})
     ext = (prices or {}).get("ext", {})
     prevs = (prices or {}).get("prev", {})
-    rows = [row(t, stocks[t], live.get(t), ext.get(t), prevs.get(t)) for t in order if t in stocks]
+    rows = [row(t, with_sec(stocks[t], sec.get(t)), live.get(t), ext.get(t), prevs.get(t)) for t in order if t in stocks]
     return {
         "asOf": (prices or {}).get("asOf") or fund.get("asOf"),   # time of the newest prices
         "pricesAsOf": (prices or {}).get("asOf"),
@@ -66,13 +77,14 @@ def build(fund: dict | None = None, prices: dict | None = None, universes: dict 
     if not fund:
         raise RuntimeError("No fundamentals yet: run the fundamentals update first.")
     prices = prices if prices is not None else read_json(PRICES_PATH)
+    sec = (read_json(SEC_FUNDAMENTALS_PATH) or {}).get("stocks", {})
     lists = (universes or read_json(UNIVERSES_PATH) or {}).get("universes", {})
     if not lists:  # no cached lists yet: everything we have is the default universe
         lists = {DEFAULT: {"name": UNIVERSES[DEFAULT][0], "stocks": [[t] for t in fund.get("order", [])]}}
     outs, index = {}, []
     for uid in [u for u in UNIVERSES if u in lists]:
         meta = lists[uid]
-        out = combine(fund, prices, [s[0] for s in meta["stocks"]], uid, meta.get("name", uid))
+        out = combine(fund, prices, [s[0] for s in meta["stocks"]], uid, meta.get("name", uid), sec)
         write_json(universe_path(uid), out)
         outs[uid] = out
         index.append({"id": uid, "name": out["universe"], "count": out["count"], "file": f"data/{uid}.json"})

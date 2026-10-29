@@ -2234,8 +2234,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     note.hidden = !d.quarterOverdue;
     if (d.quarterOverdue && d.latestQuarter) {
       const lq = new Date(d.latestQuarter + "T12:00:00Z").toLocaleDateString(undefined, { month: "short", year: "numeric" });
-      note.replaceChildren("Newest quarter on Yahoo Finance: ", el("b", { text: lq }),
-        ". If the company just reported, Yahoo usually adds the new quarter 1–3 days later; this page checks again every 3 hours (or press Refresh).");
+      const fromSec = (d.sources || []).some((x) => x.source === "sec");
+      note.replaceChildren(`Newest quarter ${fromSec ? "in SEC filings" : "on Yahoo Finance"}: `, el("b", { text: lq }), fromSec
+        ? ". If the company just reported, the new quarter shows up here within minutes of its 10-Q being filed with the SEC, usually a few days after the earnings release."
+        : ". If the company just reported, Yahoo usually adds the new quarter 1–3 days later; this page checks again every 3 hours (or press Refresh).");
     }
     renderAnWatchBtn();
     const meta = $("anMeta"); meta.textContent = "";
@@ -2338,7 +2340,9 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("div", { class: "table-wrap" }, el("table", { class: "an-t" }, el("thead", {}, thead), tb))));
     });
     const qNote = S.anPeriod === "quarterly" ? " Growth compares each quarter with the same quarter a year earlier." : " TTM = the last four reported quarters.";
-    $("anFoot").textContent = `Source: Yahoo Finance, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
+    const src = (d.sources || []).map((x) => x.source);
+    const srcText = src.includes("sec") ? (src.includes("yahoo") ? "SEC filings (10-Q / 10-K), with gaps filled from Yahoo Finance" : "SEC filings (10-Q / 10-K)") : "Yahoo Finance";
+    $("anFoot").textContent = `Source: ${srcText}, as reported in ${d.currency || "USD"}.` + qNote + " Hover a dotted label for its definition.";
     applySide();
   }
   // Add to watchlist: the same picker as the ☆ in the Screener

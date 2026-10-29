@@ -5,11 +5,14 @@
 import os
 import sys
 import tempfile
+import time
 import types
 import unittest
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+os.environ.pop("SEC_USER_AGENT", None)   # tests never call the SEC
 if "yfinance" not in sys.modules:
     try:
         import yfinance  # noqa: F401
@@ -18,7 +21,9 @@ if "yfinance" not in sys.modules:
 
 import pandas as pd  # noqa: E402
 
-from backend import analysis, build, common, fundamentals, notes_store, prices, screens_db, universe, yahoo  # noqa: E402
+from backend import analysis, build, common, fundamentals, notes_store, prices, screens_db, statements, universe  # noqa: E402
+from backend.sources import sec, sec_xbrl, yahoo  # noqa: E402
+import sec_fixture  # noqa: E402
 
 AAPL_INFO = {
     "currentPrice": 260.0, "marketCap": 3.9e12, "trailingPE": 39.4, "trailingPegRatio": 2.62,
@@ -454,16 +459,17 @@ class AnalysisDates(unittest.TestCase):
 class Analysis(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        self.orig = (analysis.CACHE_DIR, getattr(analysis.yf, "Ticker", None), analysis.GATE)
-        analysis.CACHE_DIR = self.tmp
+        self.yf = sys.modules["yfinance"]
+        self.orig = (statements.CACHE_DIR, getattr(self.yf, "Ticker", None), yahoo.GATE)
+        statements.CACHE_DIR = self.tmp
         self.made = []
         def ticker(sym):
             t = FakeStatements(sym); self.made.append(t); return t
-        analysis.yf.Ticker = ticker
-        analysis.GATE = yahoo.Gate(rps=1000)
+        self.yf.Ticker = ticker
+        yahoo.GATE = yahoo.Gate(rps=1000)
 
     def tearDown(self):
-        analysis.CACHE_DIR, analysis.yf.Ticker, analysis.GATE = self.orig
+        statements.CACHE_DIR, self.yf.Ticker, yahoo.GATE = self.orig
 
     def row(self, view, key):
         for sec in view["sections"]:
@@ -508,23 +514,192 @@ class Analysis(unittest.TestCase):
 
     def test_rate_limited_uses_old_copy(self):
         analysis.get("NVDA")
-        path = analysis._cache_path("NVDA"); raw = common.read_json(path)
+        path = statements.cache_path("NVDA", "yahoo"); raw = common.read_json(path)
         raw["fetchedAt"] = "2020-01-01T00:00:00Z"; common.write_json(path, raw)
-        analysis.GATE.limited()
+        yahoo.GATE.limited()
         out = analysis.get("NVDA")
         self.assertIn("limiting", out["warning"])
-        analysis.GATE.until = 0
+        yahoo.GATE.until = 0
         with self.assertRaises(analysis.RateLimited):
-            analysis.GATE.limited(); analysis.get("AMD")
+            yahoo.GATE.limited(); analysis.get("AMD")
 
     def test_rejects_bad_ticker_and_empty_statements(self):
         with self.assertRaises(ValueError):
             analysis.get("../etc")
         class Empty:
             def __getattr__(self, name): return pd.DataFrame()
-        analysis.yf.Ticker = lambda sym: Empty()
+        self.yf.Ticker = lambda sym: Empty()
         with self.assertRaises(LookupError):
             analysis.get("ZZZZ")
+
+
+class SecXbrl(unittest.TestCase):
+    def setUp(self):
+        self.s = sec_xbrl.statements(sec_fixture.facts(), "EX", "2026-07-26T00:00:00Z")
+
+    def q(self, kind, key):
+        return {e: v.get(key) for e, v in self.s["quarterly"][kind].items() if key in v}
+
+    def test_quarters_from_year_to_date_and_q4_from_the_year(self):
+        self.assertEqual(self.q("cashflow", "operatingCF"),
+                         {"2025-03-31": 30, "2025-06-30": 35, "2025-09-30": 35, "2025-12-31": 40,
+                          "2026-03-31": 40, "2026-06-30": 45})
+        self.assertEqual(self.q("income", "revenue")["2025-12-31"], 124)     # 440 - 316
+        self.assertEqual(self.q("income", "eps")["2025-12-31"], 1.3)         # rounded, no float noise
+
+    def test_restated_value_wins_and_other_forms_ignored(self):
+        self.assertEqual(self.q("income", "revenue")["2025-06-30"], 106)     # the later filing
+        self.assertEqual(self.q("income", "netIncome")["2026-06-30"], 30)    # not the 8-K's 999
+
+    def test_tag_switch_signs_and_derived_values(self):
+        self.assertEqual(self.s["annual"]["income"]["2024-12-31"]["revenue"], 360)   # old tag name
+        self.assertEqual(self.q("cashflow", "capex")["2026-06-30"], -8)              # payments are negative
+        self.assertEqual(self.q("cashflow", "fcf")["2026-06-30"], 37)                # 45 - 8
+        self.assertEqual(self.s["quarterly"]["balance"]["2026-06-30"],
+                         {"equity": 320, "cash": 75, "totalDebt": 95})              # 60+15; 80+10+5
+        self.assertEqual(self.s["lastFiled"], "2026-07-25")
+
+    def test_screener_figures(self):
+        from backend import sec_sync
+        f = sec_sync.screener_figures(self.s)
+        self.assertEqual(f["latestQuarter"], "2026-06-30")
+        self.assertEqual(f["eps"], round(1.2 + 1.3 + 1.4 + 1.5, 4))          # last four quarters
+        self.assertEqual(f["revGrowth"], round((130 - 106) / 106 * 100, 1))  # vs Jun 2025 (restated)
+        self.assertEqual(f["netMargin"], round((24 + 26 + 28 + 30) / (110 + 124 + 120 + 130) * 100, 1))
+
+
+class Merge(unittest.TestCase):
+    def test_first_source_wins_others_fill_gaps_and_add_periods(self):
+        sec_raw = {"quarterly": {"income": {"2026-06-30": {"revenue": 130}, "2026-09-30": {"revenue": 140}}}}
+        yahoo_raw = {"quarterly": {"income": {"2026-06-29": {"revenue": 129, "grossProfit": 60},
+                                              "2025-06-30": {"revenue": 100}},
+                                   "balance": {"2026-06-30": {"totalDebt": 90}}}}
+        m = statements.merge([sec_raw, yahoo_raw])["quarterly"]
+        self.assertEqual(m["income"]["2026-06-30"], {"revenue": 130, "grossProfit": 60})   # same quarter, a day apart
+        self.assertEqual(m["income"]["2026-09-30"], {"revenue": 140})                      # only the SEC has it yet
+        self.assertEqual(m["income"]["2025-06-30"], {"revenue": 100})                      # older, from Yahoo
+        self.assertEqual(m["balance"]["2026-06-30"], {"totalDebt": 90})
+
+
+class CombinedStatements(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.orig = (statements.CACHE_DIR, list(statements.PROVIDERS), statements._sector)
+        statements.CACHE_DIR = self.tmp
+        self.calls = []
+        def fake(name, raw):
+            def fetch(t):
+                self.calls.append(name)
+                if raw is None:
+                    raise sec.Unavailable("down")
+                return {**raw, "fetchedAt": common.iso(common.utc_now())}
+            return fetch
+        self.sec_raw = sec_xbrl.statements(sec_fixture.facts(), "EX", None)
+        self.yahoo_raw = {"annual": {}, "quarterly": {"income": {"2026-03-31": {"revenue": 119, "rnd": 9}}}}
+        self.make = lambda sec_raw: [
+            statements.Provider("sec", "SEC", fake("sec", sec_raw), lambda: True, 3600, 600),
+            statements.Provider("yahoo", "Yahoo", fake("yahoo", self.yahoo_raw), lambda: True, 3600, 600)]
+        statements._sector = lambda t: "Information Technology"
+
+    def tearDown(self):
+        statements.CACHE_DIR, statements.PROVIDERS, statements._sector = self.orig
+
+    def test_sec_first_yahoo_fills_and_sources_listed(self):
+        statements.PROVIDERS = self.make(self.sec_raw)
+        raw = statements.get("EX")
+        q = raw["quarterly"]["income"]["2026-03-31"]
+        self.assertEqual((q["revenue"], q["rnd"]), (120, 9))
+        self.assertEqual([s["source"] for s in raw["sources"]], ["sec", "yahoo"])
+        self.assertEqual(raw["sources"][0]["latestQuarter"], "2026-06-30")
+        out = analysis.compute(raw)
+        self.assertEqual(out["latestQuarter"], "2026-06-30")
+
+    def test_cached_per_source_and_a_failing_source_falls_back(self):
+        statements.PROVIDERS = self.make(self.sec_raw)
+        statements.get("EX"); statements.get("EX")
+        self.assertEqual(self.calls, ["sec", "yahoo"])                     # second time from cache
+        statements.PROVIDERS = self.make(None)
+        p = statements.cache_path("EX", "sec"); r = common.read_json(p)
+        r["fetchedAt"] = "2020-01-01T00:00:00Z"; common.write_json(p, r)
+        raw = statements.get("EX")
+        self.assertIn("couldn't update", raw["warnings"][0])
+        self.assertEqual(raw["quarterly"]["income"]["2026-06-30"]["revenue"], 130)   # the old SEC copy
+
+    def test_financials_skip_the_sec(self):
+        statements.PROVIDERS = self.make(self.sec_raw)
+        statements._sector = lambda t: "Financials"
+        raw = statements.get("BANK")
+        self.assertEqual([s["source"] for s in raw["sources"]], ["yahoo"])
+
+
+class SecFeedAndBuild(unittest.TestCase):
+    def test_latest_filings_feed(self):
+        atom = """<feed><entry><title>10-Q - Alphabet Inc. (0001652044) (Filer)</title>
+        <updated>2026-10-29T16:05:11-04:00</updated></entry>
+        <entry><title>10-Q - Some Fund (Subject)</title></entry></feed>"""
+        orig, orig_en = sec._get, sec.enabled
+        sec._get = lambda url, params=None, priority=False, timeout=30: types.SimpleNamespace(text=atom)
+        try:
+            got = sec.latest_filings("10-Q")
+        finally:
+            sec._get = orig
+        self.assertEqual(got, [{"cik": 1652044, "form": "10-Q", "company": "Alphabet Inc.",
+                                "updated": "2026-10-29T16:05:11-04:00"}])
+
+    def test_build_uses_sec_figures(self):
+        fund = {"stocks": {"X": {"shares": 1e9, "eps": 2.0, "revGrowth": 5.0, "netMargin": 10.0}}, "order": ["X"]}
+        data = build.combine(fund, {"prices": {"X": 100.0}}, sec={"X": {"eps": 4.0, "revGrowth": 20.0}})
+        row = dict(zip(data["cols"], data["rows"][0]))
+        self.assertEqual((row["pe"], row["revGrowth"], row["netMargin"]), (25.0, 20.0, 10.0))
+
+    def test_sec_off_without_contact(self):
+        self.assertFalse(sec.enabled())
+        os.environ["SEC_USER_AGENT"] = "Jane Doe jane@example.com"
+        try:
+            self.assertTrue(sec.enabled())
+        finally:
+            os.environ.pop("SEC_USER_AGENT")
+
+
+class SecSyncFeed(unittest.TestCase):
+    def setUp(self):
+        from backend import sec_sync
+        self.sync_mod = sec_sync
+        self.tmp = tempfile.mkdtemp()
+        self.orig = (statements.CACHE_DIR, sec.cik_for, sec.latest_filings, sec.company_facts, self.sync_mod.SEC_FUND_PATH)
+        statements.CACHE_DIR = self.tmp
+        self.sync_mod.SEC_FUND_PATH = os.path.join(self.tmp, "sec_fundamentals.json")
+        sec.cik_for = lambda t: {"GOOG": 1652044, "GOOGL": 1652044, "JPM": 19617}.get(t)
+        self.facts = sec_fixture.facts()
+        sec.company_facts = lambda cik, priority=False: self.facts
+
+    def tearDown(self):
+        statements.CACHE_DIR, sec.cik_for, sec.latest_filings, sec.company_facts, self.sync_mod.SEC_FUND_PATH = self.orig
+
+    def test_new_filing_fetched_for_both_share_classes_and_retried_until_it_is_in(self):
+        updates = []
+        sync = self.sync_mod.Sync(lambda: [("GOOG", "Comm"), ("GOOGL", "Comm"), ("JPM", "Financials")],
+                                  lambda: updates.append(1))
+        covered = sync.covered()
+        self.assertEqual(sorted(covered), ["GOOG", "GOOGL"])                 # banks stay on Yahoo
+        sec.latest_filings = lambda form: [{"cik": 1652044, "form": "10-Q", "company": "Alphabet Inc.",
+                                            "updated": "2026-10-29T16:05:00-04:00"}] if form == "10-Q" else []
+        sync.check_feed(covered)
+        self.assertEqual(sorted(sync.priority), ["GOOG", "GOOGL"])
+        sync.fetch("GOOG", 1652044, ["GOOG", "GOOGL"])                       # data API not updated yet
+        self.assertGreater(sync.priority["GOOG"], time.time() + 60)          # try again in a while
+        self.assertIsNotNone(statements.load("GOOGL", "sec"))
+        us = self.facts["facts"]["us-gaap"]
+        us["NetIncomeLoss"]["units"]["USD"].append(sec_fixture.fact("2026-07-01", "2026-09-30", 33.0, "10-Q", "2026-10-29"))
+        us["RevenueFromContractWithCustomerExcludingAssessedTax"]["units"]["USD"].append(
+            sec_fixture.fact("2026-07-01", "2026-09-30", 140.0, "10-Q", "2026-10-29"))
+        us["EarningsPerShareDiluted"]["units"]["USD/shares"].append(
+            sec_fixture.fact("2026-07-01", "2026-09-30", 1.6, "10-Q", "2026-10-29"))
+        sync.fetch("GOOG", 1652044, ["GOOG", "GOOGL"])                       # now it is in
+        self.assertEqual(sync.priority, {})
+        sync.save()
+        self.assertEqual(updates, [1])
+        self.assertEqual(self.sync_mod.overrides()["GOOG"]["revGrowth"], round((140 - 110) / 110 * 100, 1))
 
 if __name__ == "__main__":
     unittest.main()

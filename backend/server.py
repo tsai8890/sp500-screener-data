@@ -52,13 +52,14 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import analysis, build, finnhub, fundamentals, notes_store, prices, screens_db
-from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, market_session,
+from . import analysis, build, fundamentals, notes_store, prices, screens_db, sec_sync
+from .sources import finnhub
+from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, load_dotenv, market_session,
                      parse_iso, read_json, universe_path, utc_now)
 from .universe import UNIVERSES
-from .yahoo import GATE
+from .sources.yahoo import GATE
 
-finnhub.load_dotenv(os.path.join(ROOT, ".env"))   # API keys live in .env (git-ignored), never in the code
+load_dotenv(os.path.join(ROOT, ".env"))   # API keys live in .env (git-ignored), never in the code
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
@@ -144,6 +145,10 @@ def fundamentals_loop() -> None:
             STATE.record("fundamentals", False, time.time() - t0, f"{type(e).__name__}: {e}")
             fails += 1
             time.sleep(min(300 * 2 ** (fails - 1), 3600))   # 5, 10, 20 ... at most 60 min
+
+
+def screener_stocks() -> list[tuple[str, str | None]]:
+    return [(t, s.get("sector")) for t, s in ((STATE.fund or {}).get("stocks") or {}).items()]
 
 
 def apply_fast_quotes(quotes: dict) -> None:
@@ -374,6 +379,7 @@ def main() -> None:
     threading.Thread(target=fundamentals_loop, name="fundamentals", daemon=True).start()
     threading.Thread(target=prices_loop, name="prices", daemon=True).start()
     threading.Thread(target=finnhub.loop, args=(apply_fast_quotes,), name="finnhub", daemon=True).start()
+    threading.Thread(target=sec_sync.loop, args=(screener_stocks, STATE.rebuild), name="sec", daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
     print(f"Screener server on http://{shown}:{PORT}\n"

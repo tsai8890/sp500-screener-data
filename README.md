@@ -98,6 +98,24 @@ Nothing is deleted, and running it again is harmless. Reload the page afterwards
 
 If the page can't reach the server, it keeps your changes in the browser and saves them once the server is back; the Settings tab and the notes panel say so.
 
+## Where the numbers come from
+
+| Data | Source | Why |
+|---|---|---|
+| Prices (all stocks, every 5 min, incl. pre-market / after-hours) | Yahoo Finance | SEC has no prices |
+| Prices of the stocks on screen (every 15 s) | Finnhub (optional key) | see below |
+| Forward EPS, expected growth (forward P/E, PEG), dividend rate | Yahoo Finance | analyst estimates and declared dividends aren't in filings |
+| **Financial statements** (Advanced Analysis) | **SEC filings first**, Yahoo fills gaps | official, and current minutes after a 10-Q / 10-K instead of days |
+| **Trailing EPS, revenue growth, net margin** (Screener) | **SEC filings** when available, else Yahoo | same reason: right after earnings, Yahoo's lag |
+| Banks and insurers (Financials) | Yahoo Finance | their filings don't map onto these statements |
+| Stock lists | Wikipedia / iShares | |
+
+**SEC setup (optional, free):** put your name and email in `.env` as `SEC_USER_AGENT=Jane Doe jane@example.com` (the SEC asks every program to identify itself) and restart. The first time, the server downloads the filings data of every stock in the background (about 1,000 companies, roughly 10 minutes; the page works meanwhile; it logs progress). After that it checks the SEC's list of new filings every 10 minutes and fetches a company again as soon as it files, and re-downloads every company weekly. Without `SEC_USER_AGENT` everything comes from Yahoo as before.
+
+How SEC data becomes statements (`backend/sources/sec_xbrl.py`): each item has a list of XBRL tag names tried in order (companies use different names for the same thing); when a period is reported more than once the latest filing wins; cash-flow figures are year-to-date in 10-Qs, so a quarter is the difference of two of them, and Q4 = full year (10-K) − nine months; payments are stored as negative. Total debt from the SEC is borrowings (long- and short-term debt, commercial paper), without leases; Yahoo's figure includes leases.
+
+To compare the two sources for a stock: `.venv/bin/python -m backend.sec_check GOOG` (add `--annual` for fiscal years).
+
 ## Fast quotes for the stocks you're looking at (Finnhub, optional)
 
 Prices for all ~1,000 stocks come from Yahoo Finance every 5 minutes. With a free [Finnhub](https://finnhub.io) API key, the stock open in **Advanced Analysis** and the **first 10 stocks of the current watchlist** (in the table's order) are updated every **15 seconds** while the page is open and visible: 11 stocks × 4 a minute = 44 requests a minute, under the free plan's 60. P/E, market cap and the rest follow the new price.
@@ -148,10 +166,14 @@ The **Notes** tab is a Markdown notebook: headings, **bold**, lists, `- [ ]` tas
 | `deploy/macos-autostart.sh` | Runs the server in the background on macOS (launchd). |
 | `backend/server.py` | The server: update schedule plus HTTP (standard library only). |
 | `backend/universe.py` | The stock lists: S&P 500 (Wikipedia, GitHub CSV fallback) and Russell 1000 (holdings of the iShares Russell 1000 ETF, IWB). Cached in `data/universes.json`, refreshed daily. Add another list by registering it in `UNIVERSES`. |
-| `backend/fundamentals.py` | Fundamentals for all stocks, fetched in parallel (8 at a time). |
-| `backend/analysis.py` | Financial statements and metrics for the Advanced Analysis tab, fetched on demand and cached in `data/analysis/`. |
+| `backend/sources/` | **Where data comes from, one module per provider** (fetching and translating only, no business logic): `yahoo.py` (shared Yahoo rate limit, statements), `finnhub.py` (fast quotes), `sec.py` (EDGAR client: ticker → CIK, company facts, new-filings feed, rate limit), `sec_xbrl.py` (XBRL facts → statements). To add a provider, write a module that returns statements in the shape described in `sources/__init__.py` and add it to `PROVIDERS` in `statements.py`. |
+| `backend/statements.py` | Combines the providers' statements (SEC first, Yahoo fills gaps), each cached separately in `data/statements/<TICKER>.<source>.json` with its own refresh schedule. |
+| `backend/analysis.py` | Metrics for the Advanced Analysis tab from those statements (growth, margins, ROIC, FCF, TTM ...). |
+| `backend/fundamentals.py` | Yahoo fundamentals for all stocks (the Screener), each refreshed every 12 hours. |
+| `backend/sec_sync.py` | Keeps every stock's SEC statements current (initial download, new-filings feed, weekly refresh) and writes the Screener figures from filings to `data/sec_fundamentals.json`. |
+| `backend/sec_check.py` | `python -m backend.sec_check TICKER`: SEC and Yahoo figures side by side. |
 | `backend/prices.py` | Latest 1-minute prices, fetched in parallel batches of 50. |
-| `backend/build.py` | Merges both into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
+| `backend/build.py` | Merges fundamentals (with the SEC figures on top), prices and pre/after-hours prices into one file per list (`data/sp500.json`, `data/russell1000.json`) plus `data/index.json`, recalculating the price-based metrics. |
 | `backend/screens_db.py` | Saved screens and watchlists in SQLite. |
 | `backend/notes_store.py` | Notes as Markdown files. |
 | `backend/update.py` | One-off refresh from the command line: `python -m backend.update fundamentals`, `prices --force`, or `all`. |
