@@ -14,9 +14,11 @@ from datetime import timezone
 from .common import (FUNDAMENTALS_PATH, MARKET_CLOSE, MARKET_OPEN, NY, PRICES_PATH, iso, market_session, num,
                      read_json, utc_now, write_json)
 from .universe import yahoo_symbol
+from . import console
 from .sources.yahoo import GATE, is_rate_limit
 
-_file_lock = threading.Lock()   # prices.json is written by the schedule and by single-stock refreshes
+_file_lock = threading.Lock()
+_batch_errors: list[str] = []   # prices.json is written by the schedule and by single-stock refreshes
 BATCH = 50     # tickers per download call
 WORKERS = 2    # batches downloaded at the same time (each ticker is its own Yahoo request)
 
@@ -112,7 +114,7 @@ def _download(symbols: list[str], priority: bool = False) -> dict[str, tuple]:
             if is_rate_limit(e):
                 GATE.limited()
             else:
-                print(f"  batch {symbols[0]}..: {type(e).__name__}: {e}", file=sys.stderr)
+                _batch_errors.append(f"{type(e).__name__}: {e}")   # summarised once, not a line per batch
         time.sleep(1 + attempt)
     return {}
 
@@ -133,14 +135,13 @@ def update(tickers: list[str] | None = None, path: str = PRICES_PATH) -> dict:
     to_ticker = {yahoo_symbol(t): t for t in tickers}
     syms = list(to_ticker)
     batches = [syms[i:i + BATCH] for i in range(0, len(syms), BATCH)]
-    print(f"Prices: fetching {len(syms)} stocks from Yahoo Finance (incl. pre-market / after-hours)...", flush=True)
+    console.progress("prices", f"Prices: fetching {len(syms)} stocks...")
     done = [0]
 
     def run(batch):
         got = _download(batch)
         done[0] += len(batch)
-        if len(batches) > 4 and done[0] // BATCH % 5 == 0:   # a progress line every 250 stocks
-            print(f"Prices: {done[0]}/{len(syms)} ...", flush=True)
+        console.progress("prices", f"Prices: {done[0]}/{len(syms)} ({round(done[0] / len(syms) * 100)}%)")
         return got
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
@@ -180,8 +181,10 @@ def _merge_and_write(path, tickers, fresh, ext_fresh, got, started, prev_fresh=N
     prev_close = {t: (prev_fresh or {}).get(t, old_prev.get(t)) for t in tickers if t in (prev_fresh or {}) or t in old_prev}
     out = {"asOf": iso(utc_now()), "fresh": len(fresh), "prices": prices, "ext": ext, "prev": prev_close}
     write_json(path, out)
-    print(f"Prices: done. {len(fresh)}/{len(tickers)} fresh, {len(ext)} with a pre-market/after-hours price, "
-          f"in {time.time() - started:.1f}s -> {path}")
+    errs = f" {len(_batch_errors)} download errors, e.g. {_batch_errors[0]}." if _batch_errors else ""
+    _batch_errors.clear()
+    console.done("prices", f"Prices: {len(fresh)}/{len(tickers)} updated, {len(ext)} with a pre-market/after-hours price "
+                           f"({time.time() - started:.0f}s).{errs}")
     return out
 
 

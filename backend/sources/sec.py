@@ -81,8 +81,8 @@ def _get(url: str, params: dict | None = None, priority: bool = False, timeout: 
         raise Unavailable(f"can't reach the SEC ({type(e).__name__})") from e
     if r.status_code in (403, 429):
         PACE.blocked_until = time.monotonic() + BLOCK_PAUSE
-        print(f"SEC: request refused ({r.status_code}); pausing SEC requests for {BLOCK_PAUSE // 60} min.",
-              file=sys.stderr, flush=True)
+        from .. import console
+        console.log(f"SEC: request refused ({r.status_code}); pausing SEC requests for {BLOCK_PAUSE // 60} min.", error=True)
         raise Unavailable("SEC is limiting requests right now")
     if r.status_code == 404:
         raise LookupError(url)

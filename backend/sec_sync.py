@@ -21,7 +21,7 @@ import sys
 import time
 from datetime import date
 
-from . import statements
+from . import console, statements
 from .common import SEC_FUNDAMENTALS_PATH as SEC_FUND_PATH, iso, parse_iso, read_json, utc_now, write_json
 from .sources import sec, sec_xbrl
 
@@ -30,6 +30,7 @@ FEED_EVERY = 10 * 60     # check the SEC's newest filings this often
 RETRY_NEW = 15 * 60      # a just-filed report may need a few minutes to reach the data API
 SAVE_EVERY = 25          # write the Screener file after this many companies
 FORMS = ("10-Q", "10-K")
+PROBLEMS_PATH = os.path.join(os.path.dirname(SEC_FUND_PATH), "sec", "problems.json")
 
 
 # ---------- Screener figures from statements ----------
@@ -116,7 +117,7 @@ class Sync:
                 filed = (f["updated"] or "")[:10]
                 have = (statements.load(tickers[0], "sec") or {}).get("lastFiled") or ""
                 if filed and filed > have and tickers[0] not in self.priority:
-                    print(f"SEC: new {f['form']} from {f['company']} ({', '.join(tickers)}); fetching it.", flush=True)
+                    console.log(f"SEC: new {f['form']} from {f['company']} ({', '.join(tickers)}); fetching it.")
                     for t in tickers:
                         self.priority[t] = time.time()
                         self.wanted[t] = filed
@@ -146,21 +147,22 @@ class Sync:
 
     def run(self) -> None:
         if not sec.enabled():
-            print("SEC: no SEC_USER_AGENT (your name and email, in .env); financial statements come from "
-                  "Yahoo only.", flush=True)
+            console.log("SEC: no SEC_USER_AGENT (your name and email, in .env); financial statements come from "
+                        "Yahoo only.")
             return
         try:
             covered = self.covered()
         except sec.Unavailable as e:
-            print(f"SEC: {e}; trying again in 10 min.", file=sys.stderr, flush=True)
+            console.log(f"SEC: {e}; trying again in 10 min.", error=True)
             time.sleep(600)
             return self.run()
         queue = self.stale(covered)
         if queue:
             mins = max(1, round(len(queue) / sec.RPS / 60 * 2))
-            print(f"SEC: downloading filings data for {len(queue)} companies (about {mins} min, in the "
-                  f"background)...", flush=True)
+            console.log(f"SEC: downloading filings data for {len(queue)} companies (about {mins} min, in the "
+                        f"background)...")
         done, total = 0, len(queue)
+        problems: dict[str, str] = {}   # ticker -> what went wrong, summarised at the end
         while True:
             try:
                 if time.time() - self.last_feed > FEED_EVERY:
@@ -174,41 +176,52 @@ class Sync:
                     if self.dirty:
                         self.save()
                     if total and done >= total:
-                        print(f"SEC: all {total} companies up to date.", flush=True)
-                        total = 0
+                        msg = f"SEC: done, {total - len(problems)} of {total} companies up to date."
+                        if problems:
+                            os.makedirs(os.path.dirname(PROBLEMS_PATH), exist_ok=True)
+                            write_json(PROBLEMS_PATH, {"asOf": iso(utc_now()), "problems": problems})
+                            names = ", ".join(sorted(problems)[:8]) + (" ..." if len(problems) > 8 else "")
+                            msg += f" {len(problems)} couldn't be read ({names}); they keep Yahoo's figures. " \
+                                   f"Details: data/sec/problems.json"
+                        console.done("sec", msg)
+                        total, problems = 0, {}
                     time.sleep(30)
                     if not queue and not self.priority:
                         queue = self.stale(covered)   # the weekly re-download, a few at a time
                     continue
                 cik = covered.get(ticker)
+                if cik and not due and total:
+                    pct = round(done / total * 100)
+                    console.progress("sec", f"SEC: {done}/{total} ({pct}%) · downloading {ticker}",
+                                     milestone=done % 100 == 0 and done > 0)
                 if cik:
                     same = [t for t, c in covered.items() if c == cik]
                     try:
                         self.fetch(ticker, cik, same)
                     except LookupError:
                         self.priority.pop(ticker, None)   # the SEC has no XBRL data for it
+                        problems[ticker] = "no XBRL data at the SEC"
                     except sec.Unavailable:
                         raise
                     except Exception as e:  # noqa: BLE001  (one bad company must not stop the rest)
-                        print(f"SEC: {ticker}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+                        problems[ticker] = f"{type(e).__name__}: {e}"   # summarised at the end, not one line each
                         if ticker in self.priority:
                             self.priority[ticker] = time.time() + RETRY_NEW
                     for t in same:
                         if t != ticker and t in queue:
                             queue.remove(t)
+                            done += 1                     # GOOGL came with GOOG
                     if due:
                         self.save()                       # a new report: show it right away
                     else:
                         done += 1
-                        if total and done % 100 == 0:
-                            print(f"SEC: {done}/{total} ...", flush=True)
                 if self.dirty >= SAVE_EVERY:
                     self.save()
             except sec.Unavailable as e:
-                print(f"SEC: {e}; pausing 10 min.", file=sys.stderr, flush=True)
+                console.log(f"SEC: {e}; pausing 10 min.", error=True)
                 time.sleep(600)
             except Exception as e:  # noqa: BLE001
-                print(f"SEC: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+                console.log(f"SEC: {type(e).__name__}: {e}", error=True)
                 time.sleep(5)
 
 

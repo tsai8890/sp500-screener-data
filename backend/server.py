@@ -52,7 +52,7 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import analysis, build, fundamentals, notes_store, prices, screens_db, sec_sync
+from . import analysis, build, console, fundamentals, notes_store, prices, screens_db, sec_sync
 from .sources import finnhub
 from .common import (FUNDAMENTALS_PATH, INDEX_PATH, PRICES_PATH, ROOT, iso, load_dotenv, market_session,
                      parse_iso, read_json, universe_path, utc_now)
@@ -139,7 +139,7 @@ def fundamentals_loop() -> None:
                 time.sleep(300)   # some failed: try those again in a while
         except Exception as e:  # noqa: BLE001
             if isinstance(e, RuntimeError):
-                print(f"Fundamentals update skipped: {e}", flush=True)   # expected situation, no traceback
+                console.log(f"Fundamentals update skipped: {e}")   # expected situation, no traceback
             else:
                 traceback.print_exc()
             STATE.record("fundamentals", False, time.time() - t0, f"{type(e).__name__}: {e}")
@@ -165,7 +165,7 @@ def prices_loop() -> None:
             time.sleep(10)   # first run ever: wait for the first fundamentals, then fetch at once
             continue
         if at_start and not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
-            print("Prices: no trading right now (weekdays 4:00-20:00 New York time); showing the last saved prices.", flush=True)
+            console.log("Prices: no trading right now (weekdays 4:00-20:00 New York time); showing the last saved prices.")
         at_start = False
         if not (PRICES_ALWAYS or market_session(extended=True) or STATE.prices is None):
             continue
@@ -178,7 +178,7 @@ def prices_loop() -> None:
             STATE.record("prices", True, time.time() - t0)
         except Exception as e:  # noqa: BLE001
             if isinstance(e, RuntimeError):
-                print(f"Price update skipped: {e}", flush=True)
+                console.log(f"Price update skipped: {e}")
             else:
                 traceback.print_exc()
             STATE.record("prices", False, time.time() - t0, f"{type(e).__name__}: {e}")
@@ -375,17 +375,18 @@ def storage_info() -> dict:
 def main() -> None:
     moved = notes_store.migrate_from_sqlite(screens_db.DB_PATH)
     if moved:
-        print(f"Moved {moved} notes from the SQLite database into {notes_store.NOTES_DIR}", flush=True)
+        console.log(f"Moved {moved} notes from the SQLite database into {notes_store.NOTES_DIR}")
+    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
+    console.log(f"Screener server on http://{shown}:{PORT}\n"
+                f"  prices every {PRICE_INTERVAL // 60} min, weekdays 4:00-20:00 New York time (pre-market, regular, after-hours)\n"
+                f"  fundamentals: each stock refreshed every {FUND_INTERVAL / 3600:g} h\n"
+                f"  screens + watchlists: {storage_info()['db']}\n  notes: {storage_info()['notesDir']}\n")
+    # the banner first, then the background jobs (their messages come below it)
     threading.Thread(target=fundamentals_loop, name="fundamentals", daemon=True).start()
     threading.Thread(target=prices_loop, name="prices", daemon=True).start()
     threading.Thread(target=finnhub.loop, args=(apply_fast_quotes,), name="finnhub", daemon=True).start()
     threading.Thread(target=sec_sync.loop, args=(screener_stocks, STATE.rebuild), name="sec", daemon=True).start()
-    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
-    shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
-    print(f"Screener server on http://{shown}:{PORT}\n"
-          f"  prices every {PRICE_INTERVAL // 60} min, weekdays 4:00-20:00 New York time (pre-market, regular, after-hours)\n"
-          f"  fundamentals: each stock refreshed every {FUND_INTERVAL / 3600:g} h\n"
-          f"  screens + watchlists: {storage_info()['db']}\n  notes: {storage_info()['notesDir']}", flush=True)
     httpd.serve_forever()
 
 

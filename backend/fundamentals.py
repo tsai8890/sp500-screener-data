@@ -17,6 +17,7 @@ import yfinance as yf
 from .common import FUNDAMENTALS_PATH, iso, num, parse_iso, read_json, utc_now, write_json
 from . import universe
 from .universe import yahoo_symbol
+from . import console
 from .sources.yahoo import GATE, is_rate_limit
 
 WORKERS = 3   # threads; the request rate itself is set by the shared Yahoo gate (YAHOO_RPS)
@@ -73,8 +74,6 @@ def fetch_one(ticker: str, tries: int = 3) -> dict | None:
                 GATE.limited()     # every thread waits out the pause, then this one tries again
                 continue
             failures += 1
-            if failures == tries:
-                print(f"  {ticker}: {type(e).__name__}: {e}", file=sys.stderr)
             time.sleep(1 + random.random())
     return None
 
@@ -154,8 +153,7 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
     if todo:
         from .sources.yahoo import RPS
         mins = max(1, round(len(todo) / max(RPS, 0.01) / 60))
-        print(f"Fundamentals: fetching {len(todo)} stocks from Yahoo Finance (about {mins} min; "
-              f"progress every {CHUNK})...", flush=True)
+        console.log(f"Fundamentals: fetching {len(todo)} stocks from Yahoo Finance (about {mins} min)...")
     for i in range(0, len(todo), CHUNK):
         chunk = todo[i:i + CHUNK]
         with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -172,16 +170,19 @@ def update(path: str = FUNDAMENTALS_PATH, workers: int = WORKERS, max_age: float
             write_json(path, out)
             if on_progress:
                 on_progress(out)
-        print(f"Fundamentals: {len(fresh)}/{len(todo)} fetched ({len(failed)} failed) "
-              f"after {time.time() - started:.0f}s", flush=True)
+        done_n = len(fresh) + len(failed)
+        console.progress("fundamentals", f"Fundamentals: {done_n}/{len(todo)} ({round(done_n / len(todo) * 100)}%)",
+                         milestone=True)
 
+    if todo:
+        console.done("fundamentals", f"Fundamentals: {len(fresh)}/{len(todo)} updated ({time.time() - started:.0f}s).")
     if len(todo) >= BLOCKED_MIN and not fresh:
         raise RuntimeError(f"None of {len(todo)} stocks could be fetched from Yahoo (it may be blocking this "
                            f"computer for a while); keeping the previous data and trying again later.")
     if failed:
         names = ", ".join(sorted(failed)[:12]) + (" …" if len(failed) > 12 else "")
-        print(f"Fundamentals: no data from Yahoo for {len(failed)} stock(s): {names}. "
-              f"They keep their previous values and are tried again in a few hours.", flush=True)
+        console.log(f"Fundamentals: no data from Yahoo for {len(failed)} stock(s): {names}. "
+                    f"They keep their previous values and are tried again in a few hours.")
     if not todo:
         out = merged()
     return out

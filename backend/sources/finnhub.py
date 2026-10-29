@@ -19,6 +19,7 @@ from datetime import datetime, time as dtime, timezone
 
 import requests
 
+from .. import console
 from ..common import MARKET_CLOSE, MARKET_OPEN, NY, iso, market_session
 
 API = "https://finnhub.io/api/v1/quote"
@@ -57,7 +58,7 @@ def quote(ticker: str, key: str) -> dict | None:
     r = requests.get(API, params={"symbol": ticker, "token": key}, timeout=10)
     if r.status_code == 429:
         _pause_until = time.time() + 60
-        print("Finnhub: rate limit reached, pausing fast quotes for 1 min.", file=sys.stderr, flush=True)
+        console.log("Finnhub: rate limit reached, pausing fast quotes for 1 min.", error=True)
         return None
     if r.status_code in (401, 403):
         raise PermissionError("Finnhub rejected the API key (check FINNHUB_API_KEY in .env)")
@@ -91,9 +92,9 @@ def loop(on_quotes) -> None:
     """Every INTERVAL seconds, fetch the focus stocks and hand {ticker: (reg, ext, prev)} to on_quotes."""
     key = api_key()
     if not key:
-        print("Finnhub: no FINNHUB_API_KEY (in .env or the environment); fast quotes are off.", flush=True)
+        console.log("Finnhub: no FINNHUB_API_KEY (in .env or the environment); fast quotes are off.")
         return
-    print(f"Finnhub: fast quotes on, every {INTERVAL}s for up to {MAX_STOCKS} stocks you have open.", flush=True)
+    console.log(f"Finnhub: fast quotes on, every {INTERVAL}s for up to {MAX_STOCKS} stocks you have open.")
     while True:
         time.sleep(INTERVAL - (time.time() % INTERVAL))
         tickers = focus()
@@ -104,10 +105,10 @@ def loop(on_quotes) -> None:
             try:
                 q = quote(t, key)
             except PermissionError as e:
-                print(f"Finnhub: {e}; fast quotes are off.", file=sys.stderr, flush=True)
+                console.log(f"Finnhub: {e}; fast quotes are off.", error=True)
                 return
             except Exception as e:  # noqa: BLE001
-                print(f"Finnhub: {t}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+                console.log(f"Finnhub: {t}: {type(e).__name__}: {e}", error=True)
                 continue
             if q:
                 got[t] = to_price(q)
@@ -115,4 +116,4 @@ def loop(on_quotes) -> None:
             try:
                 on_quotes(got)
             except Exception as e:  # noqa: BLE001
-                print(f"Finnhub: couldn't apply quotes: {e}", file=sys.stderr, flush=True)
+                console.log(f"Finnhub: couldn't apply quotes: {e}", error=True)
