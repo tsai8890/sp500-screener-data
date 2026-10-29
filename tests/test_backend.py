@@ -486,6 +486,8 @@ class Analysis(unittest.TestCase):
         self.assertEqual(self.row(a, "fcf")["values"][:3], [95, 99, 108])          # OCF + capex
         self.assertEqual(self.row(a, "netDebt")["values"][2], 40)
         self.assertAlmostEqual(self.row(a, "netDebtToEbitda")["values"][2], 40 / 140, places=4)
+        # no tax data in the fixture: 21% tax; invested capital = debt 100 + equity 70
+        self.assertAlmostEqual(self.row(a, "roic")["values"][2], 120 * 0.79 / 170 * 100, places=2)
         self.assertEqual(self.row(a, "nonCurrentAssets")["values"][2], 210)
         self.assertEqual([s["id"] for s in a["sections"]], ["profit", "balance", "cash"])
 

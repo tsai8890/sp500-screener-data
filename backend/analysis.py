@@ -47,6 +47,8 @@ ITEMS = {
         "netIncome": ["Net Income Common Stockholders", "Net Income", "Net Income Including Noncontrolling Interests"],
         "eps": ["Diluted EPS"],
         "shares": ["Diluted Average Shares"],
+        "pretaxIncome": ["Pretax Income"],
+        "taxProvision": ["Tax Provision"],
     },
     "balance": {
         "cash": ["Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents"],
@@ -60,6 +62,7 @@ ITEMS = {
         "totalLiabilities": ["Total Liabilities Net Minority Interest"],
         "totalDebt": ["Total Debt"],
         "equity": ["Stockholders Equity", "Common Stock Equity"],
+        "investedCapital": ["Invested Capital"],
     },
     "cashflow": {
         "operatingCF": ["Operating Cash Flow", "Cash Flow From Continuing Operating Activities"],
@@ -261,6 +264,8 @@ ROWS = [
     ("profit", "grossMargin", "Gross margin", "pct", False, "Gross profit ÷ revenue"),
     ("profit", "operatingMargin", "Operating margin", "pct", False, "Operating income ÷ revenue"),
     ("profit", "netMargin", "Net margin", "pct", False, "Net income ÷ revenue"),
+    ("profit", "roic", "ROIC", "pct", False,
+     "Return on invested capital: operating income after tax ÷ (debt + shareholders' equity). Quarters annualized."),
     ("balance", "cash", "Cash & short-term investments", "money", False, None),
     ("balance", "receivables", "Accounts receivable", "money", False, None),
     ("balance", "inventory", "Inventory", "money", False, None),
@@ -299,6 +304,17 @@ def _ratios(p: dict, annualize: float) -> dict:
     p["operatingMargin"] = _pct(p.get("operatingIncome"), rev)
     p["netMargin"] = _pct(p.get("netIncome"), rev)
     p["ebitdaMargin"] = _pct(p.get("ebitda"), rev)
+    # ROIC = NOPAT / invested capital. Tax rate from the period's tax provision ÷ pretax income
+    # (kept between 0 and 50%), 21% if not reported. Invested capital: Yahoo's figure (debt +
+    # equity), else total debt + equity.
+    oi = p.get("operatingIncome")
+    pre, tax = p.get("pretaxIncome"), p.get("taxProvision")
+    rate = tax / pre if pre and pre > 0 and tax is not None else 0.21
+    rate = min(max(rate, 0.0), 0.5)
+    ic = p.get("investedCapital")
+    if ic is None and p.get("equity") is not None:
+        ic = p["equity"] + (p.get("totalDebt") or 0)
+    p["roic"] = _pct(oi * (1 - rate) * annualize, ic) if oi is not None and ic and ic > 0 else None
     p["rndRatio"] = _pct(p.get("rnd"), rev)
     ni = p.get("netIncome")
     eq = p.get("equity")

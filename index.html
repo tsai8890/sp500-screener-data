@@ -199,13 +199,13 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .an-meta a { color: var(--accent); text-decoration: none; } .an-meta a:hover { text-decoration: underline; }
 .an-note { margin: 4px 18px 0; padding: 9px 12px; border-radius: 8px; background: var(--sunk); color: var(--muted); font-size: calc(14px * var(--ts)); }
 .an-note b { color: var(--ink); font-weight: 600; }
-.an-hi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 10px 18px 18px; }
+.an-hi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 10px 18px 18px; }
 .an-card { background: var(--sunk); border-radius: 9px; padding: 10px 12px; min-width: 0; }
 .an-card .k { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .an-card .v { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(20.5px * var(--ts)); font-weight: 600; margin-top: 2px; white-space: nowrap; }
 .an-card .n { font-size: calc(13px * var(--ts)); color: var(--muted); line-height: 1.35; }
 .an-card .v.up, .an-card .n.up { color: var(--up); } .an-card .v.down, .an-card .n.down { color: var(--down); }
-@media (min-width: 821px) and (max-width: 2199px) { .an-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 821px) and (max-width: 1299px) { .an-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .an-sec { border-top: 14px solid var(--bg); }
 .an-sec:first-child { border-top-width: 1px; border-top-color: var(--line); }
 .an-sec h3 { font-family: var(--font-display); font-size: calc(19px * var(--ts)); margin: 0; padding: 12px 18px; display: flex; align-items: baseline; gap: 12px; background: var(--sunk); border-bottom: 1px solid var(--line); position: relative; }
@@ -2083,7 +2083,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   // card uses them); add their ids here to show those tables again.
   const SHOWN_SECTIONS = new Set(["profit"]);
   const NEUTRAL_GROWTH = new Set(["totalLiabilities", "totalAssets"]);
-  const MARGIN_KEYS = new Set(["grossMargin", "operatingMargin", "netMargin", "ebitdaMargin", "fcfMargin"]);
+  const MARGIN_KEYS = new Set(["grossMargin", "operatingMargin", "netMargin", "ebitdaMargin", "fcfMargin", "roic"]);
   function fmtMoney(v) {
     if (v == null) return "–";
     const a = Math.abs(v), sign = v < 0 ? "−" : "";
@@ -2282,7 +2282,16 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       card("P/E Ratio", r.pe != null ? { v: r.pe, text: FIELDS.pe.fmt(r.pe) + "×" } : { v: 0, text: "N/A" }, "ratio",
         r.pe != null ? fwd : "Losses over the last 12 months", "", "",
         "Share price ÷ earnings per share over the last 12 months (same as the Screener). Forward P/E uses analysts' estimate for the next 12 months.");
+      // PEG = P/E ÷ expected yearly earnings growth (%), as in the Screener
+      card("PEG Ratio", r.peg != null ? { v: r.peg, text: FIELDS.peg.fmt(r.peg) } : { v: 0, text: "N/A" }, "ratio",
+        r.peg != null ? (r.peg < 1 ? "Cheap for its growth" : r.peg > 2 ? "Pricey for its growth" : "P/E ÷ expected growth") : "No growth estimate",
+        "", r.peg == null ? "" : r.peg < 1 ? "up" : r.peg > 2 ? "down" : "",
+        "P/E ÷ analysts' expected yearly earnings growth (%). Around 1 is often seen as fair; below 1 cheap and above 2 expensive for the growth (same as the Screener).");
     }
+    // free cash flow over the last 12 months (operating cash flow − capital expenditure)
+    const fcf = lastVal(A, "fcf"), fcfm = lastVal(A, "fcfMargin");
+    if (fcf) card("Free Cash Flow", fcf, "money", (fcfm ? `${fmtAn(fcfm.v, "pct")} of revenue · ` : "") + lastLabel(fcf), "", fcf.v < 0 ? "down" : "",
+      "Operating cash flow − capital expenditure: the cash left after running and investing in the business.");
     const nde = lastVal(A, "netDebtToEbitda");
     if (nde) card("Net Debt / EBITDA", nde.v <= 0 ? { ...nde, text: "Net cash" } : nde, "ratio",
       nde.v <= 0 ? "More cash than debt" : lastLabel(nde), "", nde.v <= 0 ? "up" : nde.v > 4 ? "down" : "",
