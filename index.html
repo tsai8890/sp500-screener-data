@@ -2111,7 +2111,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
 
     // holdings
     const tbl = $("pfHoldings"); tbl.textContent = "";
-    const hd = el("tr", {}, ...["Stock", "Shares", "Avg cost", "Price", "Market value", "Today", "Unrealized gain", "Weight"].map((h) => el("th", { text: h })));
+    const hd = el("tr", {}, ...["Stock", "Shares", "Avg cost", "Price", "Market value", "Today", "Unrealized gain"].map((h) => el("th", { text: h })));
     tbl.append(el("thead", {}, hd));
     const tb = el("tbody");
     const tkCell = (p) => el("td", {}, el("button", { class: "tkbtn", type: "button", text: p.ticker, title: "Open in Advanced Analysis", onclick: () => openAnalysis(p.ticker) }),
@@ -2128,15 +2128,15 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("td", { class: "num", text: shareFmt(p.shares) }),
         el("td", { class: "num", text: money(p.avg) }),
         priceCell,
-        el("td", { class: "num", text: money(p.value) }),
+        el("td", { class: "num" }, money(p.value),   // and its share of the whole portfolio
+          el("span", { class: "sub", title: "Share of the portfolio", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "" })),
         el("td", { class: "num " + upDown(p.dayGain), text: signedMoney(p.dayGain) }),
-        el("td", { class: "num " + upDown(p.gain) }, signedMoney(p.gain), el("span", { class: "sub " + upDown(p.gain), text: signedPct(p.gainPct) })),
-        el("td", { class: "num", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "–" })));
+        el("td", { class: "num " + upDown(p.gain) }, signedMoney(p.gain), el("span", { class: "sub " + upDown(p.gain), text: signedPct(p.gainPct) }))));
     });
     tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
-      el("td", { class: "num", text: money(T.value) }), el("td", { class: "num " + upDown(T.day), text: signedMoney(T.day) }),
-      el("td", { class: "num " + upDown(T.gain) }, signedMoney(T.gain), el("span", { class: "sub " + upDown(T.gain), text: signedPct(T.gainPct) })),
-      el("td", { class: "num", text: "100%" })));
+      el("td", { class: "num" }, money(T.value), el("span", { class: "sub", text: "100%" })),
+      el("td", { class: "num " + upDown(T.day), text: signedMoney(T.day) }),
+      el("td", { class: "num " + upDown(T.gain) }, signedMoney(T.gain), el("span", { class: "sub " + upDown(T.gain), text: signedPct(T.gainPct) }))));
     tbl.append(tb);
     const closed = PF.positions.filter((p) => p.shares === 0).length;
     const over = PF.positions.filter((p) => p.oversold && p.shares === 0).map((p) => p.ticker);
