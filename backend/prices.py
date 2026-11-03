@@ -246,3 +246,26 @@ def quote(data: dict | None, ticker: str) -> dict | None:
         price, session, base = reg, None, prev
     chg = round((price / base - 1) * 100, 2) if price and base else None
     return {"price": price, "chg": chg, "session": session, "regPrice": reg, "prevClose": prev}
+
+
+def close_on(ticker: str, date: str) -> float | None:
+    """The closing price on a date (or the last trading day before it), from Yahoo."""
+    from datetime import date as _date, timedelta
+    d = _date.fromisoformat(date)
+    GATE.wait(priority=True)
+    try:
+        df = yf.download([yahoo_symbol(ticker)], start=(d - timedelta(days=7)).isoformat(),
+                         end=(d + timedelta(days=1)).isoformat(), interval="1d", auto_adjust=False,
+                         progress=False, threads=False)
+    except Exception as e:  # noqa: BLE001
+        if is_rate_limit(e):
+            GATE.limited()
+        return None
+    if df is None or df.empty:
+        return None
+    close = _close_frame(df, [yahoo_symbol(ticker)]).iloc[:, 0].dropna()
+    if isinstance(close.index, pd.DatetimeIndex):
+        idx = close.index.tz_localize(None) if close.index.tz is not None else close.index
+        close = pd.Series(close.values, index=idx)
+        close = close[close.index.date <= d]
+    return num(close.iloc[-1], nd=4) if len(close) else None

@@ -50,6 +50,10 @@ def _connect(path: str = DB_PATH) -> sqlite3.Connection:
         id TEXT PRIMARY KEY, date TEXT NOT NULL, ticker TEXT NOT NULL, side TEXT NOT NULL,
         shares REAL NOT NULL, price REAL NOT NULL, fee REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '',
         created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS fund_snapshots (
+        id TEXT PRIMARY KEY, fund TEXT NOT NULL, account TEXT NOT NULL, date TEXT NOT NULL,
+        units REAL NOT NULL, nav REAL NOT NULL, proxy TEXT NOT NULL DEFAULT '', proxy_close REAL,
+        cost REAL, created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
     return conn
 
 
@@ -249,9 +253,83 @@ def delete_transaction(tx_id: str, path: str = DB_PATH) -> bool:
 
 
 def portfolio_tickers(path: str = DB_PATH) -> list[str]:
-    """Every ticker that appears in a transaction (their prices are kept up to date too)."""
+    """Every ticker in a transaction, and every fund's proxy (their prices are kept up to date too)."""
     with _lock, _connect(path) as conn:
-        return [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM transactions ORDER BY ticker")]
+        rows = conn.execute("""SELECT ticker FROM transactions UNION SELECT proxy FROM fund_snapshots
+                               WHERE proxy != '' ORDER BY 1""").fetchall()
+    return [r[0] for r in rows]
+
+
+# ---- funds without a market price (401(k) trusts ...) ----------------------------
+# Each statement is one snapshot: units and NAV on a date. Between statements the
+# value is estimated from a tracking ETF (the proxy, e.g. VOO for an S&P 500 trust):
+# NAV today ~ statement NAV x proxy price now / proxy close on the statement date.
+
+def validate_fund_snapshot(snap_id: str, body: dict) -> dict:
+    if not ID_RE.match(snap_id or ""):
+        raise InvalidScreen("id must be 1-64 letters, digits, - or _")
+    if not isinstance(body, dict):
+        raise InvalidScreen("body must be a JSON object")
+
+    def num(v):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f if f == f and f not in (float("inf"), float("-inf")) else None
+    fund = str(body.get("fund") or "").strip()[:100]
+    if not fund:
+        raise InvalidScreen("fund name is required")
+    date = str(body.get("date") or "")
+    if not DATE_RE.match(date):
+        raise InvalidScreen("date must be YYYY-MM-DD")
+    units, nav = num(body.get("units")), num(body.get("nav"))
+    if units is None or units < 0:
+        raise InvalidScreen("units must be a number, 0 or more")
+    if nav is None or nav <= 0:
+        raise InvalidScreen("NAV must be a number above 0")
+    proxy = str(body.get("proxy") or "").strip().upper()
+    if proxy and not TICKER_RE.match(proxy):
+        raise InvalidScreen(f"bad proxy ticker: {proxy!r}")
+    cost = num(body.get("cost")) if body.get("cost") not in (None, "") else None
+    if cost is not None and cost < 0:
+        raise InvalidScreen("total contributed must be 0 or more")
+    pc = num(body.get("proxyClose")) if body.get("proxyClose") not in (None, "") else None
+    created = body.get("created")
+    return {"id": snap_id, "fund": fund, "account": str(body.get("account") or "401(k)").strip()[:40] or "401(k)",
+            "date": date, "units": units, "nav": nav, "proxy": proxy, "proxyClose": pc if pc and pc > 0 else None,
+            "cost": cost, "created": int(created) if isinstance(created, (int, float)) else None}
+
+
+_SNAP_COLS = ("id", "fund", "account", "date", "units", "nav", "proxy", "proxyClose", "cost", "created", "updated")
+
+
+def list_fund_snapshots(path: str = DB_PATH) -> list[dict]:
+    with _lock, _connect(path) as conn:
+        rows = conn.execute("""SELECT id, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated
+                               FROM fund_snapshots ORDER BY date, created""").fetchall()
+    return [dict(zip(_SNAP_COLS, r)) for r in rows]
+
+
+def upsert_fund_snapshot(snap_id: str, body: dict, path: str = DB_PATH) -> dict:
+    f = validate_fund_snapshot(snap_id, body)
+    now = int(time.time() * 1000)
+    with _lock, _connect(path) as conn:
+        exists = conn.execute("SELECT created FROM fund_snapshots WHERE id = ?", (snap_id,)).fetchone()
+        created = exists[0] if exists else (f["created"] or now)
+        conn.execute("""INSERT INTO fund_snapshots (id, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET fund=excluded.fund, account=excluded.account, date=excluded.date,
+                        units=excluded.units, nav=excluded.nav, proxy=excluded.proxy, proxy_close=excluded.proxy_close,
+                        cost=excluded.cost, updated=excluded.updated""",
+                     (snap_id, f["fund"], f["account"], f["date"], f["units"], f["nav"], f["proxy"], f["proxyClose"],
+                      f["cost"], created, now))
+    return {**f, "created": created, "updated": now}
+
+
+def delete_fund_snapshot(snap_id: str, path: str = DB_PATH) -> bool:
+    with _lock, _connect(path) as conn:
+        return conn.execute("DELETE FROM fund_snapshots WHERE id = ?", (snap_id,)).rowcount > 0
 
 
 # ---- notes: validation only; storage is backend/notes_store.py ------------------

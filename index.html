@@ -171,7 +171,14 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .pin-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 /* Portfolio */
 .pf-form { gap: 12px; }
-@media (min-width: 1300px) { .an-hi.pf-hi { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1300px) { .an-hi.pf-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1600px) { .an-hi.pf-hi { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.an-card.pf-all { border-color: var(--accent); }
+#pfFunds td:first-child, #pfSnaps td:nth-child(2) { white-space: normal; min-width: 160px; max-width: 240px; text-align: left; }
+#pfSnaps th:nth-child(2) { text-align: left; }
+#pfFunds td:first-child b { font-weight: 600; }
+.pf-sub-h { margin: 14px 18px 4px; font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); }
+.pf-est { font-size: calc(11.5px * var(--ts)); font-weight: 700; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-right: 6px; vertical-align: 1px; }
 .pf-side { align-self: flex-start; }
 .pf-side button[data-side="buy"][aria-checked="true"] { color: var(--up); }
 .pf-side button[data-side="sell"][aria-checked="true"] { color: var(--down); }
@@ -674,6 +681,23 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
           <div class="row"><button class="btn primary" id="pfAdd" type="submit">Add buy</button></div>
           <div class="toast" id="pfMsg" role="status"></div>
         </form>
+        <form class="section pf-form" id="pfFundForm" autocomplete="off">
+          <p class="eyebrow">401(k) statement</p>
+          <label class="pf-field"><span>Fund</span><input id="pfFund" value="Vanguard Instl 500 Index Trust" required></label>
+          <div class="pf-row">
+            <label class="pf-field"><span>Units</span><input id="pfUnits" type="number" step="any" min="0" inputmode="decimal" required></label>
+            <label class="pf-field"><span>Price per unit (NAV)</span><input id="pfNav" type="number" step="any" min="0" inputmode="decimal" required></label>
+          </div>
+          <div class="pf-row">
+            <label class="pf-field"><span>As of</span><input id="pfFundDate" type="date" required></label>
+            <label class="pf-field"><span>Tracks (ETF)</span><input id="pfProxy" value="VOO" autocapitalize="characters" spellcheck="false" placeholder="e.g. VOO"></label>
+          </div>
+          <label class="pf-field"><span>Total contributed <small>(optional, for the gain)</small></span><input id="pfContrib" type="number" step="any" min="0" inputmode="decimal"></label>
+          <div class="pf-total" id="pfFundTotal"></div>
+          <div class="row"><button class="btn primary" type="submit">Save statement</button></div>
+          <p class="hint">Units and price per unit are on your Vanguard statement (or the 401(k) site, under balances). The fund has no market price, so between statements its value follows the ETF it tracks: VOO for an S&amp;P 500 fund.</p>
+          <div class="toast" id="pfFundMsg" role="status"></div>
+        </form>
       </div>
       <div id="analysisSide" role="tabpanel" aria-labelledby="tab-analysis" hidden>
         <div class="panel-head"><p class="eyebrow">Analyze a stock</p></div>
@@ -799,24 +823,30 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
           <span class="note-status" id="pfState" role="status" aria-live="polite"></span>
         </div>
         <div class="an-empty" id="pfEmpty" hidden>
-          <p class="an-empty-t">No trades yet</p>
-          <p class="hint">Add your first buy on the left. Holdings, gains and allocation are worked out from your trades, with live prices.</p>
+          <p class="an-empty-t">Nothing here yet</p>
+          <p class="hint">Add your first buy on the left, or your 401(k) balance from its latest statement. Holdings, gains and allocation are worked out from your trades, with live prices.</p>
         </div>
         <div id="pfBody" hidden>
           <div class="an-hi pf-hi" id="pfCards"></div>
-          <section class="an-sec" aria-label="Holdings">
+          <section class="an-sec" aria-label="Holdings" id="pfHoldSec">
             <h3>Holdings <span class="hint" id="pfHoldNote"></span></h3>
             <div class="table-wrap"><table class="pf-t" id="pfHoldings"></table></div>
           </section>
-          <section class="an-sec" aria-label="Allocation by sector">
+          <section class="an-sec" aria-label="401(k)" id="pfFundSec">
+            <h3>401(k) <span class="hint" id="pfFundNote"></span></h3>
+            <div class="table-wrap"><table class="pf-t" id="pfFunds"></table></div>
+            <p class="pf-sub-h">Statements</p>
+            <div class="table-wrap"><table class="pf-t" id="pfSnaps"></table></div>
+          </section>
+          <section class="an-sec" aria-label="Allocation by sector" id="pfAllocSec">
             <h3>Allocation by sector</h3>
             <div class="pf-alloc" id="pfAlloc"></div>
           </section>
-          <section class="an-sec" aria-label="Trades">
+          <section class="an-sec" aria-label="Trades" id="pfTradeSec">
             <h3>Trades <span class="hint">Newest first</span><button class="linkbtn pf-export" id="pfExport" type="button">Download (.csv)</button></h3>
             <div class="table-wrap"><table class="pf-t" id="pfTrades"></table></div>
           </section>
-          <p class="an-foot">Cost is the average cost of the shares you still hold (fees included); selling realizes the difference between the sale price and that average. Today's change is against the previous close for every share held.</p>
+          <p class="an-foot">Cost is the average cost of the shares you still hold (fees included); selling realizes the difference between the sale price and that average. Today's change is against the previous close for every share held. A 401(k) fund's value is its latest statement (units × price per unit), moved since that date by the ETF it tracks: estimated until the next statement.</p>
         </div>
       </div>
       <div id="analysisView" hidden>
@@ -2027,7 +2057,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   // ---------- Portfolio: holdings worked out from trades ----------
   // Trades are stored by the server (SQLite, /api/transactions). Prices for every ticker
   // you own, ETFs included, come from /api/quotes.
-  const PF = { txs: null, quotes: {}, positions: null, loaded: false, error: null, delArmed: null };
+  const PF = { txs: null, funds: [], quotes: {}, positions: null, loaded: false, error: null, delArmed: null };
   // Common ETFs: suggested in the trade form and named on the page (the stock lists only have companies)
   const ETFS = {
     VOO: "Vanguard S&P 500 ETF", SPY: "SPDR S&P 500 ETF Trust", IVV: "iShares Core S&P 500 ETF", VTI: "Vanguard Total Stock Market ETF",
@@ -2102,16 +2132,36 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       realized: out.reduce((a, p) => a + p.realized, 0), missing: open.length - priced.length } };
   }
 
+  // 401(k)-style funds (no market price): the latest statement of each fund, moved since its
+  // date by the ETF it tracks. NAV now ~ statement NAV x ETF price now / ETF close on that date.
+  function computeFunds(snaps, quotes) {
+    const latest = new Map();
+    [...snaps].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.created || 0) - (b.created || 0)))
+      .forEach((s) => latest.set(s.fund, s));
+    const funds = [...latest.values()].filter((s) => s.units > 0).map((s) => {
+      const q = (s.proxy && quotes[s.proxy]) || {};
+      const est = s.proxyClose && q.price != null ? s.nav * q.price / s.proxyClose : null;
+      const nav = est ?? s.nav, value = s.units * nav;
+      const day = est != null && q.chg != null ? value - value / (1 + q.chg / 100) : null;
+      return { ...s, navNow: nav, estimated: est != null, value, statementValue: s.units * s.nav,
+        sinceStatement: est != null ? (est / s.nav - 1) * 100 : null, day, chg: est != null ? q.chg ?? null : null,
+        gain: s.cost != null ? value - s.cost : null, gainPct: s.cost ? (value / s.cost - 1) * 100 : null };
+    });
+    const value = funds.reduce((a, f) => a + f.value, 0), withDay = funds.filter((f) => f.day != null);
+    const day = withDay.length ? withDay.reduce((a, f) => a + f.day, 0) : null;
+    return { funds, totals: { value, day, dayPct: day != null && value - day > 0 ? day / (value - day) * 100 : null } };
+  }
+
   async function pfLoad() {
     try {
-      const j = await getJson(API_ROOT + "transactions");
-      PF.txs = j.transactions || []; PF.error = null;
+      const [j, f] = await Promise.all([getJson(API_ROOT + "transactions"), getJson(API_ROOT + "funds")]);
+      PF.txs = j.transactions || []; PF.funds = f.snapshots || []; PF.error = null;
     } catch (e) { PF.error = "Can't reach the screener server, so trades can't be loaded. Is ./run.sh running?"; PF.txs = PF.txs || []; }
-    PF.loaded = true; pfRecalc(); await pfLoadQuotes();
+    PF.loaded = true; pfRecalc(); pfFundPrefill(); await pfLoadQuotes();
   }
   async function pfLoadQuotes() {
-    if (!PF.txs || !PF.txs.length) { renderPortfolio(); return; }
-    const tickers = [...new Set(PF.txs.map((t) => t.ticker))];
+    const tickers = [...new Set((PF.txs || []).map((t) => t.ticker).concat(PF.funds.map((s) => s.proxy).filter(Boolean)))];
+    if (!tickers.length) { renderPortfolio(); return; }
     try {
       const j = await getJson(API_ROOT + "quotes?t=" + tickers.map(encodeURIComponent).join(","));
       PF.quotes = j.quotes || {}; PF.quotesAt = j.asOf;
@@ -2121,27 +2171,42 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function pfRecalc() {
     const r = computeHoldings(PF.txs || [], PF.quotes);
     PF.positions = r.positions; PF.totals = r.totals;
+    const f = computeFunds(PF.funds, PF.quotes);
+    PF.fundRows = f.funds; PF.fundTotals = f.totals;
     pfTickerList();
     renderRail();
     if (S.tab === "portfolio") renderPortfolio();
   }
   function renderPortfolio() {
-    const has = PF.txs && PF.txs.length;
-    $("pfEmpty").hidden = !!has || !PF.loaded; $("pfBody").hidden = !has;
+    const hasTx = !!(PF.txs && PF.txs.length), has = hasTx || PF.funds.length > 0;
+    $("pfEmpty").hidden = has || !PF.loaded; $("pfBody").hidden = !has;
+    ["pfHoldSec", "pfAllocSec", "pfTradeSec"].forEach((id) => { $(id).hidden = !hasTx; });
+    $("pfFundSec").hidden = !PF.funds.length;
     const st = $("pfState"); st.className = "note-status" + (PF.error ? " warn" : "");
     st.textContent = PF.error || (PF.quotesAt ? "Prices updated " + new Date(PF.quotesAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "");
     if (!has) { applySide(); return; }
-    const T = PF.totals, open = PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0));
+    const T = PF.totals, F = PF.fundTotals, open = PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0));
 
     // cards
     const cards = $("pfCards"); cards.textContent = "";
     const card = (k, v, note, cls, tip) => cards.append(el("div", { class: "an-card", title: tip || "" },
       el("div", { class: "k", text: k }), el("div", { class: "v" + (cls ? " " + cls : ""), text: v }), el("div", { class: "n", text: note || "" })));
-    card("Total Value", money(T.value), T.missing ? `${T.missing} holding${T.missing > 1 ? "s" : ""} without a price` : `${open.length} holding${open.length === 1 ? "" : "s"}`);
-    card("Today", signedMoney(T.day), signedPct(T.dayPct), upDown(T.day), "Change since the previous close, for the shares you hold now.");
-    card("Unrealized Gain", signedMoney(T.gain), signedPct(T.gainPct), upDown(T.gain), "Value of what you hold − what it cost (average cost, fees included).");
-    card("Realized Gain", signedMoney(T.realized), "From shares sold", upDown(T.realized), "Sale price − average cost of the shares sold, minus fees.");
-    card("Cost Basis", money(T.cost), "Of the shares you hold");
+    const all = T.value + F.value;
+    const days = [T.day, F.day].filter((v) => v != null), allDay = days.length ? days.reduce((a, v) => a + v, 0) : null;
+    card("All Assets", money(all), "Brokerage + 401(k)", "", "Everything on this page: your brokerage holdings plus your 401(k).");
+    cards.lastChild.classList.add("pf-all");
+    card("Today", signedMoney(allDay), signedPct(allDay != null && all - allDay > 0 ? allDay / (all - allDay) * 100 : null), upDown(allDay),
+      "Change since the previous close, for everything you hold now (the 401(k) estimated from the ETF it tracks).");
+    card("Brokerage", money(T.value), hasTx ? (T.missing ? `${T.missing} holding${T.missing > 1 ? "s" : ""} without a price` : `${open.length} holding${open.length === 1 ? "" : "s"} · cost ${money(T.cost, 0)}`) : "No trades yet",
+      "", "Market value of the stocks and ETFs from your trades.");
+    const lastDate = PF.fundRows.map((f) => f.date).sort().pop();
+    card("401(k)", PF.fundRows.length ? money(F.value) : "–",
+      PF.fundRows.length ? (PF.fundRows.some((f) => f.estimated) ? "Estimated · statement " : "As of ") + fmtDay(lastDate) : "Add a statement on the left", "",
+      "Latest statement value (units × price per unit), moved since then by the ETF the fund tracks.");
+    card("Unrealized Gain", signedMoney(hasTx ? T.gain : null), signedPct(T.gainPct), upDown(T.gain), "Brokerage: value of what you hold − what it cost (average cost, fees included).");
+    card("Realized Gain", signedMoney(hasTx ? T.realized : null), "From shares sold", upDown(T.realized), "Sale price − average cost of the shares sold, minus fees.");
+    renderFunds();
+    if (!hasTx) { applySide(); return; }
 
     // holdings
     const tbl = $("pfHoldings"); tbl.textContent = "";
@@ -2162,8 +2227,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("td", { class: "num", text: shareFmt(p.shares) }),
         el("td", { class: "num", text: money(p.avg) }),
         priceCell,
-        el("td", { class: "num" }, money(p.value),   // and its share of the whole portfolio
-          el("span", { class: "sub", title: "Share of the portfolio", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "" })),
+        el("td", { class: "num" }, money(p.value),   // and its share of the brokerage holdings
+          el("span", { class: "sub", title: "Share of the brokerage holdings", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "" })),
         el("td", { class: "num " + upDown(p.dayGain), text: signedMoney(p.dayGain) }),
         el("td", { class: "num " + upDown(p.gain) }, signedMoney(p.gain), el("span", { class: "sub " + upDown(p.gain), text: signedPct(p.gainPct) }))));
     });
@@ -2206,13 +2271,90 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     tt.append(tb2);
     applySide();
   }
-  async function pfDelete(id) {
+  const fmtDay = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
+  const navFmt = (v) => money(v, v != null && v < 1000 ? 4 : 2);
+  function renderFunds() {
+    const F = PF.fundTotals, tbl = $("pfFunds"); tbl.textContent = "";
+    if (!PF.funds.length) return;
+    $("pfFundNote").textContent = PF.fundRows.some((f) => f.estimated) ? "Estimated from the ETF each fund tracks" : "";
+    tbl.append(el("thead", {}, el("tr", {}, ...["Fund", "Units", "Price per unit", "Value", "Today", "Gain"].map((h) => el("th", { text: h })))));
+    const tb = el("tbody");
+    PF.fundRows.forEach((f) => {
+      const now = el("td", { class: "num" });
+      if (f.estimated) now.append(el("span", { class: "pf-est", title: `Estimated: statement NAV × ${f.proxy} now / ${f.proxy} close on ${f.date}`, text: "EST" }));
+      now.append(navFmt(f.navNow));
+      now.append(el("span", { class: "sub", title: "On the statement", text: `${navFmt(f.nav)} on ${fmtDay(f.date)}` }));
+      tb.append(el("tr", {},
+        el("td", {}, el("b", { text: f.fund }), el("span", { class: "co", text: `${f.account}${f.proxy ? " · tracks " + f.proxy : ""}` })),
+        el("td", { class: "num", text: shareFmt(f.units) }),
+        now,
+        el("td", { class: "num" }, money(f.value), f.sinceStatement != null ? el("span", { class: "sub " + upDown(f.sinceStatement), title: "Change since the statement",
+          text: signedPct(f.sinceStatement) + " since statement" }) : null),
+        el("td", { class: "num " + upDown(f.day) }, signedMoney(f.day), el("span", { class: "sub " + upDown(f.chg), text: signedPct(f.chg) })),
+        el("td", { class: "num " + upDown(f.gain) }, f.gain == null ? el("span", { class: "sub", title: "Enter the total contributed to see the gain", text: "–" }) : signedMoney(f.gain),
+          el("span", { class: "sub " + upDown(f.gain), text: signedPct(f.gainPct) }))));
+    });
+    if (PF.fundRows.length > 1) tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
+      el("td", { class: "num", text: money(F.value) }), el("td", { class: "num " + upDown(F.day), text: signedMoney(F.day) }), el("td")));
+    tbl.querySelectorAll("tr.total td")[2]?.remove();
+    tbl.append(tb);
+    // every statement, newest first
+    const st = $("pfSnaps"); st.textContent = "";
+    st.append(el("thead", {}, el("tr", {}, ...["As of", "Fund", "Units", "NAV", "Value", "Contributed", ""].map((h) => el("th", { text: h })))));
+    const tb2 = el("tbody");
+    [...PF.funds].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : (b.created || 0) - (a.created || 0))).forEach((s) => {
+      const del = el("button", { class: "pf-del" + (PF.delArmed === s.id ? " confirm" : ""), type: "button",
+        title: "Delete this statement", text: PF.delArmed === s.id ? "Delete?" : "×", onclick: () => pfDelete(s.id, "funds") });
+      tb2.append(el("tr", {}, el("td", { class: "num", text: s.date }), el("td", { text: s.fund }),
+        el("td", { class: "num", text: shareFmt(s.units) }), el("td", { class: "num", text: navFmt(s.nav) }),
+        el("td", { class: "num", text: money(s.units * s.nav) }), el("td", { class: "num", text: s.cost != null ? money(s.cost) : "–" }), el("td", {}, del)));
+    });
+    st.append(tb2);
+  }
+  function pfFundPrefill() {   // start from the latest statement: usually only units and NAV change
+    const last = [...PF.funds].sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
+    if (!last || $("pfUnits").value) return;
+    $("pfFund").value = last.fund; $("pfProxy").value = last.proxy || "";
+    if (last.cost != null) $("pfContrib").value = String(last.cost);
+  }
+  function pfFundShowTotal() {
+    const u = parseFloat($("pfUnits").value), n = parseFloat($("pfNav").value), box = $("pfFundTotal");
+    box.textContent = "";
+    if (u > 0 && n > 0) box.append("Balance ", el("b", { text: money(u * n) }));
+  }
+  ["pfUnits", "pfNav"].forEach((id) => $(id).addEventListener("input", pfFundShowTotal));
+  $("pfFundDate").value = todayISO();
+  $("pfFundForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("pfFundMsg"); msg.className = "toast"; msg.textContent = "Saving…";
+    const c = $("pfContrib").value.trim();
+    const body = { fund: $("pfFund").value.trim(), account: "401(k)", date: $("pfFundDate").value,
+      units: parseFloat($("pfUnits").value), nav: parseFloat($("pfNav").value),
+      proxy: $("pfProxy").value.trim().toUpperCase(), cost: c === "" ? null : parseFloat(c), created: Date.now() };
+    const id = "fund-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try {
+      const r = await fetch(API_ROOT + "funds/" + id, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "server error");
+      PF.funds = PF.funds.concat([j]);
+      msg.textContent = `Saved: ${shareFmt(j.units)} units at ${navFmt(j.nav)} = ${money(j.units * j.nav)}` +
+        (j.proxy && !j.proxyClose ? ` (no ${j.proxy} price found for ${j.date}, so it stays at the statement value)` : "");
+      $("pfUnits").value = ""; $("pfNav").value = ""; pfFundShowTotal();
+      pfRecalc();
+      if (j.proxy && !PF.quotes[j.proxy]) fetch(API_ROOT + "quote/" + encodeURIComponent(j.proxy), { cache: "no-store" }).then(() => pfLoadQuotes()).catch(() => {});
+    } catch (err) {
+      msg.textContent = err.message === "Failed to fetch" ? "Not saved: the server can't be reached." : "Not saved: " + err.message;
+      msg.className = "toast warn";
+    }
+  });
+  async function pfDelete(id, kind = "transactions") {
     if (PF.delArmed !== id) { PF.delArmed = id; renderPortfolio(); setTimeout(() => { if (PF.delArmed === id) { PF.delArmed = null; renderPortfolio(); } }, 4000); return; }
     PF.delArmed = null;
     try {
-      const r = await fetch(API_ROOT + "transactions/" + encodeURIComponent(id), { method: "DELETE", headers: authHeaders() });
+      const r = await fetch(API_ROOT + kind + "/" + encodeURIComponent(id), { method: "DELETE", headers: authHeaders() });
       if (!r.ok) throw new Error();
-      PF.txs = PF.txs.filter((t) => t.id !== id); pfRecalc();
+      if (kind === "funds") PF.funds = PF.funds.filter((s) => s.id !== id); else PF.txs = PF.txs.filter((t) => t.id !== id);
+      pfRecalc();
     } catch (e) { $("pfMsg").textContent = "Couldn't delete: the server can't be reached."; renderPortfolio(); }
   }
   // the form
@@ -2295,8 +2437,10 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function focusTickers() {
     const out = [];
     if (S.tab === "portfolio" && PF.positions) {
-      PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 10)
-        .forEach((p) => out.push(p.ticker));
+      const proxies = [...new Set(PF.funds.map((f) => f.proxy).filter(Boolean))];   // the 401(k) follows these
+      PF.positions.filter((p) => p.shares > 0 && !proxies.includes(p.ticker)).sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, Math.max(0, 10 - proxies.length)).forEach((p) => out.push(p.ticker));
+      out.push(...proxies.slice(0, 10));
       return out;
     }
     if (S.anTicker) out.push(S.anTicker);
@@ -2845,7 +2989,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   $("notesToSettings").addEventListener("click", () => setTab("settings"));
   $("exportAll").addEventListener("click", () => {
-    const all = { exportedAt: new Date().toISOString(), transactions: PF.txs || [], screens: S.userScreens, watchlists: S.watchlists.filter((w) => w.items.length || w.saved), notes: S.notes.map(notePlain) };
+    const all = { exportedAt: new Date().toISOString(), transactions: PF.txs || [], funds: PF.funds || [], screens: S.userScreens, watchlists: S.watchlists.filter((w) => w.items.length || w.saved), notes: S.notes.map(notePlain) };
     const a = el("a", { href: URL.createObjectURL(new Blob([JSON.stringify(all, null, 2)], { type: "application/json" })), download: "screener-backup-" + new Date().toISOString().slice(0, 10) + ".json" });
     document.body.append(a); a.click(); a.remove();
   });

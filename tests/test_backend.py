@@ -752,5 +752,30 @@ class Transactions(unittest.TestCase):
         self.assertEqual(prices.quote({"prices": {"X": 100}, "prev": {"X": 98}}, "X")["chg"], round((100 / 98 - 1) * 100, 2))
         self.assertIsNone(prices.quote(data, "NOPE"))
 
+
+class FundSnapshots(unittest.TestCase):
+    def setUp(self):
+        self.db = os.path.join(tempfile.mkdtemp(), "f.db")
+
+    def test_save_list_delete(self):
+        body = {"fund": "Vanguard Instl 500 Index Trust", "date": "2026-09-30", "units": "1234.5", "nav": 210.5,
+                "proxy": "voo", "proxyClose": 560.2, "cost": ""}
+        saved = screens_db.upsert_fund_snapshot("f1", body, self.db)
+        self.assertEqual((saved["account"], saved["proxy"], saved["cost"]), ("401(k)", "VOO", None))
+        screens_db.upsert_fund_snapshot("f1", {**body, "units": 1300}, self.db)   # same id: updated in place
+        rows = screens_db.list_fund_snapshots(self.db)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual((rows[0]["units"], rows[0]["proxyClose"]), (1300.0, 560.2))
+        self.assertEqual(screens_db.portfolio_tickers(self.db), ["VOO"])           # the proxy keeps a live price
+        self.assertTrue(screens_db.delete_fund_snapshot("f1", self.db))
+        self.assertEqual(screens_db.list_fund_snapshots(self.db), [])
+
+    def test_rejects_bad_statements(self):
+        good = {"fund": "X", "date": "2026-09-30", "units": 1, "nav": 1}
+        for bad in ({"fund": ""}, {"date": "9/30"}, {"units": -1}, {"nav": 0}, {"nav": "x"}, {"proxy": "BAD TICKER"},
+                    {"cost": -5}):
+            with self.assertRaises(screens_db.InvalidScreen):
+                screens_db.upsert_fund_snapshot("bad", {**good, **bad}, self.db)
+
 if __name__ == "__main__":
     unittest.main()

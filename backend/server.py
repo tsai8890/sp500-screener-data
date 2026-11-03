@@ -34,6 +34,9 @@ What it does:
         PUT    /api/transactions/<id>     add or change one: {date, ticker, side: buy|sell, shares, price, fee, note}
         DELETE /api/transactions/<id>     delete one
         GET /api/quotes?t=A,B      latest prices for any tickers, ETFs included
+        GET    /api/funds                 401(k)-style fund statements (units, NAV, date, proxy ETF)
+        PUT    /api/funds/<id>            save one (the proxy's close on that date is looked up)
+        DELETE /api/funds/<id>            delete one
         GET /api/quote/<ticker>    fetch one stock's latest price now (the Analysis Refresh button)
         GET /api/analysis/<ticker> financial statements and metrics for one stock
                                    (cached a day in data/analysis/; ?refresh=1 to refetch)
@@ -324,6 +327,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._analysis(path[len("/api/analysis/"):], "refresh=1" in self.path.partition("?")[2])
         if path == "/api/transactions":
             return self._json(200, {"transactions": screens_db.list_transactions()})
+        if path == "/api/funds":
+            return self._json(200, {"snapshots": screens_db.list_fund_snapshots()})
         if path == "/api/quotes":
             return self._quotes()
         if path == "/api/watchlists":
@@ -354,7 +359,7 @@ class Handler(BaseHTTPRequestHandler):
     def _target(self) -> tuple[str, str] | None:
         """("screens" | "watchlists" | "notes", id) for /api/<kind>/<id>."""
         path = self.path.split("?", 1)[0]
-        for kind in ("screens", "watchlists", "notes", "transactions"):
+        for kind in ("screens", "watchlists", "notes", "transactions", "funds"):
             prefix = f"/api/{kind}/"
             if path.startswith(prefix):
                 return kind, path[len(prefix):]
@@ -375,8 +380,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length))
             kind, sid = target
+            if kind == "funds" and isinstance(body, dict) and body.get("proxy") and not body.get("proxyClose"):
+                # the proxy's close on the statement date: the base for estimating the value since then
+                try:
+                    body["proxyClose"] = prices.close_on(str(body["proxy"]).upper(), str(body.get("date")))
+                except Exception:  # noqa: BLE001  (saved without it; the page shows the statement value)
+                    body["proxyClose"] = None
             save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": notes_store.upsert_note,
-                    "transactions": screens_db.upsert_transaction}[kind]
+                    "transactions": screens_db.upsert_transaction, "funds": screens_db.upsert_fund_snapshot}[kind]
             return self._json(200, save(sid, body))
         except (ValueError, screens_db.InvalidScreen) as e:
             return self._json(400, {"error": str(e)})
@@ -389,7 +400,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(401, {"error": "Missing or wrong token"})
         kind, sid = target
         remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": notes_store.delete_note,
-                  "transactions": screens_db.delete_transaction}[kind]
+                  "transactions": screens_db.delete_transaction, "funds": screens_db.delete_fund_snapshot}[kind]
         return self._json(200, {"deleted": remove(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors
