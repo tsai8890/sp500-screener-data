@@ -181,6 +181,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 #pfTicker { text-transform: uppercase; }
 #pfTicker::placeholder { text-transform: none; }
 .pf-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pf-found { font-size: calc(13px * var(--ts)); color: var(--muted); min-height: 1.3em; margin-top: -6px; }
+.pf-found b { color: var(--ink); font-weight: 600; }
 .pf-total { font-size: calc(14px * var(--ts)); color: var(--muted); min-height: 1.4em; font-variant-numeric: tabular-nums; }
 .pf-total b { color: var(--ink); font-weight: 600; }
 table.pf-t { width: 100%; }
@@ -657,7 +659,9 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
             <button type="button" role="radio" data-side="sell" aria-checked="false">Sell</button>
           </div>
           <label class="pf-field"><span>Ticker</span>
-            <input id="pfTicker" list="tickerList" placeholder="e.g. NVDA or VOO" autocapitalize="characters" spellcheck="false" required></label>
+            <input id="pfTicker" list="pfTickerList" placeholder="e.g. NVDA or VOO" autocapitalize="characters" spellcheck="false" required></label>
+          <datalist id="pfTickerList"></datalist>
+          <div class="pf-found" id="pfFound"></div>
           <div class="pf-row">
             <label class="pf-field"><span>Shares</span><input id="pfShares" type="number" step="any" min="0" inputmode="decimal" required></label>
             <label class="pf-field"><span>Price per share</span><input id="pfPrice" type="number" step="any" min="0" inputmode="decimal" required></label>
@@ -2024,6 +2028,35 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   // Trades are stored by the server (SQLite, /api/transactions). Prices for every ticker
   // you own, ETFs included, come from /api/quotes.
   const PF = { txs: null, quotes: {}, positions: null, loaded: false, error: null, delArmed: null };
+  // Common ETFs: suggested in the trade form and named on the page (the stock lists only have companies)
+  const ETFS = {
+    VOO: "Vanguard S&P 500 ETF", SPY: "SPDR S&P 500 ETF Trust", IVV: "iShares Core S&P 500 ETF", VTI: "Vanguard Total Stock Market ETF",
+    QQQ: "Invesco QQQ Trust (Nasdaq-100)", QQQM: "Invesco Nasdaq 100 ETF", VT: "Vanguard Total World Stock ETF", VXUS: "Vanguard Total International Stock ETF",
+    VEA: "Vanguard FTSE Developed Markets ETF", VWO: "Vanguard FTSE Emerging Markets ETF", SCHD: "Schwab US Dividend Equity ETF",
+    VIG: "Vanguard Dividend Appreciation ETF", VYM: "Vanguard High Dividend Yield ETF", DIA: "SPDR Dow Jones Industrial Average ETF",
+    IWM: "iShares Russell 2000 ETF", VUG: "Vanguard Growth ETF", VTV: "Vanguard Value ETF", SCHG: "Schwab US Large-Cap Growth ETF",
+    SCHX: "Schwab US Large-Cap ETF", SPLG: "SPDR Portfolio S&P 500 ETF", RSP: "Invesco S&P 500 Equal Weight ETF",
+    XLK: "Technology Select Sector SPDR", XLF: "Financial Select Sector SPDR", XLE: "Energy Select Sector SPDR",
+    XLV: "Health Care Select Sector SPDR", SMH: "VanEck Semiconductor ETF", SOXX: "iShares Semiconductor ETF",
+    VGT: "Vanguard Information Technology ETF", ARKK: "ARK Innovation ETF", BND: "Vanguard Total Bond Market ETF",
+    AGG: "iShares Core US Aggregate Bond ETF", TLT: "iShares 20+ Year Treasury Bond ETF", SGOV: "iShares 0-3 Month Treasury Bond ETF",
+    BIL: "SPDR Bloomberg 1-3 Month T-Bill ETF", SHY: "iShares 1-3 Year Treasury Bond ETF", GLD: "SPDR Gold Shares",
+    IAU: "iShares Gold Trust", SLV: "iShares Silver Trust", VNQ: "Vanguard Real Estate ETF", IBIT: "iShares Bitcoin Trust ETF",
+    TQQQ: "ProShares UltraPro QQQ", JEPI: "JPMorgan Equity Premium Income ETF", JEPQ: "JPMorgan Nasdaq Equity Premium Income ETF",
+  };
+  const pfName = (t, q) => (q && q.name) || ETFS[t] || (tickerMap().get(t) || {}).name || "";
+  let pfListKey = "";
+  function pfTickerList() {
+    const owned = new Set((PF.txs || []).map((t) => t.ticker));
+    const key = [...owned].sort().join(",") + "|" + tickerMap().size;
+    if (key === pfListKey) return;   // rebuild only when what it lists changes
+    pfListKey = key;
+    const dl = $("pfTickerList"); dl.textContent = "";
+    const add = (t, name) => dl.append(el("option", { value: t, label: name || "" }));
+    [...owned].sort().forEach((t) => add(t, pfName(t, PF.quotes[t])));
+    Object.entries(ETFS).forEach(([t, name]) => { if (!owned.has(t)) add(t, name); });
+    [...tickerMap().values()].sort((a, b) => a.ticker.localeCompare(b.ticker)).forEach((r) => { if (!owned.has(r.ticker)) add(r.ticker, r.name); });
+  }
   PF.side = "buy";
   const money = (v, d = 2) => (v == null || !isFinite(v) ? "–" : (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }));
   const signedMoney = (v) => (v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + "$" + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -2053,7 +2086,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       const price = q.price ?? null, value = price != null ? p.shares * price : null;
       const prevRef = price != null && q.chg != null ? price / (1 + q.chg / 100) : null;
       return { ...p, price, chg: q.chg ?? null, session: q.session || null, regPrice: q.regPrice ?? null,
-        name: q.name || (tickerMap().get(p.ticker) || {}).name || "", sector: q.sector || (tickerMap().get(p.ticker) || {}).sector || null,
+        name: pfName(p.ticker, q), sector: q.sector || (tickerMap().get(p.ticker) || {}).sector || (ETFS[p.ticker] ? "ETFs" : null),
         avg: p.shares > 0 ? p.cost / p.shares : null, value,
         dayGain: value != null && prevRef != null ? p.shares * (price - prevRef) : null,
         gain: value != null ? value - p.cost : null, gainPct: value != null && p.cost > 0 ? (value / p.cost - 1) * 100 : null };
@@ -2088,6 +2121,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function pfRecalc() {
     const r = computeHoldings(PF.txs || [], PF.quotes);
     PF.positions = r.positions; PF.totals = r.totals;
+    pfTickerList();
     renderRail();
     if (S.tab === "portfolio") renderPortfolio();
   }
@@ -2146,7 +2180,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     // allocation by sector
     const alloc = $("pfAlloc"); alloc.textContent = "";
     const sec = new Map();
-    open.filter((p) => p.value != null).forEach((p) => { const k = p.sector || "ETFs & other"; sec.set(k, (sec.get(k) || 0) + p.value); });
+    open.filter((p) => p.value != null).forEach((p) => { const k = p.sector || "Other"; sec.set(k, (sec.get(k) || 0) + p.value); });
     [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
       const pct = T.value ? v / T.value * 100 : 0;
       alloc.append(el("div", { class: "pf-bar" }, el("span", { text: name }),
@@ -2196,16 +2230,32 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const t = $("pfTicker").value.trim().toUpperCase(), held = (PF.positions || []).find((p) => p.ticker === t);
     if (PF.side === "sell" && (!held || sh > held.shares + 1e-9)) box.append(el("span", { class: "pf-warn", text: `You hold ${held ? shareFmt(held.shares) : 0} shares of ${t || "this stock"}.` }));
   }
-  function pfFillPrice() {
+  let pfLookup = 0;
+  async function pfFillPrice() {
     const t = $("pfTicker").value.trim().toUpperCase().replace(/^\$/, "");
+    const found = $("pfFound"); found.textContent = "";
     if (!t) return;
-    const r = tickerMap().get(t) || PF.quotes[t];
-    if (r && r.price != null && !$("pfPrice").value) { $("pfPrice").value = String(r.price); pfShowTotal(); }
+    let r = tickerMap().get(t) || PF.quotes[t];
+    if (!r || r.price == null) {   // not tracked yet (an ETF, say): fetch its price now
+      const n = ++pfLookup;
+      found.textContent = "Looking up " + t + "…";
+      try {
+        await fetch(API_ROOT + "quote/" + encodeURIComponent(t), { cache: "no-store" });
+        const j = await getJson(API_ROOT + "quotes?t=" + encodeURIComponent(t));
+        if (n !== pfLookup) return;
+        r = (j.quotes || {})[t];
+        if (r) PF.quotes[t] = { ...PF.quotes[t], ...r };
+      } catch (e) { /* shown below */ }
+      if (n !== pfLookup) return;
+    }
+    found.textContent = "";
+    if (!r || r.price == null) { found.append(`No price found for ${t}: check the ticker (you can still enter the price yourself).`); return; }
+    found.append(el("b", { text: t }), (pfName(t, r) ? " · " + pfName(t, r) : "") + " · " + money(r.price));
+    if (!$("pfPrice").value) { $("pfPrice").value = String(r.price); pfShowTotal(); }
   }
   document.querySelectorAll("#pfSide button").forEach((b) => b.addEventListener("click", () => pfSetSide(b.dataset.side)));
   ["pfShares", "pfPrice", "pfFee"].forEach((id) => $(id).addEventListener("input", pfShowTotal));
   $("pfTicker").addEventListener("change", pfFillPrice);
-  $("pfTicker").addEventListener("blur", pfFillPrice);
   $("pfDate").value = todayISO();
   $("pfForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -2219,7 +2269,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       if (!r.ok) throw new Error(j.error || "server error");
       PF.txs = (PF.txs || []).concat([j]);
       msg.textContent = `Added: ${j.side === "buy" ? "bought" : "sold"} ${shareFmt(j.shares)} ${j.ticker} at ${money(j.price)}`;
-      $("pfShares").value = ""; $("pfPrice").value = ""; $("pfFee").value = ""; $("pfTicker").value = ""; pfShowTotal();
+      $("pfShares").value = ""; $("pfPrice").value = ""; $("pfFee").value = ""; $("pfTicker").value = ""; $("pfFound").textContent = ""; pfShowTotal();
       $("pfTicker").focus();
       pfRecalc();
       if (!PF.quotes[j.ticker]) {   // new ticker (an ETF, say): get its price right away
