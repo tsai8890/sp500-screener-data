@@ -46,6 +46,10 @@ def _connect(path: str = DB_PATH) -> sqlite3.Connection:
     conn.execute("""CREATE TABLE IF NOT EXISTS watchlists (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, items TEXT NOT NULL,
         created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS transactions (
+        id TEXT PRIMARY KEY, date TEXT NOT NULL, ticker TEXT NOT NULL, side TEXT NOT NULL,
+        shares REAL NOT NULL, price REAL NOT NULL, fee REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '',
+        created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
     return conn
 
 
@@ -172,6 +176,82 @@ def upsert_watchlist(wl_id: str, body: dict, path: str = DB_PATH) -> dict:
 def delete_watchlist(wl_id: str, path: str = DB_PATH) -> bool:
     with _lock, _connect(path) as conn:
         return conn.execute("DELETE FROM watchlists WHERE id = ?", (wl_id,)).rowcount > 0
+
+
+# ---- portfolio transactions -------------------------------------------------------
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+MAX_TRANSACTIONS = 20000
+
+
+def validate_transaction(tx_id: str, body: dict) -> dict:
+    """One buy or sell: {date: YYYY-MM-DD, ticker, side: buy|sell, shares > 0, price >= 0, fee >= 0, note}."""
+    if not ID_RE.match(tx_id or ""):
+        raise InvalidScreen("id must be 1-64 letters, digits, - or _")
+    if not isinstance(body, dict):
+        raise InvalidScreen("body must be a JSON object")
+    date = str(body.get("date") or "")
+    if not DATE_RE.match(date):
+        raise InvalidScreen("date must be YYYY-MM-DD")
+    ticker = str(body.get("ticker") or "").strip().upper().replace("-", ".")
+    if not TICKER_RE.match(ticker):
+        raise InvalidScreen(f"bad ticker: {body.get('ticker')!r}")
+    side = str(body.get("side") or "").lower()
+    if side not in ("buy", "sell"):
+        raise InvalidScreen("side must be buy or sell")
+    def num(v):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f if f == f and f not in (float("inf"), float("-inf")) else None
+    shares, price, fee = num(body.get("shares")), num(body.get("price")), num(body.get("fee") or 0)
+    if shares is None or shares <= 0:
+        raise InvalidScreen("shares must be a number above 0")
+    if price is None or price < 0:
+        raise InvalidScreen("price must be a number, 0 or more")
+    if fee is None or fee < 0:
+        raise InvalidScreen("fee must be a number, 0 or more")
+    created = body.get("created")
+    return {"id": tx_id, "date": date, "ticker": ticker, "side": side, "shares": shares, "price": price,
+            "fee": fee, "note": str(body.get("note") or "")[:200],
+            "created": int(created) if isinstance(created, (int, float)) else None}
+
+
+def list_transactions(path: str = DB_PATH) -> list[dict]:
+    with _lock, _connect(path) as conn:
+        rows = conn.execute("""SELECT id, date, ticker, side, shares, price, fee, note, created, updated
+                               FROM transactions ORDER BY date, created""").fetchall()
+    keys = ("id", "date", "ticker", "side", "shares", "price", "fee", "note", "created", "updated")
+    return [dict(zip(keys, r)) for r in rows]
+
+
+def upsert_transaction(tx_id: str, body: dict, path: str = DB_PATH) -> dict:
+    t = validate_transaction(tx_id, body)
+    now = int(time.time() * 1000)
+    with _lock, _connect(path) as conn:
+        exists = conn.execute("SELECT created FROM transactions WHERE id = ?", (tx_id,)).fetchone()
+        if not exists and conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] >= MAX_TRANSACTIONS:
+            raise InvalidScreen(f"at most {MAX_TRANSACTIONS} transactions")
+        created = exists[0] if exists else (t["created"] or now)
+        conn.execute("""INSERT INTO transactions (id, date, ticker, side, shares, price, fee, note, created, updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET date=excluded.date, ticker=excluded.ticker, side=excluded.side,
+                        shares=excluded.shares, price=excluded.price, fee=excluded.fee, note=excluded.note,
+                        updated=excluded.updated""",
+                     (tx_id, t["date"], t["ticker"], t["side"], t["shares"], t["price"], t["fee"], t["note"], created, now))
+    return {**t, "created": created, "updated": now}
+
+
+def delete_transaction(tx_id: str, path: str = DB_PATH) -> bool:
+    with _lock, _connect(path) as conn:
+        return conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,)).rowcount > 0
+
+
+def portfolio_tickers(path: str = DB_PATH) -> list[str]:
+    """Every ticker that appears in a transaction (their prices are kept up to date too)."""
+    with _lock, _connect(path) as conn:
+        return [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM transactions ORDER BY ticker")]
 
 
 # ---- notes: validation only; storage is backend/notes_store.py ------------------

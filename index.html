@@ -169,6 +169,51 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 .note-status.ok::before { content: "✓ "; color: var(--pass); }
 .pin-btn { display: inline-flex; align-items: center; gap: 6px; }
 .pin-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+/* Portfolio */
+.pf-form { gap: 12px; }
+@media (min-width: 1300px) { .an-hi.pf-hi { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.pf-side { align-self: flex-start; }
+.pf-side button[data-side="buy"][aria-checked="true"] { color: var(--up); }
+.pf-side button[data-side="sell"][aria-checked="true"] { color: var(--down); }
+.pf-field { display: flex; flex-direction: column; gap: 4px; font-size: calc(13px * var(--ts)); color: var(--muted); min-width: 0; }
+.pf-field small { font-size: inherit; opacity: .8; }
+.pf-field input { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(15px * var(--ts)); color: var(--ink); width: 100%; min-width: 0; }
+#pfTicker { text-transform: uppercase; }
+#pfTicker::placeholder { text-transform: none; }
+.pf-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pf-total { font-size: calc(14px * var(--ts)); color: var(--muted); min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.pf-total b { color: var(--ink); font-weight: 600; }
+table.pf-t { width: 100%; }
+table.pf-t th, table.pf-t td { text-align: right; vertical-align: top; }
+table.pf-t th:first-child, table.pf-t td:first-child { text-align: left; padding-left: 18px; }
+table.pf-t th:last-child, table.pf-t td:last-child { padding-right: 18px; }
+table.pf-t td.num { font-size: calc(16px * var(--ts)); }
+table.pf-t td .sub { display: block; font-size: calc(13px * var(--ts)); color: var(--muted); }
+table.pf-t td .sub.up, table.pf-t td.num.up { color: var(--up); }
+table.pf-t td .sub.down, table.pf-t td.num.down { color: var(--down); }
+table.pf-t .tkbtn { all: unset; cursor: pointer; font-family: var(--font-data); font-weight: 600; color: var(--accent); }
+table.pf-t .tkbtn:hover { text-decoration: underline; }
+table.pf-t .co { display: block; color: var(--muted); font-size: calc(13px * var(--ts)); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.pf-t tr.closed td { color: var(--muted); }
+table.pf-t tr.total td { font-weight: 600; border-top: 2px solid var(--line); }
+.pf-sidetag { font-size: calc(12px * var(--ts)); font-weight: 700; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; }
+.pf-sidetag.buy { color: var(--up); background: var(--pass-soft); }
+.pf-sidetag.sell { color: var(--down); background: var(--fail-soft); }
+.pf-del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: calc(14px * var(--ts)); }
+.pf-del:hover { color: var(--fail); background: var(--fail-soft); }
+.pf-del.confirm { color: var(--accent-ink); background: var(--fail); }
+.pf-warn { color: var(--fail); font-size: calc(12.5px * var(--ts)); display: block; }
+.pf-alloc { padding: 12px 18px 16px; display: grid; gap: 8px; }
+.pf-bar { display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) 160px; gap: 12px; align-items: center; font-size: calc(14px * var(--ts)); }
+.pf-bar .track { height: 12px; background: var(--sunk); border-radius: 6px; overflow: hidden; }
+.pf-bar .fill { height: 100%; background: var(--accent); border-radius: 6px; }
+.pf-bar .amt { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--muted); }
+.pf-export { margin-left: auto; font-family: var(--font-body); font-size: calc(14px * var(--ts)); font-weight: 500; }
+@media (max-width: 820px) {
+  #toggleSide4 { flex: 1 1 100%; text-align: left; }
+  .pf-bar { grid-template-columns: 110px minmax(0, 1fr) 90px; }
+  table.pf-t th:first-child, table.pf-t td:first-child { padding-left: 14px; }
+}
 /* Advanced analysis */
 .an-group .panel-head { padding-top: 6px; }
 .an-list { display: flex; flex-direction: column; gap: 2px; padding: 0 10px 12px; }
@@ -297,7 +342,7 @@ td.num.since.down { color: var(--down); }
 
 .layout { display: grid; grid-template-columns: minmax(calc(270px * var(--ts)), calc(320px * var(--ts))) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 821px) {
-  #toggleSide, #toggleSide2, #toggleSide3 { width: calc(136px * var(--ts)); text-align: center; }   /* same width whatever the label */
+  #toggleSide, #toggleSide2, #toggleSide3, #toggleSide4 { width: calc(136px * var(--ts)); text-align: center; }   /* same width whatever the label */
   .layout.collapsed { grid-template-columns: minmax(0, 1fr); }
   .layout.collapsed > aside { display: none; }
   .m-only { display: none !important; }
@@ -604,6 +649,28 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
           <div class="row"><button class="btn danger" id="deleteWatch" type="button">Delete watchlist</button></div>
         </div>
       </div>
+      <div id="portfolioSide" role="tabpanel" aria-labelledby="tab-portfolio" hidden>
+        <form class="section pf-form" id="pfForm" autocomplete="off">
+          <p class="eyebrow">Add a trade</p>
+          <div class="seg pf-side" id="pfSide" role="radiogroup" aria-label="Buy or sell">
+            <button type="button" role="radio" data-side="buy" aria-checked="true">Buy</button>
+            <button type="button" role="radio" data-side="sell" aria-checked="false">Sell</button>
+          </div>
+          <label class="pf-field"><span>Ticker</span>
+            <input id="pfTicker" list="tickerList" placeholder="e.g. NVDA or VOO" autocapitalize="characters" spellcheck="false" required></label>
+          <div class="pf-row">
+            <label class="pf-field"><span>Shares</span><input id="pfShares" type="number" step="any" min="0" inputmode="decimal" required></label>
+            <label class="pf-field"><span>Price per share</span><input id="pfPrice" type="number" step="any" min="0" inputmode="decimal" required></label>
+          </div>
+          <div class="pf-row">
+            <label class="pf-field"><span>Date</span><input id="pfDate" type="date" required></label>
+            <label class="pf-field"><span>Fee <small>(optional)</small></span><input id="pfFee" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>
+          </div>
+          <div class="pf-total" id="pfTotal"></div>
+          <div class="row"><button class="btn primary" id="pfAdd" type="submit">Add buy</button></div>
+          <div class="toast" id="pfMsg" role="status"></div>
+        </form>
+      </div>
       <div id="analysisSide" role="tabpanel" aria-labelledby="tab-analysis" hidden>
         <div class="panel-head"><p class="eyebrow">Analyze a stock</p></div>
         <div class="section">
@@ -720,6 +787,32 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
             <div class="toast" id="importMsg" role="status"></div>
           </div>
         </details>
+        </div>
+      </div>
+      <div id="portfolioView" hidden>
+        <div class="note-bar an-bar">
+          <button class="btn sm" id="toggleSide4" type="button" aria-controls="sidePanel">Hide form</button>
+          <span class="note-status" id="pfState" role="status" aria-live="polite"></span>
+        </div>
+        <div class="an-empty" id="pfEmpty" hidden>
+          <p class="an-empty-t">No trades yet</p>
+          <p class="hint">Add your first buy on the left. Holdings, gains and allocation are worked out from your trades, with live prices.</p>
+        </div>
+        <div id="pfBody" hidden>
+          <div class="an-hi pf-hi" id="pfCards"></div>
+          <section class="an-sec" aria-label="Holdings">
+            <h3>Holdings <span class="hint" id="pfHoldNote"></span></h3>
+            <div class="table-wrap"><table class="pf-t" id="pfHoldings"></table></div>
+          </section>
+          <section class="an-sec" aria-label="Allocation by sector">
+            <h3>Allocation by sector</h3>
+            <div class="pf-alloc" id="pfAlloc"></div>
+          </section>
+          <section class="an-sec" aria-label="Trades">
+            <h3>Trades <span class="hint">Newest first</span><button class="linkbtn pf-export" id="pfExport" type="button">Download (.csv)</button></h3>
+            <div class="table-wrap"><table class="pf-t" id="pfTrades"></table></div>
+          </section>
+          <p class="an-foot">Cost is the average cost of the shares you still hold (fees included); selling realizes the difference between the sale price and that average. Today's change is against the previous close for every share held.</p>
         </div>
       </div>
       <div id="analysisView" hidden>
@@ -1162,7 +1255,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   const pct = (v) => (v == null ? "–" : FIELDS.chg.fmt(v));
   const mean = (arr) => { const a = arr.filter((v) => v != null && isFinite(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
   function renderResults() {
-    if (S.tab === "notes" || S.tab === "settings" || S.tab === "analysis") return;
+    if (S.tab === "notes" || S.tab === "settings" || S.tab === "analysis" || S.tab === "portfolio") return;
     const watch = S.tab === "watch";
     const d = S.draft;
     const cols = visibleCols().concat(watch ? [{ key: "since" }] : []);
@@ -1761,6 +1854,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     screener: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>',
     analysis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="M14.5 7.5l3-3 3 3" opacity=".55"/></svg>',
     notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>',
   };
@@ -1768,6 +1862,8 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     { id: "screener", label: "Screener", hash: "screener", panel: "screenerSide", panelTitle: "Screens" },
     { id: "watch", label: "Watchlist", hash: "watchlist", panel: "watchSide", panelTitle: "Watchlists",
       badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
+    { id: "portfolio", label: "Portfolio", hash: "portfolio", panel: "portfolioSide", panelTitle: "Add a trade", toggleLabel: "form",
+      badge: () => { const n = PF.positions ? PF.positions.filter((p) => p.shares > 0).length : 0; return n ? String(n) : ""; } },
     { id: "analysis", label: "Analysis", hash: "analysis", panel: "analysisSide", panelTitle: "Stocks" },
     { id: "notes", label: "Notes", hash: "notes", panel: "notesSide", panelTitle: "Notes",
       badge: () => (S.notes.length ? String(S.notes.length) : "") },
@@ -1791,17 +1887,20 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function setTab(tab) {
     S.tab = TABS.some((t) => t.id === tab) ? tab : "screener";
     lsSet("screener.tab", S.tab);
-    const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings", analysis = S.tab === "analysis";
+    const watch = S.tab === "watch", notes = S.tab === "notes", settings = S.tab === "settings", analysis = S.tab === "analysis", portfolio = S.tab === "portfolio";
     if (!notes) nstore.flushAll();
     TABS.forEach((t) => { $(t.panel).hidden = t.id !== S.tab; });
-    $("sidePanel").classList.toggle("as-cards", S.tab === "screener" || S.tab === "watch");
+    $("sidePanel").classList.toggle("as-cards", S.tab === "screener" || S.tab === "watch" || portfolio);
     renderRail();
     $("drawerTitle").textContent = TABS.find((t) => t.id === S.tab).panelTitle;
-    $("resultsView").hidden = notes || settings || analysis; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("analysisView").hidden = !analysis; $("footNote").hidden = notes || settings || analysis;
+    const own = notes || settings || analysis || portfolio;   // tabs with their own main view
+    $("resultsView").hidden = own; $("notesView").hidden = !notes; $("settingsView").hidden = !settings; $("analysisView").hidden = !analysis; $("portfolioView").hidden = !portfolio; $("footNote").hidden = own;
     // keep these in place (just invisible) so nothing below moves when switching tabs
-    $("uniPick").style.visibility = watch || notes || settings || analysis ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
-    $("pageTitle").textContent = analysis ? "Advanced Analysis" : settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
-    document.querySelector(".lede").textContent = analysis
+    $("uniPick").style.visibility = watch || own ? "hidden" : ""; $("missToggle").style.visibility = watch ? "hidden" : "";
+    $("pageTitle").textContent = portfolio ? "Portfolio" : analysis ? "Advanced Analysis" : settings ? "Settings" : notes ? "Notes" : watch ? "Watchlist" : uName() + " Screener";
+    document.querySelector(".lede").textContent = portfolio
+      ? "What you own, worked out from your trades: value, today's change, gains and where your money is."
+      : analysis
       ? "One company's revenue, profits and margins over several years, from its financial statements."
       : settings
       ? "Choose where your screens, watchlists and notes are kept, and check when they were last saved."
@@ -1812,6 +1911,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (watch) renderWatchSide();
     if (notes) { renderNoteList(); openNote(S.activeNote, false); $("showResults").textContent = "Open note"; }
     if (settings) { renderSettings(); $("showResults").textContent = "Show status"; }
+    if (portfolio) { renderPortfolio(); pfLoadQuotes(); $("showResults").textContent = "Show portfolio"; }
     if (analysis) {
       renderAnalysisSide(); renderAnalysis(); $("showResults").textContent = "Show analysis";
       if (S.anTicker && !AN.data[S.anTicker] && !AN.loading[S.anTicker] && !AN.error[S.anTicker]) loadAnalysis(S.anTicker, false);
@@ -1831,7 +1931,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       box.append(el("button", { type: "button", role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1",
         onclick: () => { switchUniverse(u.id); $("uniPick").querySelector('[aria-checked="true"]').focus(); } }, u.name, n ? el("span", { class: "n", text: n.toLocaleString() }) : null));
     });
-    $("pageTitle").textContent = S.tab === "analysis" ? "Advanced Analysis" : S.tab === "settings" ? "Settings" : S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
+    $("pageTitle").textContent = S.tab === "portfolio" ? "Portfolio" : S.tab === "analysis" ? "Advanced Analysis" : S.tab === "settings" ? "Settings" : S.tab === "notes" ? "Notes" : S.tab === "watch" ? "Watchlist" : uName() + " Screener";
     if (hadFocus) box.querySelector('[aria-checked="true"]').focus();
   }
   function loadIndex() {
@@ -1920,12 +2020,235 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   }
   function initLive() { startFetching(); startFastQuotes(); }
 
+  // ---------- Portfolio: holdings worked out from trades ----------
+  // Trades are stored by the server (SQLite, /api/transactions). Prices for every ticker
+  // you own, ETFs included, come from /api/quotes.
+  const PF = { txs: null, quotes: {}, positions: null, loaded: false, error: null, delArmed: null };
+  PF.side = "buy";
+  const money = (v, d = 2) => (v == null || !isFinite(v) ? "–" : (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const signedMoney = (v) => (v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + "$" + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const signedPct = (v) => (v == null || !isFinite(v) ? "" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%");
+  const upDown = (v) => (v > 0 ? "up" : v < 0 ? "down" : "");
+  const shareFmt = (n) => n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+
+  // Average-cost holdings from the trades (oldest first). Pure: easy to check by hand.
+  function computeHoldings(txs, quotes) {
+    const by = new Map();
+    [...txs].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.created || 0) - (b.created || 0))).forEach((t) => {
+      const p = by.get(t.ticker) || { ticker: t.ticker, shares: 0, cost: 0, realized: 0, oversold: false, trades: 0 };
+      p.trades++;
+      if (t.side === "buy") { p.shares += t.shares; p.cost += t.shares * t.price + (t.fee || 0); }
+      else {
+        const q = Math.min(t.shares, p.shares), avg = p.shares > 0 ? p.cost / p.shares : 0;
+        if (t.shares > p.shares + 1e-9) p.oversold = true;   // sold more than held: counted up to what was held
+        p.realized += q * t.price - (t.fee || 0) - avg * q;
+        p.cost -= avg * q; p.shares -= q;
+        if (p.shares < 1e-9) { p.shares = 0; p.cost = 0; }
+      }
+      by.set(t.ticker, p);
+    });
+    const out = [...by.values()].map((p) => {
+      const q = quotes[p.ticker] || {};
+      const price = q.price ?? null, value = price != null ? p.shares * price : null;
+      const prevRef = price != null && q.chg != null ? price / (1 + q.chg / 100) : null;
+      return { ...p, price, chg: q.chg ?? null, session: q.session || null, regPrice: q.regPrice ?? null,
+        name: q.name || (tickerMap().get(p.ticker) || {}).name || "", sector: q.sector || (tickerMap().get(p.ticker) || {}).sector || null,
+        avg: p.shares > 0 ? p.cost / p.shares : null, value,
+        dayGain: value != null && prevRef != null ? p.shares * (price - prevRef) : null,
+        gain: value != null ? value - p.cost : null, gainPct: value != null && p.cost > 0 ? (value / p.cost - 1) * 100 : null };
+    });
+    const open = out.filter((p) => p.shares > 0), priced = open.filter((p) => p.value != null);
+    const value = priced.reduce((a, p) => a + p.value, 0);
+    const costPriced = priced.reduce((a, p) => a + p.cost, 0);
+    const withDay = priced.filter((p) => p.dayGain != null);
+    const day = withDay.length ? withDay.reduce((a, p) => a + p.dayGain, 0) : null;   // none known: unknown, not $0
+    return { positions: out, totals: {
+      value, cost: open.reduce((a, p) => a + p.cost, 0), gain: value - costPriced, gainPct: costPriced > 0 ? (value / costPriced - 1) * 100 : null,
+      day, dayPct: day != null && value - day > 0 ? day / (value - day) * 100 : null,
+      realized: out.reduce((a, p) => a + p.realized, 0), missing: open.length - priced.length } };
+  }
+
+  async function pfLoad() {
+    try {
+      const j = await getJson(API_ROOT + "transactions");
+      PF.txs = j.transactions || []; PF.error = null;
+    } catch (e) { PF.error = "Can't reach the screener server, so trades can't be loaded. Is ./run.sh running?"; PF.txs = PF.txs || []; }
+    PF.loaded = true; pfRecalc(); await pfLoadQuotes();
+  }
+  async function pfLoadQuotes() {
+    if (!PF.txs || !PF.txs.length) { renderPortfolio(); return; }
+    const tickers = [...new Set(PF.txs.map((t) => t.ticker))];
+    try {
+      const j = await getJson(API_ROOT + "quotes?t=" + tickers.map(encodeURIComponent).join(","));
+      PF.quotes = j.quotes || {}; PF.quotesAt = j.asOf;
+    } catch (e) { /* keep the last prices */ }
+    pfRecalc();
+  }
+  function pfRecalc() {
+    const r = computeHoldings(PF.txs || [], PF.quotes);
+    PF.positions = r.positions; PF.totals = r.totals;
+    renderRail();
+    if (S.tab === "portfolio") renderPortfolio();
+  }
+  function renderPortfolio() {
+    const has = PF.txs && PF.txs.length;
+    $("pfEmpty").hidden = !!has || !PF.loaded; $("pfBody").hidden = !has;
+    const st = $("pfState"); st.className = "note-status" + (PF.error ? " warn" : "");
+    st.textContent = PF.error || (PF.quotesAt ? "Prices updated " + new Date(PF.quotesAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "");
+    if (!has) { applySide(); return; }
+    const T = PF.totals, open = PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0));
+
+    // cards
+    const cards = $("pfCards"); cards.textContent = "";
+    const card = (k, v, note, cls, tip) => cards.append(el("div", { class: "an-card", title: tip || "" },
+      el("div", { class: "k", text: k }), el("div", { class: "v" + (cls ? " " + cls : ""), text: v }), el("div", { class: "n", text: note || "" })));
+    card("Total Value", money(T.value), T.missing ? `${T.missing} holding${T.missing > 1 ? "s" : ""} without a price` : `${open.length} holding${open.length === 1 ? "" : "s"}`);
+    card("Today", signedMoney(T.day), signedPct(T.dayPct), upDown(T.day), "Change since the previous close, for the shares you hold now.");
+    card("Unrealized Gain", signedMoney(T.gain), signedPct(T.gainPct), upDown(T.gain), "Value of what you hold − what it cost (average cost, fees included).");
+    card("Realized Gain", signedMoney(T.realized), "From shares sold", upDown(T.realized), "Sale price − average cost of the shares sold, minus fees.");
+    card("Cost Basis", money(T.cost), "Of the shares you hold");
+
+    // holdings
+    const tbl = $("pfHoldings"); tbl.textContent = "";
+    const hd = el("tr", {}, ...["Stock", "Shares", "Avg cost", "Price", "Market value", "Today", "Unrealized gain", "Weight"].map((h) => el("th", { text: h })));
+    tbl.append(el("thead", {}, hd));
+    const tb = el("tbody");
+    const tkCell = (p) => el("td", {}, el("button", { class: "tkbtn", type: "button", text: p.ticker, title: "Open in Advanced Analysis", onclick: () => openAnalysis(p.ticker) }),
+      el("span", { class: "co", text: p.name || "" }), p.oversold ? el("span", { class: "pf-warn", text: "Sold more than held: check the trades" }) : null);
+    open.forEach((p) => {
+      const priceCell = el("td", { class: "num" });
+      if (p.price == null) priceCell.textContent = "–";
+      else {
+        if (p.session) priceCell.append(sessionTag(p));
+        priceCell.append(money(p.price));
+        if (p.chg != null) priceCell.append(el("span", { class: "sub " + upDown(p.chg), text: signedPct(p.chg) }));
+      }
+      tb.append(el("tr", {}, tkCell(p),
+        el("td", { class: "num", text: shareFmt(p.shares) }),
+        el("td", { class: "num", text: money(p.avg) }),
+        priceCell,
+        el("td", { class: "num", text: money(p.value) }),
+        el("td", { class: "num " + upDown(p.dayGain), text: signedMoney(p.dayGain) }),
+        el("td", { class: "num " + upDown(p.gain) }, signedMoney(p.gain), el("span", { class: "sub " + upDown(p.gain), text: signedPct(p.gainPct) })),
+        el("td", { class: "num", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "–" })));
+    });
+    tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
+      el("td", { class: "num", text: money(T.value) }), el("td", { class: "num " + upDown(T.day), text: signedMoney(T.day) }),
+      el("td", { class: "num " + upDown(T.gain) }, signedMoney(T.gain), el("span", { class: "sub " + upDown(T.gain), text: signedPct(T.gainPct) })),
+      el("td", { class: "num", text: "100%" })));
+    tbl.append(tb);
+    const closed = PF.positions.filter((p) => p.shares === 0).length;
+    const over = PF.positions.filter((p) => p.oversold && p.shares === 0).map((p) => p.ticker);
+    const hn = $("pfHoldNote"); hn.textContent = closed ? `${closed} sold off completely (in realized gain)` : "";
+    if (over.length) hn.append(el("span", { class: "pf-warn", text: `Sold more shares than you had of ${over.join(", ")}: check those trades.` }));
+
+    // allocation by sector
+    const alloc = $("pfAlloc"); alloc.textContent = "";
+    const sec = new Map();
+    open.filter((p) => p.value != null).forEach((p) => { const k = p.sector || "ETFs & other"; sec.set(k, (sec.get(k) || 0) + p.value); });
+    [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
+      const pct = T.value ? v / T.value * 100 : 0;
+      alloc.append(el("div", { class: "pf-bar" }, el("span", { text: name }),
+        el("div", { class: "track" }, el("div", { class: "fill", style: `width: ${pct.toFixed(2)}%` })),
+        el("span", { class: "amt", text: `${pct.toFixed(1)}% · ${money(v, 0)}` })));
+    });
+
+    // trades, newest first
+    const tt = $("pfTrades"); tt.textContent = "";
+    tt.append(el("thead", {}, el("tr", {}, ...["Date", "", "Stock", "Shares", "Price", "Fee", "Amount", ""].map((h) => el("th", { text: h })))));
+    const tb2 = el("tbody");
+    [...PF.txs].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : (b.created || 0) - (a.created || 0))).forEach((t) => {
+      const amount = t.side === "buy" ? -(t.shares * t.price + (t.fee || 0)) : t.shares * t.price - (t.fee || 0);
+      const del = el("button", { class: "pf-del" + (PF.delArmed === t.id ? " confirm" : ""), type: "button",
+        title: "Delete this trade", text: PF.delArmed === t.id ? "Delete?" : "×", onclick: () => pfDelete(t.id) });
+      tb2.append(el("tr", {}, el("td", { class: "num", text: t.date }),
+        el("td", {}, el("span", { class: "pf-sidetag " + t.side, text: t.side === "buy" ? "BUY" : "SELL" })),
+        el("td", {}, el("button", { class: "tkbtn", type: "button", text: t.ticker, onclick: () => openAnalysis(t.ticker) })),
+        el("td", { class: "num", text: shareFmt(t.shares) }), el("td", { class: "num", text: money(t.price) }),
+        el("td", { class: "num", text: t.fee ? money(t.fee) : "–" }),
+        el("td", { class: "num " + upDown(amount), text: signedMoney(amount) }), el("td", {}, del)));
+    });
+    tt.append(tb2);
+    applySide();
+  }
+  async function pfDelete(id) {
+    if (PF.delArmed !== id) { PF.delArmed = id; renderPortfolio(); setTimeout(() => { if (PF.delArmed === id) { PF.delArmed = null; renderPortfolio(); } }, 4000); return; }
+    PF.delArmed = null;
+    try {
+      const r = await fetch(API_ROOT + "transactions/" + encodeURIComponent(id), { method: "DELETE", headers: authHeaders() });
+      if (!r.ok) throw new Error();
+      PF.txs = PF.txs.filter((t) => t.id !== id); pfRecalc();
+    } catch (e) { $("pfMsg").textContent = "Couldn't delete: the server can't be reached."; renderPortfolio(); }
+  }
+  // the form
+  function pfSetSide(side) {
+    PF.side = side;
+    document.querySelectorAll("#pfSide button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.side === side)));
+    $("pfAdd").textContent = side === "buy" ? "Add buy" : "Add sell"; pfShowTotal();
+  }
+  function pfShowTotal() {
+    const sh = parseFloat($("pfShares").value), pr = parseFloat($("pfPrice").value), fee = parseFloat($("pfFee").value) || 0;
+    const box = $("pfTotal"); box.textContent = "";
+    if (!(sh > 0) || !(pr >= 0)) return;
+    const amt = sh * pr + (PF.side === "buy" ? fee : -fee);
+    box.append(PF.side === "buy" ? "You pay " : "You receive ", el("b", { text: money(amt) }));
+    const t = $("pfTicker").value.trim().toUpperCase(), held = (PF.positions || []).find((p) => p.ticker === t);
+    if (PF.side === "sell" && (!held || sh > held.shares + 1e-9)) box.append(el("span", { class: "pf-warn", text: `You hold ${held ? shareFmt(held.shares) : 0} shares of ${t || "this stock"}.` }));
+  }
+  function pfFillPrice() {
+    const t = $("pfTicker").value.trim().toUpperCase().replace(/^\$/, "");
+    if (!t) return;
+    const r = tickerMap().get(t) || PF.quotes[t];
+    if (r && r.price != null && !$("pfPrice").value) { $("pfPrice").value = String(r.price); pfShowTotal(); }
+  }
+  document.querySelectorAll("#pfSide button").forEach((b) => b.addEventListener("click", () => pfSetSide(b.dataset.side)));
+  ["pfShares", "pfPrice", "pfFee"].forEach((id) => $(id).addEventListener("input", pfShowTotal));
+  $("pfTicker").addEventListener("change", pfFillPrice);
+  $("pfTicker").addEventListener("blur", pfFillPrice);
+  $("pfDate").value = todayISO();
+  $("pfForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("pfMsg"); msg.className = "toast";
+    const tx = { date: $("pfDate").value, ticker: $("pfTicker").value.trim().toUpperCase().replace(/^\$/, ""), side: PF.side,
+      shares: parseFloat($("pfShares").value), price: parseFloat($("pfPrice").value), fee: parseFloat($("pfFee").value) || 0, created: Date.now() };
+    const id = "tx-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try {
+      const r = await fetch(API_ROOT + "transactions/" + id, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(tx) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "server error");
+      PF.txs = (PF.txs || []).concat([j]);
+      msg.textContent = `Added: ${j.side === "buy" ? "bought" : "sold"} ${shareFmt(j.shares)} ${j.ticker} at ${money(j.price)}`;
+      $("pfShares").value = ""; $("pfPrice").value = ""; $("pfFee").value = ""; $("pfTicker").value = ""; pfShowTotal();
+      $("pfTicker").focus();
+      pfRecalc();
+      if (!PF.quotes[j.ticker]) {   // new ticker (an ETF, say): get its price right away
+        fetch(API_ROOT + "quote/" + encodeURIComponent(j.ticker), { cache: "no-store" }).then(() => pfLoadQuotes()).catch(() => {});
+      }
+    } catch (err) {
+      msg.textContent = err.message === "Failed to fetch" ? "Not saved: the server can't be reached." : "Not saved: " + err.message;
+      msg.className = "toast warn";
+    }
+  });
+  $("pfExport").addEventListener("click", () => {
+    const rows = [["date", "side", "ticker", "shares", "price", "fee"]].concat([...PF.txs].sort((a, b) => (a.date < b.date ? -1 : 1))
+      .map((t) => [t.date, t.side, t.ticker, t.shares, t.price, t.fee || 0]));
+    const a = el("a", { href: URL.createObjectURL(new Blob([rows.map((r) => r.join(",")).join("\n") + "\n"], { type: "text/csv" })), download: "trades-" + todayISO() + ".csv" });
+    document.body.append(a); a.click(); a.remove();
+  });
+  setInterval(() => { if (S.tab === "portfolio" && document.visibilityState === "visible") pfLoadQuotes(); }, 60 * 1000);
+
   // ---------- Fast quotes (Finnhub) for the stocks on screen ----------
   // The stock open in Analysis + the first 10 of the current watchlist (in the table's order)
   // are reported to the server, which fetches them from Finnhub every ~15 s; their rows are
   // updated here in place. Without a Finnhub key on the server this switches itself off.
   function focusTickers() {
     const out = [];
+    if (S.tab === "portfolio" && PF.positions) {
+      PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 10)
+        .forEach((p) => out.push(p.ticker));
+      return out;
+    }
     if (S.anTicker) out.push(S.anTicker);
     const { key, dir } = S.sort, sgn = dir === "asc" ? 1 : -1;
     const rows = watchRows().sort((a, b) => {
@@ -1945,7 +2268,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       if (tickers.length) {
         const j = await getJson(API_ROOT + "live?t=" + tickers.map(encodeURIComponent).join(","));
         if (!j.on) next = 300;   // no Finnhub key on the server: check again much later
-        else { next = j.interval || 15; applyFastRows(j.rows || {}); }
+        else { next = j.interval || 15; applyFastRows(j.rows || {}); if (S.tab === "portfolio") pfLoadQuotes(); }
       }
     } catch (e) { next = 60; }
     fastTimer = setTimeout(fastTick, next * 1000);
@@ -2037,19 +2360,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     $("layout").classList.toggle("drawer-open", open);
     document.body.style.overflow = open ? "hidden" : "";
     $("toggleSide").setAttribute("aria-expanded", String(open));
-    if (open) $("closeDrawer").focus(); else if (isPhone()) $(S.tab === "notes" ? "toggleSide2" : S.tab === "analysis" ? "toggleSide3" : "toggleSide").focus();
+    if (open) $("closeDrawer").focus(); else if (isPhone()) $(S.tab === "notes" ? "toggleSide2" : S.tab === "analysis" ? "toggleSide3" : S.tab === "portfolio" ? "toggleSide4" : "toggleSide").focus();
   }
   function applySide() {
-    const btns = [$("toggleSide"), $("toggleSide2"), $("toggleSide3")];
+    const btns = [$("toggleSide"), $("toggleSide2"), $("toggleSide3"), $("toggleSide4")];
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
       const cur = S.tab === "notes" ? S.notes.find((n) => n.id === S.activeNote) : null;
-      const nm = S.tab === "analysis" ? (S.anTicker || "Stocks") : S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
+      const nm = S.tab === "portfolio" ? "Add a trade" : S.tab === "analysis" ? (S.anTicker || "Stocks") : S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
       btns.forEach((b) => { b.textContent = "☰ " + nm; b.title = TABS.find((t) => t.id === S.tab).panelTitle; b.setAttribute("aria-expanded", String(!!S.drawer)); });
     } else {
       if (S.drawer) setDrawer(false);
       $("layout").classList.toggle("collapsed", S.collapsed);
-      const what = TABS.find((t) => t.id === S.tab).panelTitle.toLowerCase();
+      const tab = TABS.find((t) => t.id === S.tab), what = tab.toggleLabel || tab.panelTitle.toLowerCase();
       btns.forEach((b) => { b.textContent = (S.collapsed ? "Show " : "Hide ") + what; b.setAttribute("aria-expanded", String(!S.collapsed)); });
     }
   }
@@ -2060,6 +2383,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   $("toggleSide").addEventListener("click", toggleSidePanel);
   $("toggleSide2").addEventListener("click", toggleSidePanel);
   $("toggleSide3").addEventListener("click", toggleSidePanel);
+  $("toggleSide4").addEventListener("click", toggleSidePanel);
   ["closeDrawer", "showResults", "scrim"].forEach((id) => $(id).addEventListener("click", () => setDrawer(false)));
   $("showResults").addEventListener("click", () => { if (S.tab === "notes") $("noteText").focus(); });
   phoneMq.addEventListener("change", applySide);
@@ -2471,7 +2795,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   $("notesToSettings").addEventListener("click", () => setTab("settings"));
   $("exportAll").addEventListener("click", () => {
-    const all = { exportedAt: new Date().toISOString(), screens: S.userScreens, watchlists: S.watchlists.filter((w) => w.items.length || w.saved), notes: S.notes.map(notePlain) };
+    const all = { exportedAt: new Date().toISOString(), transactions: PF.txs || [], screens: S.userScreens, watchlists: S.watchlists.filter((w) => w.items.length || w.saved), notes: S.notes.map(notePlain) };
     const a = el("a", { href: URL.createObjectURL(new Blob([JSON.stringify(all, null, 2)], { type: "application/json" })), download: "screener-backup-" + new Date().toISOString().slice(0, 10) + ".json" });
     document.body.append(a); a.click(); a.remove();
   });
@@ -2641,6 +2965,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   });
   initLive();
   loadIndex();
+  pfLoad();
 })();
 </script>
 </body>

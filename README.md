@@ -138,6 +138,14 @@ Dark by default. Settings → *Theme*: Dark, Light, or Same as system.
 
 Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of window width, 115% up to 2400 px and 130% above that, for large monitors; or choose 100–175% yourself. Every font size and the widths tied to text scale together (CSS variable `--ts`).
 
+## Portfolio tab
+
+Record your trades (buy or sell: ticker, shares, price, date, optional fee) and the page works out what you own: total value, today's change, unrealized and realized gain, cost basis, each holding's average cost, price, value and weight, allocation by sector, and the full trade history (newest first, deletable, downloadable as CSV).
+
+- **Cost:** average cost (fees included), like most brokers' apps show it. Selling realizes sale price − average cost of the shares sold, minus the fee. Selling more than you hold is flagged.
+- **Prices:** the same live prices as everywhere else, including pre-market / after-hours (tagged PM / AH). Tickers outside the stock lists (ETFs such as VOO, QQQ, smaller companies) are added to the 5-minute price updates automatically; with a Finnhub key, the 10 largest holdings update every 15 seconds while the tab is open.
+- **Storage:** the `transactions` table in `data/screener.db` (`GET /api/transactions`, `PUT` / `DELETE /api/transactions/<id>`); also included in Settings → Download everything. Prices for any tickers: `GET /api/quotes?t=VOO,AAPL`.
+
 ## Advanced Analysis tab
 
 The **Analysis** tab shows one company's revenue, profits and margins over the years. Type a ticker, pick one from your recent stocks or watchlists, or hover a stock's name in the Screener or Watchlist and choose *Advanced analysis*. `http://localhost:8000/#analysis/NVDA` opens a stock directly.

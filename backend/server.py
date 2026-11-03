@@ -30,6 +30,10 @@ What it does:
         PUT    /api/notes/<id>       save one note: {body, pinned, created, updated}
         DELETE /api/notes/<id>       delete one note
         GET /api/storage           where screens, watchlists and notes are kept
+        GET    /api/transactions          portfolio transactions (SQLite)
+        PUT    /api/transactions/<id>     add or change one: {date, ticker, side: buy|sell, shares, price, fee, note}
+        DELETE /api/transactions/<id>     delete one
+        GET /api/quotes?t=A,B      latest prices for any tickers, ETFs included
         GET /api/quote/<ticker>    fetch one stock's latest price now (the Analysis Refresh button)
         GET /api/analysis/<ticker> financial statements and metrics for one stock
                                    (cached a day in data/analysis/; ?refresh=1 to refetch)
@@ -173,7 +177,10 @@ def prices_loop() -> None:
             continue   # Yahoo asked us to slow down; skip this round
         t0 = time.time()
         try:
-            STATE.prices = prices.update(STATE.fund.get("order"))
+            # the stock lists, plus anything you own that isn't in them (ETFs, smaller companies)
+            order = STATE.fund.get("order") or []
+            extra = [t for t in screens_db.portfolio_tickers() if t not in set(order)]
+            STATE.prices = prices.update(order + extra)
             STATE.rebuild()
             STATE.record("prices", True, time.time() - t0)
         except Exception as e:  # noqa: BLE001
@@ -233,6 +240,23 @@ class Handler(BaseHTTPRequestHandler):
                                                    pr.get("prev", {}).get(t))))
                 for t in tickers if t in stocks}
         return self._json(200, {"on": bool(finnhub.api_key()), "interval": finnhub.INTERVAL, "asOf": pr.get("asOf"), "rows": rows})
+
+    def _quotes(self) -> None:
+        """Latest prices for any tickers, also ones outside the stock lists (ETFs ...):
+        GET /api/quotes?t=VOO,AAPL -> {"quotes": {ticker: {price, chg, session, ...}}}"""
+        from urllib.parse import parse_qs, unquote
+        q = parse_qs(self.path.partition("?")[2])
+        tickers = [unquote(t).strip().upper().replace("-", ".") for t in ",".join(q.get("t", [])).split(",") if t.strip()]
+        tickers = [t for t in tickers if analysis.TICKER_RE.match(t)][:500]
+        data = STATE.prices or {}
+        names = {t: s.get("name") for t, s in ((STATE.fund or {}).get("stocks") or {}).items()}
+        sectors = {t: s.get("sector") for t, s in ((STATE.fund or {}).get("stocks") or {}).items()}
+        out = {}
+        for t in tickers:
+            qt = prices.quote(data, t)
+            if qt:
+                out[t] = {**qt, "name": names.get(t), "sector": sectors.get(t)}
+        return self._json(200, {"asOf": data.get("asOf"), "quotes": out})
 
     def _quote(self, ticker: str) -> None:
         """Fetch one stock's latest price now and rebuild the data the page reads."""
@@ -298,6 +322,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._quote(path[len("/api/quote/"):])
         if path.startswith("/api/analysis/"):
             return self._analysis(path[len("/api/analysis/"):], "refresh=1" in self.path.partition("?")[2])
+        if path == "/api/transactions":
+            return self._json(200, {"transactions": screens_db.list_transactions()})
+        if path == "/api/quotes":
+            return self._quotes()
         if path == "/api/watchlists":
             return self._json(200, {"watchlists": screens_db.list_watchlists(), "tokenRequired": bool(SCREENS_TOKEN)})
         if path == "/api/screens":
@@ -326,7 +354,7 @@ class Handler(BaseHTTPRequestHandler):
     def _target(self) -> tuple[str, str] | None:
         """("screens" | "watchlists" | "notes", id) for /api/<kind>/<id>."""
         path = self.path.split("?", 1)[0]
-        for kind in ("screens", "watchlists", "notes"):
+        for kind in ("screens", "watchlists", "notes", "transactions"):
             prefix = f"/api/{kind}/"
             if path.startswith(prefix):
                 return kind, path[len(prefix):]
@@ -347,7 +375,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length))
             kind, sid = target
-            save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": notes_store.upsert_note}[kind]
+            save = {"screens": screens_db.upsert, "watchlists": screens_db.upsert_watchlist, "notes": notes_store.upsert_note,
+                    "transactions": screens_db.upsert_transaction}[kind]
             return self._json(200, save(sid, body))
         except (ValueError, screens_db.InvalidScreen) as e:
             return self._json(400, {"error": str(e)})
@@ -359,7 +388,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return self._json(401, {"error": "Missing or wrong token"})
         kind, sid = target
-        remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": notes_store.delete_note}[kind]
+        remove = {"screens": screens_db.delete, "watchlists": screens_db.delete_watchlist, "notes": notes_store.delete_note,
+                  "transactions": screens_db.delete_transaction}[kind]
         return self._json(200, {"deleted": remove(sid)})
 
     def log_message(self, fmt, *args) -> None:  # quieter logs: only errors

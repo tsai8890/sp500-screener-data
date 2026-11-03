@@ -720,5 +720,37 @@ class LongHistory(unittest.TestCase):
         self.assertEqual(len(q["periods"]), 8)
         self.assertTrue(all(g is not None for g in q["sections"][0]["rows"][0]["growth"]))
 
+
+class Transactions(unittest.TestCase):
+    def setUp(self):
+        self.db = os.path.join(tempfile.mkdtemp(), "t.db")
+
+    def test_save_list_delete_and_tickers(self):
+        screens_db.upsert_transaction("t1", {"date": "2026-01-05", "ticker": "voo", "side": "buy", "shares": "10",
+                                             "price": 500, "fee": ""}, self.db)
+        screens_db.upsert_transaction("t2", {"date": "2026-02-05", "ticker": "BRK-B", "side": "sell", "shares": 1.5,
+                                             "price": 250, "fee": 1}, self.db)
+        txs = screens_db.list_transactions(self.db)
+        self.assertEqual([(t["ticker"], t["side"], t["shares"], t["fee"]) for t in txs],
+                         [("VOO", "buy", 10.0, 0.0), ("BRK.B", "sell", 1.5, 1.0)])
+        self.assertEqual(screens_db.portfolio_tickers(self.db), ["BRK.B", "VOO"])
+        self.assertTrue(screens_db.delete_transaction("t1", self.db))
+        self.assertEqual(len(screens_db.list_transactions(self.db)), 1)
+
+    def test_rejects_bad_trades(self):
+        good = {"date": "2026-01-05", "ticker": "AAPL", "side": "buy", "shares": 1, "price": 1}
+        for bad in ({"date": "1/5/2026"}, {"side": "hold"}, {"shares": 0}, {"shares": "x"}, {"price": -1},
+                    {"fee": -2}, {"ticker": "BAD TICKER"}):
+            with self.assertRaises(screens_db.InvalidScreen):
+                screens_db.upsert_transaction("bad", {**good, **bad}, self.db)
+
+    def test_quote_after_hours_and_pre_market(self):
+        data = {"prices": {"X": 100}, "prev": {"X": 98}, "ext": {"X": [101, "post", "t"]}}
+        self.assertEqual(prices.quote(data, "X")["chg"], round((101 / 98 - 1) * 100, 2))   # includes the day's move
+        data["ext"]["X"] = [99, "pre", "t"]
+        self.assertEqual(prices.quote(data, "X")["chg"], -1.0)                              # vs the last close
+        self.assertEqual(prices.quote({"prices": {"X": 100}, "prev": {"X": 98}}, "X")["chg"], round((100 / 98 - 1) * 100, 2))
+        self.assertIsNone(prices.quote(data, "NOPE"))
+
 if __name__ == "__main__":
     unittest.main()

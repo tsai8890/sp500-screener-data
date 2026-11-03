@@ -227,3 +227,22 @@ def apply_quotes(quotes: dict, path: str = PRICES_PATH) -> dict:
                 x[t] = list(ext)
         write_json(path, data)
     return data
+
+
+def quote(data: dict | None, ticker: str) -> dict | None:
+    """The latest price of one stock from prices.json, the way the page shows it:
+    {"price": latest trade, "chg": % vs the previous close (pre-market: vs the last close),
+     "session": "pre" | "post" | None, "regPrice", "prevClose"}."""
+    data = data or {}
+    reg = (data.get("prices") or {}).get(ticker)
+    ext = (data.get("ext") or {}).get(ticker)
+    prev = (data.get("prev") or {}).get(ticker)
+    if reg is None and not ext:
+        return None
+    if ext:
+        price, session = ext[0], ext[1]
+        base = reg if session == "pre" else prev
+    else:
+        price, session, base = reg, None, prev
+    chg = round((price / base - 1) * 100, 2) if price and base else None
+    return {"price": price, "chg": chg, "session": session, "regPrice": reg, "prevClose": prev}
