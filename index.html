@@ -174,10 +174,28 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: calc(32.5px 
 @media (min-width: 1300px) { .an-hi.pf-hi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1600px) { .an-hi.pf-hi { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .an-card.pf-all { border-color: var(--accent); }
-#pfFunds td:first-child, #pfSnaps td:nth-child(2) { white-space: normal; min-width: 160px; max-width: 240px; text-align: left; }
-#pfSnaps th:nth-child(2) { text-align: left; }
-#pfFunds td:first-child b { font-weight: 600; }
-.pf-sub-h { margin: 14px 18px 4px; font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--muted); }
+#pfFunds td:first-child, #pfCash td:first-child, #pfTrades td.pf-hname { white-space: normal; min-width: 160px; max-width: 260px; }
+#pfTrades td.pf-hname { text-align: left; }
+#pfFunds td:first-child b, #pfCash td:first-child b { font-weight: 600; }
+.pf-fs { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.pf-fs[hidden] { display: none; }
+.pf-field select { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 7px 10px; font-size: calc(15px * var(--ts)); color: var(--ink); width: 100%; min-width: 0; }
+.pf-group + .pf-group { border-top: 1px solid var(--line); }
+.pf-group[hidden] { display: none; }
+.pf-sub-h { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding: 14px 18px 4px; font-size: calc(15px * var(--ts)); font-weight: 600; color: var(--ink); }
+.pf-sub-amt { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; }
+#pfFunds, #pfCash, #pfTrades { min-width: 0; }   /* names wrap instead of widening the table */
+table.pf-t td.pf-acts { white-space: nowrap; width: 1%; }
+div.pf-acts { display: flex; gap: 8px; align-items: center; margin-top: 10px; justify-content: inherit; }
+td.num div.pf-acts { justify-content: flex-end; }
+.pf-remove { margin-left: 10px; color: var(--fail); }
+input.pf-edit { border: 1px solid var(--accent); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 7.5em; text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: calc(15px * var(--ts)); color: var(--ink); }
+input.pf-edit[type="date"] { width: auto; text-align: left; }
+.pf-edit-date { display: block; margin-top: 6px; font-size: calc(13px * var(--ts)); color: var(--muted); }
+tr.editing td { background: var(--accent-soft); }
+.pf-sidetag.upd { color: var(--muted); background: var(--sunk); }
+td.pf-bal { color: var(--muted); }
+.pf-bar.other .fill { background: var(--muted); }
 .pf-est { font-size: calc(11.5px * var(--ts)); font-weight: 700; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-right: 6px; vertical-align: 1px; }
 .pf-side { align-self: flex-start; }
 .pf-side button[data-side="buy"][aria-checked="true"] { color: var(--up); }
@@ -660,43 +678,61 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
       </div>
       <div id="portfolioSide" role="tabpanel" aria-labelledby="tab-portfolio" hidden>
         <form class="section pf-form" id="pfForm" autocomplete="off">
-          <p class="eyebrow">Add a trade</p>
-          <div class="seg pf-side" id="pfSide" role="radiogroup" aria-label="Buy or sell">
-            <button type="button" role="radio" data-side="buy" aria-checked="true">Buy</button>
-            <button type="button" role="radio" data-side="sell" aria-checked="false">Sell</button>
-          </div>
-          <label class="pf-field"><span>Ticker</span>
-            <input id="pfTicker" list="pfTickerList" placeholder="e.g. NVDA or VOO" autocapitalize="characters" spellcheck="false" required></label>
-          <datalist id="pfTickerList"></datalist>
-          <div class="pf-found" id="pfFound"></div>
-          <div class="pf-row">
-            <label class="pf-field"><span>Shares</span><input id="pfShares" type="number" step="any" min="0" inputmode="decimal" required></label>
-            <label class="pf-field"><span>Price per share</span><input id="pfPrice" type="number" step="any" min="0" inputmode="decimal" required></label>
-          </div>
-          <div class="pf-row">
-            <label class="pf-field"><span>Date</span><input id="pfDate" type="date" required></label>
-            <label class="pf-field"><span>Fee <small>(optional)</small></span><input id="pfFee" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>
-          </div>
-          <div class="pf-total" id="pfTotal"></div>
+          <p class="eyebrow">Add to your portfolio</p>
+          <label class="pf-field"><span>Asset type</span>
+            <select id="pfKind">
+              <option value="stock">Stock or ETF</option>
+              <option value="fund">Fund without a ticker (e.g. 401(k))</option>
+              <option value="cash">Cash</option>
+            </select></label>
+          <fieldset class="pf-fs" id="pfStockFields">
+            <div class="seg pf-side" id="pfSide" role="radiogroup" aria-label="Buy or sell">
+              <button type="button" role="radio" data-side="buy" aria-checked="true">Buy</button>
+              <button type="button" role="radio" data-side="sell" aria-checked="false">Sell</button>
+            </div>
+            <label class="pf-field"><span>Ticker</span>
+              <input id="pfTicker" list="pfTickerList" placeholder="e.g. NVDA or VOO" autocapitalize="characters" spellcheck="false" required></label>
+            <datalist id="pfTickerList"></datalist>
+            <div class="pf-found" id="pfFound"></div>
+            <div class="pf-row">
+              <label class="pf-field"><span>Shares</span><input id="pfShares" type="number" step="any" min="0" inputmode="decimal" required></label>
+              <label class="pf-field"><span>Price per share</span><input id="pfPrice" type="number" step="any" min="0" inputmode="decimal" required></label>
+            </div>
+            <div class="pf-row">
+              <label class="pf-field"><span>Date</span><input id="pfDate" type="date" required></label>
+              <label class="pf-field"><span>Fee <small>(optional)</small></span><input id="pfFee" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>
+            </div>
+            <div class="pf-total" id="pfTotal"></div>
+          </fieldset>
+          <fieldset class="pf-fs" id="pfFundFields" hidden disabled>
+            <label class="pf-field"><span>Fund name</span><input id="pfFund" list="pfFundList" placeholder="e.g. Vanguard Instl 500 Index Trust" required></label>
+            <datalist id="pfFundList"></datalist>
+            <div class="pf-row">
+              <label class="pf-field"><span>Account <small>(optional)</small></span><input id="pfAccount" placeholder="e.g. 401(k)"></label>
+              <label class="pf-field"><span>Tracks (ETF)</span><input id="pfProxy" autocapitalize="characters" spellcheck="false" placeholder="e.g. VOO"></label>
+            </div>
+            <div class="pf-row">
+              <label class="pf-field"><span>Units</span><input id="pfUnits" type="number" step="any" min="0" inputmode="decimal" required></label>
+              <label class="pf-field"><span>Price per unit (NAV)</span><input id="pfNav" type="number" step="any" min="0" inputmode="decimal" required></label>
+            </div>
+            <div class="pf-row">
+              <label class="pf-field"><span>As of</span><input id="pfFundDate" type="date" required></label>
+              <label class="pf-field"><span>Contributed <small>(optional)</small></span><input id="pfContrib" type="number" step="any" min="0" inputmode="decimal" title="Total put in so far, to work out the gain"></label>
+            </div>
+            <div class="pf-total" id="pfFundTotal"></div>
+            <p class="hint">Units and price per unit are on the fund's statement (or the 401(k) site, under balances). A fund without a ticker has no market price, so between updates its value follows the ETF it tracks: VOO for an S&amp;P 500 fund. Saving a fund that's already in Holdings updates it.</p>
+          </fieldset>
+          <fieldset class="pf-fs" id="pfCashFields" hidden disabled>
+            <label class="pf-field"><span>Name</span><input id="pfCashName" list="pfCashList" placeholder="e.g. Savings, Chase checking" required></label>
+            <datalist id="pfCashList"></datalist>
+            <div class="pf-row">
+              <label class="pf-field"><span>Amount</span><input id="pfCashAmt" type="number" step="any" min="0" inputmode="decimal" required></label>
+              <label class="pf-field"><span>As of</span><input id="pfCashDate" type="date" required></label>
+            </div>
+            <p class="hint">Saving a name that's already in Holdings replaces its amount. You can also change amounts right in Holdings.</p>
+          </fieldset>
           <div class="row"><button class="btn primary" id="pfAdd" type="submit">Add buy</button></div>
           <div class="toast" id="pfMsg" role="status"></div>
-        </form>
-        <form class="section pf-form" id="pfFundForm" autocomplete="off">
-          <p class="eyebrow">401(k) statement</p>
-          <label class="pf-field"><span>Fund</span><input id="pfFund" value="Vanguard Instl 500 Index Trust" required></label>
-          <div class="pf-row">
-            <label class="pf-field"><span>Units</span><input id="pfUnits" type="number" step="any" min="0" inputmode="decimal" required></label>
-            <label class="pf-field"><span>Price per unit (NAV)</span><input id="pfNav" type="number" step="any" min="0" inputmode="decimal" required></label>
-          </div>
-          <div class="pf-row">
-            <label class="pf-field"><span>As of</span><input id="pfFundDate" type="date" required></label>
-            <label class="pf-field"><span>Tracks (ETF)</span><input id="pfProxy" value="VOO" autocapitalize="characters" spellcheck="false" placeholder="e.g. VOO"></label>
-          </div>
-          <label class="pf-field"><span>Total contributed <small>(optional, for the gain)</small></span><input id="pfContrib" type="number" step="any" min="0" inputmode="decimal"></label>
-          <div class="pf-total" id="pfFundTotal"></div>
-          <div class="row"><button class="btn primary" type="submit">Save statement</button></div>
-          <p class="hint">Units and price per unit are on your Vanguard statement (or the 401(k) site, under balances). The fund has no market price, so between statements its value follows the ETF it tracks: VOO for an S&amp;P 500 fund.</p>
-          <div class="toast" id="pfFundMsg" role="status"></div>
         </form>
       </div>
       <div id="analysisSide" role="tabpanel" aria-labelledby="tab-analysis" hidden>
@@ -824,29 +860,34 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
         </div>
         <div class="an-empty" id="pfEmpty" hidden>
           <p class="an-empty-t">Nothing here yet</p>
-          <p class="hint">Add your first buy on the left, or your 401(k) balance from its latest statement. Holdings, gains and allocation are worked out from your trades, with live prices.</p>
+          <p class="hint">Add a stock or ETF trade, a fund without a ticker (like a 401(k) fund) or cash on the left. Holdings, gains and allocation are worked out with live prices.</p>
         </div>
         <div id="pfBody" hidden>
           <div class="an-hi pf-hi" id="pfCards"></div>
           <section class="an-sec" aria-label="Holdings" id="pfHoldSec">
             <h3>Holdings <span class="hint" id="pfHoldNote"></span></h3>
-            <div class="table-wrap"><table class="pf-t" id="pfHoldings"></table></div>
-          </section>
-          <section class="an-sec" aria-label="401(k)" id="pfFundSec">
-            <h3>401(k) <span class="hint" id="pfFundNote"></span></h3>
-            <div class="table-wrap"><table class="pf-t" id="pfFunds"></table></div>
-            <p class="pf-sub-h">Statements</p>
-            <div class="table-wrap"><table class="pf-t" id="pfSnaps"></table></div>
+            <div class="pf-group" id="pfStockBox">
+              <p class="pf-sub-h"><span>Stocks &amp; ETFs</span><span class="pf-sub-amt" id="pfStockAmt"></span></p>
+              <div class="table-wrap"><table class="pf-t" id="pfHoldings"></table></div>
+            </div>
+            <div class="pf-group" id="pfFundBox">
+              <p class="pf-sub-h"><span>Funds</span><span class="pf-sub-amt" id="pfFundAmt"></span></p>
+              <div class="table-wrap"><table class="pf-t" id="pfFunds"></table></div>
+            </div>
+            <div class="pf-group" id="pfCashBox">
+              <p class="pf-sub-h"><span>Cash</span><span class="pf-sub-amt" id="pfCashAmtTotal"></span></p>
+              <div class="table-wrap"><table class="pf-t" id="pfCash"></table></div>
+            </div>
           </section>
           <section class="an-sec" aria-label="Allocation by sector" id="pfAllocSec">
             <h3>Allocation by sector <span class="hint">Share of all assets</span></h3>
             <div class="pf-alloc" id="pfAlloc"></div>
           </section>
-          <section class="an-sec" aria-label="Trades" id="pfTradeSec">
-            <h3>Trades <span class="hint">Newest first</span><button class="linkbtn pf-export" id="pfExport" type="button">Download (.csv)</button></h3>
+          <section class="an-sec" aria-label="Trades and edit history" id="pfTradeSec">
+            <h3>Trades / Edit History <span class="hint">Newest first</span><button class="linkbtn pf-export" id="pfExport" type="button">Download (.csv)</button></h3>
             <div class="table-wrap"><table class="pf-t" id="pfTrades"></table></div>
           </section>
-          <p class="an-foot">Cost is the average cost of the shares you still hold (fees included); selling realizes the difference between the sale price and that average. Today's change is against the previous close for every share held. A 401(k) fund's value is its latest statement (units × price per unit), moved since that date by the ETF it tracks: estimated until the next statement.</p>
+          <p class="an-foot">Cost is the average cost of the shares you still hold (fees included); selling realizes the difference between the sale price and that average. Today's change is against the previous close for every share held. A fund without a ticker is valued at its latest update (units × price per unit), moved since that date by the ETF it tracks (marked EST until the next update). Every change to a fund or cash is kept in the history; deleting the newest one goes back to the one before.</p>
         </div>
       </div>
       <div id="analysisView" hidden>
@@ -1896,7 +1937,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     { id: "screener", label: "Screener", hash: "screener", panel: "screenerSide", panelTitle: "Screens" },
     { id: "watch", label: "Watchlist", hash: "watchlist", panel: "watchSide", panelTitle: "Watchlists",
       badge: () => { const n = S.watchlists.reduce((a, w) => a + w.items.length, 0); return n ? String(n) : ""; } },
-    { id: "portfolio", label: "Portfolio", hash: "portfolio", panel: "portfolioSide", panelTitle: "Add a trade", toggleLabel: "form",
+    { id: "portfolio", label: "Portfolio", hash: "portfolio", panel: "portfolioSide", panelTitle: "Add to portfolio", toggleLabel: "form",
       badge: () => { const n = PF.positions ? PF.positions.filter((p) => p.shares > 0).length : 0; return n ? String(n) : ""; } },
     { id: "analysis", label: "Analysis", hash: "analysis", panel: "analysisSide", panelTitle: "Stocks" },
     { id: "notes", label: "Notes", hash: "notes", panel: "notesSide", panelTitle: "Notes",
@@ -2132,32 +2173,37 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
       realized: out.reduce((a, p) => a + p.realized, 0), missing: open.length - priced.length } };
   }
 
-  // 401(k)-style funds (no market price): the latest statement of each fund, moved since its
-  // date by the ETF it tracks. NAV now ~ statement NAV x ETF price now / ETF close on that date.
-  function computeFunds(snaps, quotes) {
+  // Assets without a ticker, from their updates (the latest per name counts; 0 = removed):
+  //   funds (401(k) trusts ...): units x NAV, moved since the update by the ETF they track:
+  //         NAV now ~ NAV then x ETF price now / ETF close on that date
+  //   cash: the amount
+  function computeAssets(snaps, quotes) {
     const latest = new Map();
     [...snaps].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.created || 0) - (b.created || 0)))
-      .forEach((s) => latest.set(s.fund, s));
-    const funds = [...latest.values()].filter((s) => s.units > 0).map((s) => {
+      .forEach((s) => latest.set((s.kind || "fund") + "|" + s.fund, s));
+    const live = [...latest.values()].filter((s) => s.units > 0);
+    const funds = live.filter((s) => (s.kind || "fund") === "fund").map((s) => {
       const q = (s.proxy && quotes[s.proxy]) || {};
       const est = s.proxyClose && q.price != null ? s.nav * q.price / s.proxyClose : null;
       const nav = est ?? s.nav, value = s.units * nav;
       const day = est != null && q.chg != null ? value - value / (1 + q.chg / 100) : null;
-      return { ...s, navNow: nav, estimated: est != null, value, statementValue: s.units * s.nav,
+      return { ...s, navNow: nav, estimated: est != null, value,
         sinceStatement: est != null ? (est / s.nav - 1) * 100 : null, day, chg: est != null ? q.chg ?? null : null,
         gain: s.cost != null ? value - s.cost : null, gainPct: s.cost ? (value / s.cost - 1) * 100 : null };
-    });
-    const value = funds.reduce((a, f) => a + f.value, 0), withDay = funds.filter((f) => f.day != null);
+    }).sort((a, b) => b.value - a.value);
+    const cash = live.filter((s) => s.kind === "cash").map((s) => ({ ...s, value: s.units })).sort((a, b) => b.value - a.value);
+    const fv = funds.reduce((a, f) => a + f.value, 0), withDay = funds.filter((f) => f.day != null);
     const day = withDay.length ? withDay.reduce((a, f) => a + f.day, 0) : null;
-    return { funds, totals: { value, day, dayPct: day != null && value - day > 0 ? day / (value - day) * 100 : null } };
+    return { funds, cash, latest, totals: { value: fv, day, dayPct: day != null && fv - day > 0 ? day / (fv - day) * 100 : null },
+      cashTotal: cash.reduce((a, c) => a + c.value, 0) };
   }
 
   async function pfLoad() {
     try {
       const [j, f] = await Promise.all([getJson(API_ROOT + "transactions"), getJson(API_ROOT + "funds")]);
       PF.txs = j.transactions || []; PF.funds = f.snapshots || []; PF.error = null;
-    } catch (e) { PF.error = "Can't reach the screener server, so trades can't be loaded. Is ./run.sh running?"; PF.txs = PF.txs || []; }
-    PF.loaded = true; pfRecalc(); pfFundPrefill(); await pfLoadQuotes();
+    } catch (e) { PF.error = "Can't reach the screener server, so your portfolio can't be loaded. Is ./run.sh running?"; PF.txs = PF.txs || []; }
+    PF.loaded = true; pfRecalc(); await pfLoadQuotes();
   }
   async function pfLoadQuotes() {
     const tickers = [...new Set((PF.txs || []).map((t) => t.ticker).concat(PF.funds.map((s) => s.proxy).filter(Boolean)))];
@@ -2171,48 +2217,59 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function pfRecalc() {
     const r = computeHoldings(PF.txs || [], PF.quotes);
     PF.positions = r.positions; PF.totals = r.totals;
-    const f = computeFunds(PF.funds, PF.quotes);
-    PF.fundRows = f.funds; PF.fundTotals = f.totals;
-    pfTickerList();
+    const a = computeAssets(PF.funds, PF.quotes);
+    PF.fundRows = a.funds; PF.fundTotals = a.totals; PF.cashRows = a.cash; PF.cashTotal = a.cashTotal; PF.latest = a.latest;
+    pfTickerList(); pfNameLists();
     renderRail();
     if (S.tab === "portfolio") renderPortfolio();
   }
-  function renderPortfolio() {
+  const fmtDay = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
+  const navFmt = (v) => money(v, v != null && v < 1000 ? 4 : 2);
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+  function renderPortfolio(force) {
+    if (PF.editing && !force) return;   // don't wipe a row being edited when prices tick
     const hasTx = !!(PF.txs && PF.txs.length), has = hasTx || PF.funds.length > 0;
     $("pfEmpty").hidden = has || !PF.loaded; $("pfBody").hidden = !has;
-    ["pfHoldSec", "pfTradeSec"].forEach((id) => { $(id).hidden = !hasTx; });
-    $("pfFundSec").hidden = !PF.funds.length;
     const st = $("pfState"); st.className = "note-status" + (PF.error ? " warn" : "");
     st.textContent = PF.error || (PF.quotesAt ? "Prices updated " + new Date(PF.quotesAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "");
     if (!has) { applySide(); return; }
-    const T = PF.totals, F = PF.fundTotals, open = PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0));
+    const T = PF.totals, F = PF.fundTotals, C = PF.cashTotal, open = PF.positions.filter((p) => p.shares > 0).sort((a, b) => (b.value || 0) - (a.value || 0));
+    const all = T.value + F.value + C;
 
     // cards
     const cards = $("pfCards"); cards.textContent = "";
     const card = (k, v, note, cls, tip) => cards.append(el("div", { class: "an-card", title: tip || "" },
       el("div", { class: "k", text: k }), el("div", { class: "v" + (cls ? " " + cls : ""), text: v }), el("div", { class: "n", text: note || "" })));
-    const all = T.value + F.value;
     const days = [T.day, F.day].filter((v) => v != null), allDay = days.length ? days.reduce((a, v) => a + v, 0) : null;
-    card("All Assets", money(all), "Brokerage + 401(k)", "", "Everything on this page: your brokerage holdings plus your 401(k).");
+    card("All Assets", money(all), "Stocks + funds + cash", "", "Everything on this page.");
     cards.lastChild.classList.add("pf-all");
     card("Today", signedMoney(allDay), signedPct(allDay != null && all - allDay > 0 ? allDay / (all - allDay) * 100 : null), upDown(allDay),
-      "Change since the previous close, for everything you hold now (the 401(k) estimated from the ETF it tracks).");
-    card("Brokerage", money(T.value), hasTx ? (T.missing ? `${T.missing} holding${T.missing > 1 ? "s" : ""} without a price` : `${open.length} holding${open.length === 1 ? "" : "s"} · cost ${money(T.cost, 0)}`) : "No trades yet",
+      "Change since the previous close, for everything you hold now (funds without a ticker estimated from the ETF they track; cash doesn't move).");
+    card("Stocks & ETFs", open.length ? money(T.value) : "–", open.length ? (T.missing ? `${T.missing} without a price` : `${plural(open.length, "holding")} · cost ${money(T.cost, 0)}`) : "None yet",
       "", "Market value of the stocks and ETFs from your trades.");
-    const lastDate = PF.fundRows.map((f) => f.date).sort().pop();
-    card("401(k)", PF.fundRows.length ? money(F.value) : "–",
-      PF.fundRows.length ? (PF.fundRows.some((f) => f.estimated) ? "Estimated · statement " : "As of ") + fmtDay(lastDate) : "Add a statement on the left", "",
-      "Latest statement value (units × price per unit), moved since then by the ETF the fund tracks.");
-    card("Unrealized Gain", signedMoney(hasTx ? T.gain : null), signedPct(T.gainPct), upDown(T.gain), "Brokerage: value of what you hold − what it cost (average cost, fees included).");
-    card("Realized Gain", signedMoney(hasTx ? T.realized : null), "From shares sold", upDown(T.realized), "Sale price − average cost of the shares sold, minus fees.");
-    renderFunds();
-    renderAlloc(all);
-    if (!hasTx) { applySide(); return; }
+    card("Funds", PF.fundRows.length ? money(F.value) : "–", PF.fundRows.length ? (PF.fundRows.some((f) => f.estimated) ? "Estimated from the ETFs they track" : plural(PF.fundRows.length, "fund")) : "None yet",
+      "", "Latest update (units × price per unit), moved since then by the ETF each fund tracks.");
+    card("Cash", PF.cashRows.length ? money(C) : "–", PF.cashRows.length ? plural(PF.cashRows.length, "account") : "None yet");
+    card("Unrealized Gain", signedMoney(open.length ? T.gain : null), [signedPct(T.gainPct), T.realized ? "realized " + signedMoney(T.realized) : ""].filter(Boolean).join(" · "),
+      upDown(T.gain), "Stocks & ETFs: value of what you hold − what it cost (average cost, fees included). Realized: sale price − average cost of the shares sold, minus fees.");
 
-    // holdings
-    const tbl = $("pfHoldings"); tbl.textContent = "";
-    const hd = el("tr", {}, ...["Stock", "Shares", "Avg cost", "Price", "Market value", "Today", "Unrealized gain"].map((h) => el("th", { text: h })));
-    tbl.append(el("thead", {}, hd));
+    renderStocks(open, all);
+    renderFunds(all);
+    renderCash(all);
+    const groups = [open.length, PF.fundRows.length, PF.cashRows.length];
+    $("pfStockBox").hidden = !groups[0]; $("pfFundBox").hidden = !groups[1]; $("pfCashBox").hidden = !groups[2];
+    $("pfHoldSec").hidden = !groups.some(Boolean);
+    renderAlloc(all);
+    renderHistory();
+    applySide();
+  }
+  const ofAll = (v, all) => (v != null && all ? (v / all * 100).toFixed(1) + "% of all" : "");
+
+  function renderStocks(open, all) {
+    const T = PF.totals, tbl = $("pfHoldings"); tbl.textContent = "";
+    $("pfStockAmt").textContent = open.length ? money(T.value) : "";
+    tbl.append(el("thead", {}, el("tr", {}, ...["Stock", "Shares", "Avg cost", "Price", "Market value", "Today", "Unrealized gain"].map((h) => el("th", { text: h })))));
     const tb = el("tbody");
     const tkCell = (p) => el("td", {}, el("button", { class: "tkbtn", type: "button", text: p.ticker, title: "Open in Advanced Analysis", onclick: () => openAnalysis(p.ticker) }),
       el("span", { class: "co", text: p.name || "" }), p.oversold ? el("span", { class: "pf-warn", text: "Sold more than held: check the trades" }) : null);
@@ -2228,144 +2285,213 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
         el("td", { class: "num", text: shareFmt(p.shares) }),
         el("td", { class: "num", text: money(p.avg) }),
         priceCell,
-        el("td", { class: "num" }, money(p.value),   // and its share of the brokerage holdings
-          el("span", { class: "sub", title: "Share of the brokerage holdings", text: p.value != null && T.value ? (p.value / T.value * 100).toFixed(1) + "%" : "" })),
+        el("td", { class: "num" }, money(p.value), el("span", { class: "sub", title: "Share of all assets", text: ofAll(p.value, all) })),
         el("td", { class: "num " + upDown(p.dayGain), text: signedMoney(p.dayGain) }),
         el("td", { class: "num " + upDown(p.gain) }, signedMoney(p.gain), el("span", { class: "sub " + upDown(p.gain), text: signedPct(p.gainPct) }))));
     });
-    tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
-      el("td", { class: "num" }, money(T.value), el("span", { class: "sub", text: "100%" })),
+    if (open.length > 1) tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
+      el("td", { class: "num" }, money(T.value), el("span", { class: "sub", text: ofAll(T.value, all) })),
       el("td", { class: "num " + upDown(T.day), text: signedMoney(T.day) }),
       el("td", { class: "num " + upDown(T.gain) }, signedMoney(T.gain), el("span", { class: "sub " + upDown(T.gain), text: signedPct(T.gainPct) }))));
     tbl.append(tb);
     const closed = PF.positions.filter((p) => p.shares === 0).length;
     const over = PF.positions.filter((p) => p.oversold && p.shares === 0).map((p) => p.ticker);
-    const hn = $("pfHoldNote"); hn.textContent = closed ? `${closed} sold off completely (in realized gain)` : "";
+    const hn = $("pfHoldNote"); hn.textContent = closed ? `${closed} stock${closed > 1 ? "s" : ""} sold off completely (in realized gain)` : "";
     if (over.length) hn.append(el("span", { class: "pf-warn", text: `Sold more shares than you had of ${over.join(", ")}: check those trades.` }));
+  }
 
-    // trades, newest first
-    const tt = $("pfTrades"); tt.textContent = "";
-    tt.append(el("thead", {}, el("tr", {}, ...["Date", "", "Stock", "Shares", "Price", "Fee", "Amount", ""].map((h) => el("th", { text: h })))));
-    const tb2 = el("tbody");
-    [...PF.txs].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : (b.created || 0) - (a.created || 0))).forEach((t) => {
-      const amount = t.side === "buy" ? -(t.shares * t.price + (t.fee || 0)) : t.shares * t.price - (t.fee || 0);
-      const del = el("button", { class: "pf-del" + (PF.delArmed === t.id ? " confirm" : ""), type: "button",
-        title: "Delete this trade", text: PF.delArmed === t.id ? "Delete?" : "×", onclick: () => pfDelete(t.id) });
-      tb2.append(el("tr", {}, el("td", { class: "num", text: t.date }),
-        el("td", {}, el("span", { class: "pf-sidetag " + t.side, text: t.side === "buy" ? "BUY" : "SELL" })),
-        el("td", {}, el("button", { class: "tkbtn", type: "button", text: t.ticker, onclick: () => openAnalysis(t.ticker) })),
-        el("td", { class: "num", text: shareFmt(t.shares) }), el("td", { class: "num", text: money(t.price) }),
-        el("td", { class: "num", text: t.fee ? money(t.fee) : "–" }),
-        el("td", { class: "num " + upDown(amount), text: signedMoney(amount) }), el("td", {}, del)));
-    });
-    tt.append(tb2);
-    applySide();
+  // in-place editing of a fund or cash row
+  const isEditing = (s) => PF.editing && PF.editing.key === (s.kind || "fund") + "|" + s.fund;
+  function pfStartEdit(s) { PF.editing = { key: (s.kind || "fund") + "|" + s.fund }; renderPortfolio(true); }
+  function pfCancelEdit() { PF.editing = null; renderPortfolio(true); }
+  const editInput = (value, label, extra = {}) => el("input", { class: "pf-edit", type: "number", step: "any", min: "0", inputmode: "decimal", value: String(value), "aria-label": label, ...extra });
+  function editButtons(onSave, onRemove) {
+    return el("div", { class: "pf-acts" },
+      el("button", { class: "btn sm primary", type: "button", text: "Save", onclick: onSave }),
+      el("button", { class: "btn sm", type: "button", text: "Cancel", onclick: pfCancelEdit }),
+      el("button", { class: "linkbtn pf-remove", type: "button", text: "Remove", title: "Set to 0: it leaves Holdings (kept in the history)", onclick: onRemove }));
   }
-  // allocation of all assets: brokerage holdings by sector, plus the 401(k) as its own line
-  function renderAlloc(all) {
-    const alloc = $("pfAlloc"); alloc.textContent = "";
-    const sec = new Map();
-    (PF.positions || []).filter((p) => p.shares > 0 && p.value != null).forEach((p) => { const k = p.sector || "Other"; sec.set(k, (sec.get(k) || 0) + p.value); });
-    if (PF.fundTotals && PF.fundTotals.value > 0) sec.set("401(k)", PF.fundTotals.value);
-    [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
-      const pct = all ? v / all * 100 : 0;
-      alloc.append(el("div", { class: "pf-bar" + (name === "401(k)" ? " k401" : "") }, el("span", { text: name }),
-        el("div", { class: "track" }, el("div", { class: "fill", style: `width: ${pct.toFixed(2)}%` })),
-        el("span", { class: "amt", text: `${pct.toFixed(1)}% · ${money(v, 0)}` })));
-    });
-  }
-  const fmtDay = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
-  const navFmt = (v) => money(v, v != null && v < 1000 ? 4 : 2);
-  function renderFunds() {
+  const editBtn = (s) => el("td", { class: "pf-acts" }, el("button", { class: "linkbtn", type: "button", text: "Edit", onclick: () => pfStartEdit(s) }));
+
+  function renderFunds(all) {
     const F = PF.fundTotals, tbl = $("pfFunds"); tbl.textContent = "";
-    if (!PF.funds.length) return;
-    $("pfFundNote").textContent = PF.fundRows.some((f) => f.estimated) ? "Estimated from the ETF each fund tracks" : "";
-    tbl.append(el("thead", {}, el("tr", {}, ...["Fund", "Units", "Price per unit", "Value", "Today", "Gain"].map((h) => el("th", { text: h })))));
+    $("pfFundAmt").textContent = PF.fundRows.length ? money(F.value) : "";
+    if (!PF.fundRows.length) return;
+    tbl.append(el("thead", {}, el("tr", {}, ...["Fund", "Units", "Price per unit", "Value", "Today", "Gain", ""].map((h) => el("th", { text: h })))));
     const tb = el("tbody");
     PF.fundRows.forEach((f) => {
+      const name = el("td", {}, el("b", { text: f.fund }), el("span", { class: "co", text: [f.account, f.proxy ? "tracks " + f.proxy : ""].filter(Boolean).join(" · ") }));
+      if (isEditing(f)) {
+        const units = editInput(f.units, "Units"), nav = editInput(+f.nav.toFixed(4), "Price per unit (NAV)");
+        const date = el("input", { class: "pf-edit", type: "date", value: todayISO(), "aria-label": "As of" });
+        const preview = el("td", { class: "num" });
+        const show = () => { const v = parseFloat(units.value) * parseFloat(nav.value); preview.textContent = isFinite(v) ? money(v) : "–"; };
+        units.addEventListener("input", show); nav.addEventListener("input", show); show();
+        const save = (u) => pfSaveSnap({ ...f, units: u, nav: parseFloat(nav.value), date: date.value,
+          proxyClose: date.value === f.date && parseFloat(nav.value) === f.nav ? f.proxyClose : null });
+        name.append(el("label", { class: "pf-edit-date" }, "As of ", date), editButtons(() => save(parseFloat(units.value)), () => save(0)));
+        [units, nav].forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") save(parseFloat(units.value)); if (e.key === "Escape") pfCancelEdit(); }));
+        tb.append(el("tr", { class: "editing" }, name, el("td", { class: "num" }, units), el("td", { class: "num" }, nav), preview, el("td"), el("td"), el("td")));
+        setTimeout(() => units.focus({ preventScroll: true }), 0);
+        return;
+      }
       const now = el("td", { class: "num" });
-      if (f.estimated) now.append(el("span", { class: "pf-est", title: `Estimated: statement NAV × ${f.proxy} now / ${f.proxy} close on ${f.date}`, text: "EST" }));
-      now.append(navFmt(f.navNow));
-      now.append(el("span", { class: "sub", title: "On the statement", text: `${navFmt(f.nav)} on ${fmtDay(f.date)}` }));
-      tb.append(el("tr", {},
-        el("td", {}, el("b", { text: f.fund }), el("span", { class: "co", text: `${f.account}${f.proxy ? " · tracks " + f.proxy : ""}` })),
+      if (f.estimated) now.append(el("span", { class: "pf-est", title: `Estimated: NAV on ${f.date} × ${f.proxy} now / ${f.proxy} close on ${f.date}`, text: "EST" }));
+      now.append(navFmt(f.navNow), el("span", { class: "sub", title: "At the last update", text: `${navFmt(f.nav)} on ${fmtDay(f.date)}` }));
+      tb.append(el("tr", {}, name,
         el("td", { class: "num", text: shareFmt(f.units) }),
         now,
-        el("td", { class: "num" }, money(f.value), f.sinceStatement != null ? el("span", { class: "sub " + upDown(f.sinceStatement), title: "Change since the statement",
-          text: signedPct(f.sinceStatement) + " since statement" }) : null),
+        el("td", { class: "num" }, money(f.value), el("span", { class: "sub", title: "Share of all assets", text: ofAll(f.value, all) })),
         el("td", { class: "num " + upDown(f.day) }, signedMoney(f.day), el("span", { class: "sub " + upDown(f.chg), text: signedPct(f.chg) })),
-        el("td", { class: "num " + upDown(f.gain) }, f.gain == null ? el("span", { class: "sub", title: "Enter the total contributed to see the gain", text: "–" }) : signedMoney(f.gain),
-          el("span", { class: "sub " + upDown(f.gain), text: signedPct(f.gainPct) }))));
+        el("td", { class: "num " + upDown(f.gain) }, f.gain == null ? el("span", { class: "sub", title: "Add the amount contributed (left panel) to see the gain", text: "–" }) : signedMoney(f.gain),
+          el("span", { class: "sub " + upDown(f.gain), text: signedPct(f.gainPct) })),
+        editBtn(f)));
     });
-    if (PF.fundRows.length > 1) tb.append(el("tr", { class: "total" }, el("td", { text: "Total" }), el("td"), el("td"), el("td"),
-      el("td", { class: "num", text: money(F.value) }), el("td", { class: "num " + upDown(F.day), text: signedMoney(F.day) }), el("td")));
-    tbl.querySelectorAll("tr.total td")[2]?.remove();
     tbl.append(tb);
-    // every statement, newest first
-    const st = $("pfSnaps"); st.textContent = "";
-    st.append(el("thead", {}, el("tr", {}, ...["As of", "Fund", "Units", "NAV", "Value", "Contributed", ""].map((h) => el("th", { text: h })))));
-    const tb2 = el("tbody");
-    [...PF.funds].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : (b.created || 0) - (a.created || 0))).forEach((s) => {
-      const del = el("button", { class: "pf-del" + (PF.delArmed === s.id ? " confirm" : ""), type: "button",
-        title: "Delete this statement", text: PF.delArmed === s.id ? "Delete?" : "×", onclick: () => pfDelete(s.id, "funds") });
-      tb2.append(el("tr", {}, el("td", { class: "num", text: s.date }), el("td", { text: s.fund }),
-        el("td", { class: "num", text: shareFmt(s.units) }), el("td", { class: "num", text: navFmt(s.nav) }),
-        el("td", { class: "num", text: money(s.units * s.nav) }), el("td", { class: "num", text: s.cost != null ? money(s.cost) : "–" }), el("td", {}, del)));
+  }
+
+  function renderCash(all) {
+    const tbl = $("pfCash"); tbl.textContent = "";
+    $("pfCashAmtTotal").textContent = PF.cashRows.length ? money(PF.cashTotal) : "";
+    if (!PF.cashRows.length) return;
+    tbl.append(el("thead", {}, el("tr", {}, ...["Account", "Updated", "Amount", ""].map((h) => el("th", { text: h })))));
+    const tb = el("tbody");
+    PF.cashRows.forEach((c) => {
+      if (isEditing(c)) {
+        const amt = editInput(+c.units.toFixed(2), "Amount");
+        const save = (v) => pfSaveSnap({ ...c, units: v, date: todayISO() });
+        amt.addEventListener("keydown", (e) => { if (e.key === "Enter") save(parseFloat(amt.value)); if (e.key === "Escape") pfCancelEdit(); });
+        tb.append(el("tr", { class: "editing" }, el("td", {}, el("b", { text: c.fund })), el("td", { class: "num", text: "today" }),
+          el("td", { class: "num" }, amt, editButtons(() => save(parseFloat(amt.value)), () => save(0))), el("td")));
+        setTimeout(() => { amt.focus({ preventScroll: true }); amt.select(); }, 0);
+        return;
+      }
+      tb.append(el("tr", {}, el("td", {}, el("b", { text: c.fund })), el("td", { class: "num", text: fmtDay(c.date) }),
+        el("td", { class: "num" }, money(c.value), el("span", { class: "sub", title: "Share of all assets", text: ofAll(c.value, all) })), editBtn(c)));
     });
-    st.append(tb2);
+    tbl.append(tb);
   }
-  function pfFundPrefill() {   // start from the latest statement: usually only units and NAV change
-    const last = [...PF.funds].sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
-    if (!last || $("pfUnits").value) return;
-    $("pfFund").value = last.fund; $("pfProxy").value = last.proxy || "";
-    if (last.cost != null) $("pfContrib").value = String(last.cost);
+
+  // allocation of all assets: stocks by sector, funds by account (e.g. "401(k)"), cash
+  function renderAlloc(all) {
+    const alloc = $("pfAlloc"); alloc.textContent = "";
+    const sec = new Map(), other = new Set();
+    const add = (k, v, own) => { sec.set(k, (sec.get(k) || 0) + v); if (own) other.add(k); };
+    (PF.positions || []).filter((p) => p.shares > 0 && p.value != null).forEach((p) => add(p.sector || "Other", p.value));
+    PF.fundRows.forEach((f) => add(f.account || "Funds", f.value, true));
+    if (PF.cashTotal > 0) add("Cash", PF.cashTotal, true);
+    [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
+      const p = all ? v / all * 100 : 0;
+      alloc.append(el("div", { class: "pf-bar" + (other.has(name) ? " other" : "") }, el("span", { text: name }),
+        el("div", { class: "track" }, el("div", { class: "fill", style: `width: ${p.toFixed(2)}%` })),
+        el("span", { class: "amt", text: `${p.toFixed(1)}% · ${money(v, 0)}` })));
+    });
   }
+
+  // trades and every fund / cash update, newest first
+  function historyRows() {
+    const rows = (PF.txs || []).map((t) => ({ kind: "tx", src: t, id: t.id, date: t.date, created: t.created || 0 }))
+      .concat(PF.funds.map((s) => ({ kind: s.kind || "fund", src: s, id: s.id, date: s.date, created: s.created || 0 })));
+    return rows.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : b.created - a.created));
+  }
+  function renderHistory() {
+    const tt = $("pfTrades"); tt.textContent = "";
+    tt.append(el("thead", {}, el("tr", {}, ...["Date", "", "Asset", "Shares / units", "Price", "Fee", "Amount", ""].map((h) => el("th", { text: h })))));
+    const tb = el("tbody");
+    historyRows().forEach((r) => {
+      const s = r.src, armed = PF.delArmed === r.id;
+      const del = el("button", { class: "pf-del" + (armed ? " confirm" : ""), type: "button", title: r.kind === "tx" ? "Delete this trade" : "Delete this update",
+        text: armed ? "Delete?" : "×", onclick: () => pfDelete(r.id, r.kind === "tx" ? "transactions" : "funds") });
+      if (r.kind === "tx") {
+        const amount = s.side === "buy" ? -(s.shares * s.price + (s.fee || 0)) : s.shares * s.price - (s.fee || 0);
+        tb.append(el("tr", {}, el("td", { class: "num", text: s.date }),
+          el("td", {}, el("span", { class: "pf-sidetag " + s.side, text: s.side === "buy" ? "BUY" : "SELL" })),
+          el("td", {}, el("button", { class: "tkbtn", type: "button", text: s.ticker, onclick: () => openAnalysis(s.ticker) })),
+          el("td", { class: "num", text: shareFmt(s.shares) }), el("td", { class: "num", text: money(s.price) }),
+          el("td", { class: "num", text: s.fee ? money(s.fee) : "–" }),
+          el("td", { class: "num " + upDown(amount), text: signedMoney(amount) }), el("td", {}, del)));
+        return;
+      }
+      const cash = r.kind === "cash", removed = !(s.units > 0);
+      tb.append(el("tr", {}, el("td", { class: "num", text: s.date }),
+        el("td", {}, el("span", { class: "pf-sidetag upd", text: removed ? "REMOVED" : cash ? "CASH" : "FUND" })),
+        el("td", { class: "pf-hname" }, el("span", { text: s.fund }), s.account ? el("span", { class: "co", text: s.account }) : null),
+        el("td", { class: "num", text: cash || removed ? "–" : shareFmt(s.units) }), el("td", { class: "num", text: cash || removed ? "–" : navFmt(s.nav) }),
+        el("td", { class: "num", text: "–" }),
+        el("td", { class: "num pf-bal", title: "Balance set by this update", text: "= " + money(s.units * s.nav) }), el("td", {}, del)));
+    });
+    tt.append(tb);
+  }
+
+  async function pfSaveSnap(s) {
+    const msg = $("pfMsg");
+    const body = { kind: s.kind || "fund", fund: s.fund, account: s.account || "", date: s.date, units: s.units, nav: s.kind === "cash" ? 1 : s.nav,
+      proxy: s.proxy || "", proxyClose: s.proxyClose || null, cost: s.cost ?? null, created: Date.now() };
+    const id = (body.kind === "cash" ? "cash-" : "fund-") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    try {
+      const r = await fetch(API_ROOT + "funds/" + id, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "server error");
+      PF.funds = PF.funds.concat([j]); PF.editing = null;
+      msg.className = "toast";
+      msg.textContent = !(j.units > 0) ? `Removed ${j.fund} (kept in the history)` : j.kind === "cash" ? `Saved: ${j.fund} ${money(j.units)}`
+        : `Saved: ${j.fund}, ${shareFmt(j.units)} units at ${navFmt(j.nav)} = ${money(j.units * j.nav)}` +
+          (j.proxy && !j.proxyClose ? ` (no ${j.proxy} price found for ${j.date}, so it stays at this value)` : "");
+      pfRecalc(); renderPortfolio(true);
+      if (j.proxy && !PF.quotes[j.proxy]) fetch(API_ROOT + "quote/" + encodeURIComponent(j.proxy), { cache: "no-store" }).then(() => pfLoadQuotes()).catch(() => {});
+      return true;
+    } catch (err) {
+      msg.textContent = err.message === "Failed to fetch" ? "Not saved: the server can't be reached." : "Not saved: " + err.message;
+      msg.className = "toast warn";
+      return false;
+    }
+  }
+  async function pfDelete(id, kind = "transactions") {
+    if (PF.delArmed !== id) { PF.delArmed = id; renderPortfolio(true); setTimeout(() => { if (PF.delArmed === id) { PF.delArmed = null; renderPortfolio(true); } }, 4000); return; }
+    PF.delArmed = null;
+    try {
+      const r = await fetch(API_ROOT + kind + "/" + encodeURIComponent(id), { method: "DELETE", headers: authHeaders() });
+      if (!r.ok) throw new Error();
+      if (kind === "funds") PF.funds = PF.funds.filter((s) => s.id !== id); else PF.txs = PF.txs.filter((t) => t.id !== id);
+      pfRecalc(); renderPortfolio(true);
+    } catch (e) { $("pfMsg").textContent = "Couldn't delete: the server can't be reached."; renderPortfolio(true); }
+  }
+
+  // ---- the form: stock trade, fund update or cash ----
+  PF.kind = "stock";
+  function pfNameLists() {   // suggest the funds and cash accounts already there
+    const fill = (id, kind) => { const dl = $(id); dl.textContent = "";
+      [...new Set(PF.funds.filter((s) => (s.kind || "fund") === kind).map((s) => s.fund))].forEach((n) => dl.append(el("option", { value: n }))); };
+    fill("pfFundList", "fund"); fill("pfCashList", "cash");
+  }
+  function pfAddLabel() {
+    $("pfAdd").textContent = PF.kind === "fund" ? "Save fund" : PF.kind === "cash" ? "Save cash" : PF.side === "buy" ? "Add buy" : "Add sell";
+  }
+  function pfSetKind(kind) {
+    PF.kind = kind;
+    [["stock", "pfStockFields"], ["fund", "pfFundFields"], ["cash", "pfCashFields"]].forEach(([k, id]) => { $(id).hidden = k !== kind; $(id).disabled = k !== kind; });
+    $("pfMsg").textContent = ""; pfAddLabel();
+  }
+  $("pfKind").addEventListener("change", (e) => pfSetKind(e.target.value));
+  function pfSetSide(side) {
+    PF.side = side;
+    document.querySelectorAll("#pfSide button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.side === side)));
+    pfAddLabel(); pfShowTotal();
+  }
+  $("pfFund").addEventListener("change", () => {   // an existing fund: start from its last update
+    const last = PF.latest && PF.latest.get("fund|" + $("pfFund").value.trim());
+    if (!last) return;
+    if (!$("pfAccount").value) $("pfAccount").value = last.account || "";
+    if (!$("pfProxy").value) $("pfProxy").value = last.proxy || "";
+    if (!$("pfContrib").value && last.cost != null) $("pfContrib").value = String(last.cost);
+  });
   function pfFundShowTotal() {
     const u = parseFloat($("pfUnits").value), n = parseFloat($("pfNav").value), box = $("pfFundTotal");
     box.textContent = "";
     if (u > 0 && n > 0) box.append("Balance ", el("b", { text: money(u * n) }));
   }
   ["pfUnits", "pfNav"].forEach((id) => $(id).addEventListener("input", pfFundShowTotal));
-  $("pfFundDate").value = todayISO();
-  $("pfFundForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const msg = $("pfFundMsg"); msg.className = "toast"; msg.textContent = "Saving…";
-    const c = $("pfContrib").value.trim();
-    const body = { fund: $("pfFund").value.trim(), account: "401(k)", date: $("pfFundDate").value,
-      units: parseFloat($("pfUnits").value), nav: parseFloat($("pfNav").value),
-      proxy: $("pfProxy").value.trim().toUpperCase(), cost: c === "" ? null : parseFloat(c), created: Date.now() };
-    const id = "fund-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    try {
-      const r = await fetch(API_ROOT + "funds/" + id, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "server error");
-      PF.funds = PF.funds.concat([j]);
-      msg.textContent = `Saved: ${shareFmt(j.units)} units at ${navFmt(j.nav)} = ${money(j.units * j.nav)}` +
-        (j.proxy && !j.proxyClose ? ` (no ${j.proxy} price found for ${j.date}, so it stays at the statement value)` : "");
-      $("pfUnits").value = ""; $("pfNav").value = ""; pfFundShowTotal();
-      pfRecalc();
-      if (j.proxy && !PF.quotes[j.proxy]) fetch(API_ROOT + "quote/" + encodeURIComponent(j.proxy), { cache: "no-store" }).then(() => pfLoadQuotes()).catch(() => {});
-    } catch (err) {
-      msg.textContent = err.message === "Failed to fetch" ? "Not saved: the server can't be reached." : "Not saved: " + err.message;
-      msg.className = "toast warn";
-    }
-  });
-  async function pfDelete(id, kind = "transactions") {
-    if (PF.delArmed !== id) { PF.delArmed = id; renderPortfolio(); setTimeout(() => { if (PF.delArmed === id) { PF.delArmed = null; renderPortfolio(); } }, 4000); return; }
-    PF.delArmed = null;
-    try {
-      const r = await fetch(API_ROOT + kind + "/" + encodeURIComponent(id), { method: "DELETE", headers: authHeaders() });
-      if (!r.ok) throw new Error();
-      if (kind === "funds") PF.funds = PF.funds.filter((s) => s.id !== id); else PF.txs = PF.txs.filter((t) => t.id !== id);
-      pfRecalc();
-    } catch (e) { $("pfMsg").textContent = "Couldn't delete: the server can't be reached."; renderPortfolio(); }
-  }
-  // the form
-  function pfSetSide(side) {
-    PF.side = side;
-    document.querySelectorAll("#pfSide button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.side === side)));
-    $("pfAdd").textContent = side === "buy" ? "Add buy" : "Add sell"; pfShowTotal();
-  }
+  $("pfFundDate").value = todayISO(); $("pfCashDate").value = todayISO();
   function pfShowTotal() {
     const sh = parseFloat($("pfShares").value), pr = parseFloat($("pfPrice").value), fee = parseFloat($("pfFee").value) || 0;
     const box = $("pfTotal"); box.textContent = "";
@@ -2405,6 +2531,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   $("pfForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const msg = $("pfMsg"); msg.className = "toast";
+    if (PF.kind === "fund") {
+      const c = $("pfContrib").value.trim();
+      const ok = await pfSaveSnap({ kind: "fund", fund: $("pfFund").value.trim(), account: $("pfAccount").value.trim(), date: $("pfFundDate").value,
+        units: parseFloat($("pfUnits").value), nav: parseFloat($("pfNav").value), proxy: $("pfProxy").value.trim().toUpperCase(),
+        cost: c === "" ? null : parseFloat(c) });
+      if (ok) { ["pfFund", "pfAccount", "pfProxy", "pfUnits", "pfNav", "pfContrib"].forEach((id) => { $(id).value = ""; }); pfFundShowTotal(); }
+      return;
+    }
+    if (PF.kind === "cash") {
+      const ok = await pfSaveSnap({ kind: "cash", fund: $("pfCashName").value.trim(), date: $("pfCashDate").value, units: parseFloat($("pfCashAmt").value) });
+      if (ok) { $("pfCashName").value = ""; $("pfCashAmt").value = ""; }
+      return;
+    }
     const tx = { date: $("pfDate").value, ticker: $("pfTicker").value.trim().toUpperCase().replace(/^\$/, ""), side: PF.side,
       shares: parseFloat($("pfShares").value), price: parseFloat($("pfPrice").value), fee: parseFloat($("pfFee").value) || 0, created: Date.now() };
     const id = "tx-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -2426,9 +2565,11 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     }
   });
   $("pfExport").addEventListener("click", () => {
-    const rows = [["date", "side", "ticker", "shares", "price", "fee"]].concat([...PF.txs].sort((a, b) => (a.date < b.date ? -1 : 1))
-      .map((t) => [t.date, t.side, t.ticker, t.shares, t.price, t.fee || 0]));
-    const a = el("a", { href: URL.createObjectURL(new Blob([rows.map((r) => r.join(",")).join("\n") + "\n"], { type: "text/csv" })), download: "trades-" + todayISO() + ".csv" });
+    const q = (v) => (/[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v);
+    const rows = [["date", "type", "asset", "account", "shares_or_units", "price", "fee", "balance"]].concat(historyRows().reverse().map(({ kind, src: t }) =>
+      kind === "tx" ? [t.date, t.side, t.ticker, "", t.shares, t.price, t.fee || 0, ""]
+        : [t.date, kind, t.fund, t.account || "", kind === "cash" ? "" : t.units, kind === "cash" ? "" : t.nav, "", t.units * t.nav]));
+    const a = el("a", { href: URL.createObjectURL(new Blob([rows.map((r) => r.map(q).join(",")).join("\n") + "\n"], { type: "text/csv" })), download: "portfolio-history-" + todayISO() + ".csv" });
     document.body.append(a); a.click(); a.remove();
   });
   setInterval(() => { if (S.tab === "portfolio" && document.visibilityState === "visible") pfLoadQuotes(); }, 60 * 1000);
@@ -2564,7 +2705,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     if (isPhone()) {
       $("layout").classList.remove("collapsed");
       const cur = S.tab === "notes" ? S.notes.find((n) => n.id === S.activeNote) : null;
-      const nm = S.tab === "portfolio" ? "Add a trade" : S.tab === "analysis" ? (S.anTicker || "Stocks") : S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
+      const nm = S.tab === "portfolio" ? "Add to portfolio" : S.tab === "analysis" ? (S.anTicker || "Stocks") : S.tab === "settings" ? "Settings" : S.tab === "notes" ? (cur ? noteTitle(cur) : "Notes") : S.tab === "watch" ? activeWL().name : (S.draft && S.draft.name) || "Screens";
       btns.forEach((b) => { b.textContent = "☰ " + nm; b.title = TABS.find((t) => t.id === S.tab).panelTitle; b.setAttribute("aria-expanded", String(!!S.drawer)); });
     } else {
       if (S.drawer) setDrawer(false);

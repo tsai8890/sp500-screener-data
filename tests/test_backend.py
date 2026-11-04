@@ -761,7 +761,7 @@ class FundSnapshots(unittest.TestCase):
         body = {"fund": "Vanguard Instl 500 Index Trust", "date": "2026-09-30", "units": "1234.5", "nav": 210.5,
                 "proxy": "voo", "proxyClose": 560.2, "cost": ""}
         saved = screens_db.upsert_fund_snapshot("f1", body, self.db)
-        self.assertEqual((saved["account"], saved["proxy"], saved["cost"]), ("401(k)", "VOO", None))
+        self.assertEqual((saved["kind"], saved["account"], saved["proxy"], saved["cost"]), ("fund", "", "VOO", None))
         screens_db.upsert_fund_snapshot("f1", {**body, "units": 1300}, self.db)   # same id: updated in place
         rows = screens_db.list_fund_snapshots(self.db)
         self.assertEqual(len(rows), 1)
@@ -769,6 +769,14 @@ class FundSnapshots(unittest.TestCase):
         self.assertEqual(screens_db.portfolio_tickers(self.db), ["VOO"])           # the proxy keeps a live price
         self.assertTrue(screens_db.delete_fund_snapshot("f1", self.db))
         self.assertEqual(screens_db.list_fund_snapshots(self.db), [])
+
+    def test_cash(self):
+        c = screens_db.upsert_fund_snapshot("c1", {"kind": "cash", "fund": "Savings", "date": "2026-11-03", "units": 5000,
+                                                   "nav": 99, "proxy": "VOO"}, self.db)
+        self.assertEqual((c["kind"], c["units"], c["nav"], c["proxy"]), ("cash", 5000.0, 1.0, ""))
+        self.assertEqual(screens_db.portfolio_tickers(self.db), [])
+        with self.assertRaises(screens_db.InvalidScreen):
+            screens_db.upsert_fund_snapshot("c2", {"kind": "gold", "fund": "X", "date": "2026-11-03", "units": 1, "nav": 1}, self.db)
 
     def test_rejects_bad_statements(self):
         good = {"fund": "X", "date": "2026-09-30", "units": 1, "nav": 1}

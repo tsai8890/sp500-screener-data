@@ -140,12 +140,24 @@ Settings → *Text size*. *Auto* (the default) picks 100% below 1800 px of windo
 
 ## Portfolio tab
 
-Record your trades (buy or sell: ticker, shares, price, date, optional fee) and the page works out what you own: total value, today's change, unrealized and realized gain, cost basis, each holding's average cost, price, value and weight, allocation by sector, and the full trade history (newest first, deletable, downloadable as CSV).
+Everything you own in one place. The form on the left has an **Asset type** menu:
+
+- **Stock or ETF:** record each trade (buy or sell: ticker, shares, price, date, optional fee).
+- **Fund without a ticker** (e.g. a 401(k) fund such as the Vanguard Institutional 500 Index Trust): units, price per unit (NAV) and the date, from the statement or the 401(k) site; optionally the account (e.g. "401(k)"), the ETF it tracks (VOO for an S&P 500 fund) and the total contributed (for the gain).
+- **Cash:** a name (e.g. "Savings") and the amount.
+
+The page has three sections:
+
+- **Holdings**, in three groups: **Stocks & ETFs** (shares, average cost, live price, value, today's change, unrealized gain), **Funds** and **Cash**. Funds and cash can be changed right there (Edit → new units / NAV or amount → Save; Remove sets it to 0). The cards above show All Assets, Today, and each group's total.
+- **Allocation by sector:** stocks by sector, funds by account (e.g. "401(k)"), and cash, each as a share of all assets.
+- **Trades / Edit History:** every trade and every fund / cash update, newest first; any line can be deleted (deleting the newest update of a fund goes back to the one before). Downloadable as CSV.
+
+How the numbers work:
 
 - **Cost:** average cost (fees included), like most brokers' apps show it. Selling realizes sale price − average cost of the shares sold, minus the fee. Selling more than you hold is flagged.
-- **Prices:** the same live prices as everywhere else, including pre-market / after-hours (tagged PM / AH). Tickers outside the stock lists (ETFs such as VOO, QQQ, smaller companies) are added to the 5-minute price updates automatically; with a Finnhub key, the 10 largest holdings update every 15 seconds while the tab is open.
-- **Storage:** the `transactions` table in `data/screener.db` (`GET /api/transactions`, `PUT` / `DELETE /api/transactions/<id>`); also included in Settings → Download everything. Prices for any tickers: `GET /api/quotes?t=VOO,AAPL`.
-- **401(k):** funds without a market price (e.g. the Vanguard Institutional 500 Index Trust) are entered from a statement: units, price per unit (NAV) and the date, plus the ETF the fund tracks (VOO for an S&P 500 fund) and, optionally, the total contributed (for the gain). Between statements the value is estimated as statement NAV × ETF price now / ETF close on the statement date (tagged EST), and today's change follows the ETF. Enter a new statement whenever you get one; the latest per fund counts and older ones stay as history. Allocation by sector shows the 401(k) as its own line, with every share measured against all assets. The cards show **All Assets** (brokerage + 401(k)), **Brokerage** and **401(k)** separately. Stored in the `fund_snapshots` table (`GET /api/funds`, `PUT` / `DELETE /api/funds/<id>`; on save the server looks up the ETF's close on that date).
+- **Prices:** the same live prices as everywhere else, including pre-market / after-hours (tagged PM / AH). Tickers outside the stock lists (ETFs such as VOO, QQQ, smaller companies) are added to the 5-minute price updates automatically; with a Finnhub key, the 10 largest holdings (and the ETFs your funds track) update every 15 seconds while the tab is open.
+- **Funds without a ticker:** valued at the latest update (units × NAV), moved since that date by the ETF the fund tracks: NAV now ≈ NAV then × ETF price now / ETF close on that date (tagged EST). Today's change follows the ETF. On save, the server looks up the ETF's close on that date.
+- **Storage:** trades in the `transactions` table of `data/screener.db` (`GET /api/transactions`, `PUT` / `DELETE /api/transactions/<id>`); fund and cash updates in `fund_snapshots` (`kind` fund or cash; `GET /api/funds`, `PUT` / `DELETE /api/funds/<id>`). Both are included in Settings → Download everything. Prices for any tickers: `GET /api/quotes?t=VOO,AAPL`.
 
 ## Advanced Analysis tab
 

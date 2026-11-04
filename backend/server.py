@@ -380,7 +380,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length))
             kind, sid = target
-            if kind == "funds" and isinstance(body, dict) and body.get("proxy") and not body.get("proxyClose"):
+            if kind == "funds" and isinstance(body, dict) and body.get("kind", "fund") == "fund" and body.get("proxy") \
+                    and not body.get("proxyClose"):
                 # the proxy's close on the statement date: the base for estimating the value since then
                 try:
                     body["proxyClose"] = prices.close_on(str(body["proxy"]).upper(), str(body.get("date")))

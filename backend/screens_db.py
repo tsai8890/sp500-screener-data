@@ -54,6 +54,8 @@ def _connect(path: str = DB_PATH) -> sqlite3.Connection:
         id TEXT PRIMARY KEY, fund TEXT NOT NULL, account TEXT NOT NULL, date TEXT NOT NULL,
         units REAL NOT NULL, nav REAL NOT NULL, proxy TEXT NOT NULL DEFAULT '', proxy_close REAL,
         cost REAL, created INTEGER NOT NULL, updated INTEGER NOT NULL)""")
+    if "kind" not in [r[1] for r in conn.execute("PRAGMA table_info(fund_snapshots)")]:
+        conn.execute("ALTER TABLE fund_snapshots ADD COLUMN kind TEXT NOT NULL DEFAULT 'fund'")
     return conn
 
 
@@ -260,10 +262,12 @@ def portfolio_tickers(path: str = DB_PATH) -> list[str]:
     return [r[0] for r in rows]
 
 
-# ---- funds without a market price (401(k) trusts ...) ----------------------------
-# Each statement is one snapshot: units and NAV on a date. Between statements the
-# value is estimated from a tracking ETF (the proxy, e.g. VOO for an S&P 500 trust):
-# NAV today ~ statement NAV x proxy price now / proxy close on the statement date.
+# ---- assets without a ticker: funds (401(k) trusts ...) and cash ------------------
+# Each update is one snapshot, kept as history; the latest per name counts (0 = removed).
+#   fund  units and NAV on a date. Between updates the value is estimated from a tracking
+#         ETF (the proxy, e.g. VOO for an S&P 500 trust):
+#         NAV today ~ snapshot NAV x proxy price now / proxy close on the snapshot date.
+#   cash  the balance: units = amount, nav = 1.
 
 def validate_fund_snapshot(snap_id: str, body: dict) -> dict:
     if not ID_RE.match(snap_id or ""):
@@ -277,15 +281,20 @@ def validate_fund_snapshot(snap_id: str, body: dict) -> dict:
         except (TypeError, ValueError):
             return None
         return f if f == f and f not in (float("inf"), float("-inf")) else None
+    kind = str(body.get("kind") or "fund")
+    if kind not in ("fund", "cash"):
+        raise InvalidScreen("kind must be fund or cash")
+    if kind == "cash":
+        body = {**body, "nav": 1, "proxy": "", "proxyClose": None, "cost": None}
     fund = str(body.get("fund") or "").strip()[:100]
     if not fund:
-        raise InvalidScreen("fund name is required")
+        raise InvalidScreen("a name is required")
     date = str(body.get("date") or "")
     if not DATE_RE.match(date):
         raise InvalidScreen("date must be YYYY-MM-DD")
     units, nav = num(body.get("units")), num(body.get("nav"))
     if units is None or units < 0:
-        raise InvalidScreen("units must be a number, 0 or more")
+        raise InvalidScreen(("the amount" if kind == "cash" else "units") + " must be a number, 0 or more")
     if nav is None or nav <= 0:
         raise InvalidScreen("NAV must be a number above 0")
     proxy = str(body.get("proxy") or "").strip().upper()
@@ -296,17 +305,17 @@ def validate_fund_snapshot(snap_id: str, body: dict) -> dict:
         raise InvalidScreen("total contributed must be 0 or more")
     pc = num(body.get("proxyClose")) if body.get("proxyClose") not in (None, "") else None
     created = body.get("created")
-    return {"id": snap_id, "fund": fund, "account": str(body.get("account") or "401(k)").strip()[:40] or "401(k)",
+    return {"id": snap_id, "kind": kind, "fund": fund, "account": str(body.get("account") or "").strip()[:40],
             "date": date, "units": units, "nav": nav, "proxy": proxy, "proxyClose": pc if pc and pc > 0 else None,
             "cost": cost, "created": int(created) if isinstance(created, (int, float)) else None}
 
 
-_SNAP_COLS = ("id", "fund", "account", "date", "units", "nav", "proxy", "proxyClose", "cost", "created", "updated")
+_SNAP_COLS = ("id", "kind", "fund", "account", "date", "units", "nav", "proxy", "proxyClose", "cost", "created", "updated")
 
 
 def list_fund_snapshots(path: str = DB_PATH) -> list[dict]:
     with _lock, _connect(path) as conn:
-        rows = conn.execute("""SELECT id, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated
+        rows = conn.execute("""SELECT id, kind, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated
                                FROM fund_snapshots ORDER BY date, created""").fetchall()
     return [dict(zip(_SNAP_COLS, r)) for r in rows]
 
@@ -317,12 +326,12 @@ def upsert_fund_snapshot(snap_id: str, body: dict, path: str = DB_PATH) -> dict:
     with _lock, _connect(path) as conn:
         exists = conn.execute("SELECT created FROM fund_snapshots WHERE id = ?", (snap_id,)).fetchone()
         created = exists[0] if exists else (f["created"] or now)
-        conn.execute("""INSERT INTO fund_snapshots (id, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(id) DO UPDATE SET fund=excluded.fund, account=excluded.account, date=excluded.date,
+        conn.execute("""INSERT INTO fund_snapshots (id, kind, fund, account, date, units, nav, proxy, proxy_close, cost, created, updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, fund=excluded.fund, account=excluded.account, date=excluded.date,
                         units=excluded.units, nav=excluded.nav, proxy=excluded.proxy, proxy_close=excluded.proxy_close,
                         cost=excluded.cost, updated=excluded.updated""",
-                     (snap_id, f["fund"], f["account"], f["date"], f["units"], f["nav"], f["proxy"], f["proxyClose"],
+                     (snap_id, f["kind"], f["fund"], f["account"], f["date"], f["units"], f["nav"], f["proxy"], f["proxyClose"],
                       f["cost"], created, now))
     return {**f, "created": created, "updated": now}
 
