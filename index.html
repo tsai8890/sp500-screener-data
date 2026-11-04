@@ -839,7 +839,7 @@ footer.note { font-size: calc(14px * var(--ts)); color: var(--muted); max-width:
             <div class="table-wrap"><table class="pf-t" id="pfSnaps"></table></div>
           </section>
           <section class="an-sec" aria-label="Allocation by sector" id="pfAllocSec">
-            <h3>Allocation by sector</h3>
+            <h3>Allocation by sector <span class="hint">Share of all assets</span></h3>
             <div class="pf-alloc" id="pfAlloc"></div>
           </section>
           <section class="an-sec" aria-label="Trades" id="pfTradeSec">
@@ -2180,7 +2180,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
   function renderPortfolio() {
     const hasTx = !!(PF.txs && PF.txs.length), has = hasTx || PF.funds.length > 0;
     $("pfEmpty").hidden = has || !PF.loaded; $("pfBody").hidden = !has;
-    ["pfHoldSec", "pfAllocSec", "pfTradeSec"].forEach((id) => { $(id).hidden = !hasTx; });
+    ["pfHoldSec", "pfTradeSec"].forEach((id) => { $(id).hidden = !hasTx; });
     $("pfFundSec").hidden = !PF.funds.length;
     const st = $("pfState"); st.className = "note-status" + (PF.error ? " warn" : "");
     st.textContent = PF.error || (PF.quotesAt ? "Prices updated " + new Date(PF.quotesAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "");
@@ -2206,6 +2206,7 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     card("Unrealized Gain", signedMoney(hasTx ? T.gain : null), signedPct(T.gainPct), upDown(T.gain), "Brokerage: value of what you hold − what it cost (average cost, fees included).");
     card("Realized Gain", signedMoney(hasTx ? T.realized : null), "From shares sold", upDown(T.realized), "Sale price − average cost of the shares sold, minus fees.");
     renderFunds();
+    renderAlloc(all);
     if (!hasTx) { applySide(); return; }
 
     // holdings
@@ -2242,17 +2243,6 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     const hn = $("pfHoldNote"); hn.textContent = closed ? `${closed} sold off completely (in realized gain)` : "";
     if (over.length) hn.append(el("span", { class: "pf-warn", text: `Sold more shares than you had of ${over.join(", ")}: check those trades.` }));
 
-    // allocation by sector
-    const alloc = $("pfAlloc"); alloc.textContent = "";
-    const sec = new Map();
-    open.filter((p) => p.value != null).forEach((p) => { const k = p.sector || "Other"; sec.set(k, (sec.get(k) || 0) + p.value); });
-    [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
-      const pct = T.value ? v / T.value * 100 : 0;
-      alloc.append(el("div", { class: "pf-bar" }, el("span", { text: name }),
-        el("div", { class: "track" }, el("div", { class: "fill", style: `width: ${pct.toFixed(2)}%` })),
-        el("span", { class: "amt", text: `${pct.toFixed(1)}% · ${money(v, 0)}` })));
-    });
-
     // trades, newest first
     const tt = $("pfTrades"); tt.textContent = "";
     tt.append(el("thead", {}, el("tr", {}, ...["Date", "", "Stock", "Shares", "Price", "Fee", "Amount", ""].map((h) => el("th", { text: h })))));
@@ -2270,6 +2260,19 @@ PLD,Prologis,Real Estate,110,33,3.5,6,37,3.3`;
     });
     tt.append(tb2);
     applySide();
+  }
+  // allocation of all assets: brokerage holdings by sector, plus the 401(k) as its own line
+  function renderAlloc(all) {
+    const alloc = $("pfAlloc"); alloc.textContent = "";
+    const sec = new Map();
+    (PF.positions || []).filter((p) => p.shares > 0 && p.value != null).forEach((p) => { const k = p.sector || "Other"; sec.set(k, (sec.get(k) || 0) + p.value); });
+    if (PF.fundTotals && PF.fundTotals.value > 0) sec.set("401(k)", PF.fundTotals.value);
+    [...sec.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
+      const pct = all ? v / all * 100 : 0;
+      alloc.append(el("div", { class: "pf-bar" + (name === "401(k)" ? " k401" : "") }, el("span", { text: name }),
+        el("div", { class: "track" }, el("div", { class: "fill", style: `width: ${pct.toFixed(2)}%` })),
+        el("span", { class: "amt", text: `${pct.toFixed(1)}% · ${money(v, 0)}` })));
+    });
   }
   const fmtDay = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
   const navFmt = (v) => money(v, v != null && v < 1000 ? 4 : 2);
